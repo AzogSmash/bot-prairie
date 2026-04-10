@@ -3,7 +3,7 @@ const https = require('https');
 
 async function getPlayer(tag) {
   const cleanTag = tag.replace('#', '').toUpperCase();
-  const url = `https://api.brawlstars.com/v1/players/%23${cleanTag}`;
+  const url = `https://bsproxy.royaleapi.dev/v1/players/%23${cleanTag}`;
 
   console.log(`[BS API] Fetching player: ${cleanTag}`);
   console.log(`[BS API] Key exists: ${!!process.env.BRAWLSTARS_API_KEY}`);
@@ -33,7 +33,7 @@ async function getPlayer(tag) {
 
 async function getClub(tag) {
   const cleanTag = tag.replace('#', '').toUpperCase();
-  const url = `https://api.brawlstars.com/v1/clubs/%23${cleanTag}`;
+  const url = `https://bsproxy.royaleapi.dev/v1/clubs/%23${cleanTag}`;
 
   const options = {
     headers: {
