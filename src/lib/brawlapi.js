@@ -2,9 +2,11 @@ require('dotenv').config();
 const https = require('https');
 
 async function getPlayer(tag) {
-  // Nettoie le tag — enlève le # et encode
   const cleanTag = tag.replace('#', '').toUpperCase();
   const url = `https://api.brawlstars.com/v1/players/%23${cleanTag}`;
+
+  console.log(`[BS API] Fetching player: ${cleanTag}`);
+  console.log(`[BS API] Key exists: ${!!process.env.BRAWLSTARS_API_KEY}`);
 
   const options = {
     headers: {
@@ -17,9 +19,11 @@ async function getPlayer(tag) {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
+        console.log(`[BS API] Status: ${res.statusCode}`);
         if (res.statusCode === 200) {
           resolve(JSON.parse(data));
         } else {
+          console.log(`[BS API] Error body: ${data}`);
           reject(new Error(`Tag introuvable (${res.statusCode})`));
         }
       });
