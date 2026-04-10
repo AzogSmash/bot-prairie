@@ -115,11 +115,12 @@ client.on('interactionCreate', async interaction => {
 client.once('clientReady', async () => {
   console.log(`✅ Bot Prairie connecté en tant que ${client.user.tag}`);
   await deployCommands();
-  // Lance le panel clubs
-await updateClubsPanel(client);
-
-// Mise à jour toutes les heures
-setInterval(() => updateClubsPanel(client), 60 * 60 * 1000);
+  
+  // Attend 3 secondes que le cache soit chargé
+  setTimeout(async () => {
+    await updateClubsPanel(client);
+    setInterval(() => updateClubsPanel(client), 60 * 60 * 1000);
+  }, 3000);
 });
 
 client.login(process.env.DISCORD_TOKEN);
