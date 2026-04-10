@@ -1,7 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { getPlayer } = require('../lib/brawlapi');
 const { supabase } = require('../lib/supabase');
-const { buildProfileEmbed } = require('./commands/profil');
 
 // Barre de progression visuelle
 function progressBar(current, max, length = 10) {
