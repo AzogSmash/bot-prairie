@@ -1,45 +1,40 @@
 const https = require('https');
 
-async function getPlayer(tag) {
-  const cleanTag = tag.replace('#', '').toUpperCase();
-  const url = `https://bsproxy.royaleapi.dev/v1/players/%23${cleanTag}`;
+async function brawlFetch(path) {
+  const url = `https://bsproxy.royaleapi.dev/v1${path}`;
 
-  console.log(`[BS API] Fetching player: ${cleanTag}`);
+  const options = {
+    headers: {
+      'Authorization': `Bearer ${process.env.BRAWLSTARS_API_KEY}`,
+      'Accept': 'application/json',
+    }
+  };
 
   return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
+    https.get(url, options, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
-        console.log(`[BS API] Status: ${res.statusCode}`);
+        console.log(`[BS API] ${path} → ${res.statusCode}`);
         if (res.statusCode === 200) {
           resolve(JSON.parse(data));
         } else {
           console.log(`[BS API] Error: ${data}`);
-          reject(new Error(`Tag introuvable (${res.statusCode})`));
+          reject(new Error(`Erreur API (${res.statusCode})`));
         }
       });
     }).on('error', reject);
   });
 }
 
+async function getPlayer(tag) {
+  const cleanTag = tag.replace('#', '').toUpperCase();
+  return brawlFetch(`/players/%23${cleanTag}`);
+}
+
 async function getClub(tag) {
   const cleanTag = tag.replace('#', '').toUpperCase();
-  const url = `https://bsproxy.royaleapi.dev/v1/clubs/%23${cleanTag}`;
-
-  return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        if (res.statusCode === 200) {
-          resolve(JSON.parse(data));
-        } else {
-          reject(new Error(`Club introuvable (${res.statusCode})`));
-        }
-      });
-    }).on('error', reject);
-  });
+  return brawlFetch(`/clubs/%23${cleanTag}`);
 }
 
 module.exports = { getPlayer, getClub };
