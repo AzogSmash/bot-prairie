@@ -23,6 +23,7 @@ async function getClubRankings(tag) {
   const cleanTag = tag.replace('#', '').toUpperCase();
 
   async function fetchRanking(region) {
+    console.log(`[Rankings] ${region} → ${data.items?.length} clubs, paging: ${JSON.stringify(data.paging)}`);
     const limit = 1000;
     return new Promise((resolve) => {
       const url = `https://bsproxy.royaleapi.dev/v1/rankings/${region}/clubs?limit=${limit}`;
