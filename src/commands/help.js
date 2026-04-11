@@ -11,16 +11,20 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor('#2ecc71')
       .setTitle('🌿 Bot Prairie — Commandes disponibles')
-      .setDescription('Voici toutes les commandes disponibles sur le serveur Prairie !')
+      .setDescription(
+        'Bienvenue sur le bot officiel de la famille Prairie !\n' +
+        'Ce bot a été développé spécialement pour notre communauté de 7 clubs et 350+ membres actifs.\n\n' +
+        'Si tu rencontres un problème, ping un <@&' + process.env.STAFF_ROLE_ID + '> 🛠️'
+      )
       .addFields(
-        // Compte BS
+        // Brawl Stars
         {
           name: '🎮 Brawl Stars',
           value: [
             '`/lier` — Lie ton compte Brawl Stars à ton profil Prairie',
-            '`/profil` — Affiche ton profil ou celui d\'un membre',
-            '`/classement` — Top des membres Prairie par trophées',
-            '`/clubs` — Vue globale des 7 clubs Prairie',
+            '`/profil` — Affiche ton profil complet ou celui d\'un membre',
+            '`/classement` — Classement des membres Prairie par trophées',
+            '`/clubs` — Vue globale des 7 clubs Prairie en temps réel',
           ].join('\n'),
           inline: false,
         },
@@ -31,32 +35,42 @@ module.exports = {
           value: [
             '`/absence` — Déclare une absence via formulaire',
             '`/absences` — Liste les absences avec filtres par club et période',
-            '`/absence-annuler` — Annule ton absence *(staff : peut annuler celle de n\'importe qui)*',
+            '`/absence-annuler` — Annule ton absence déclarée',
           ].join('\n'),
           inline: false,
         },
 
-        // Info
+        // Staff only
+        {
+          name: '🔒 Staff uniquement',
+          value: [
+            '`/absences` — Voir toutes les absences + annuler celle de n\'importe quel membre',
+            '`/absence-annuler @membre` — Annuler l\'absence d\'un membre spécifique',
+            '`/reset-panels` — Réinitialise les panels du salon infos-clubs',
+          ].join('\n'),
+          inline: false,
+        },
+
+        // Aide
         {
           name: '❓ Aide',
-          value: [
-            '`/help` — Affiche ce message',
-          ].join('\n'),
+          value: '`/help` — Affiche ce message',
           inline: false,
         },
 
-        // Footer info
+        // Bon à savoir
         {
           name: '💡 Bon à savoir',
           value: [
-            '• Les commandes avec 🔒 sont réservées au staff',
             '• `/profil` fonctionne uniquement après avoir fait `/lier`',
-            '• Les stats sont récupérées en temps réel depuis l\'API Brawl Stars',
+            '• Les stats BS sont récupérées en temps réel',
+            '• Les panels clubs se mettent à jour automatiquement toutes les heures',
+            `• Un problème ? Ping <@&${process.env.STAFF_ROLE_ID}> 🛠️`,
           ].join('\n'),
           inline: false,
         },
       )
-      .setFooter({ text: 'Prairie Brawl Stars • Bot développé pour la famille Prairie' })
+      .setFooter({ text: 'Prairie Brawl Stars • Bot officiel de la famille Prairie' })
       .setTimestamp();
 
     await interaction.editReply({ embeds: [embed] });
