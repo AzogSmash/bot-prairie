@@ -33,6 +33,7 @@ async function getClubRankings(tag) {
         res.on('end', () => {
           try {
             const data = JSON.parse(d);
+            console.log(`[Rankings] ${region} → ${data.items?.length} clubs retournés`);
             const rank = data.items?.findIndex(c => c.tag === `#${cleanTag}`) + 1;
             resolve(rank > 0 ? rank : null);
           } catch { resolve(null); }
