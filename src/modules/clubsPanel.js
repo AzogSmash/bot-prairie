@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const { getClub } = require('../lib/brawlapi');
+const { setCache } = require('../lib/cache');
 
 const PRAIRIE_CLUBS = [
   {
@@ -211,7 +212,20 @@ async function updateClubsPanel(client) {
       console.error(`[ClubsPanel] Erreur pour ${clubConfig.name}:`, err.message);
     }
   }
-
+    // Met à jour le cache des membres
+    const allMembers = [];
+    for (const club of PRAIRIE_CLUBS) {
+    try {
+        const clubData = await getClub(club.tag);
+        clubData.members?.forEach(m => allMembers.push({
+        bsTag: m.tag,
+        trophies: m.trophies,
+        clubName: clubData.name,
+        }));
+    } catch {}
+    }
+    setCache(allMembers);
+    
   console.log('[ClubsPanel] ✅ Panels mis à jour');
 }
 
