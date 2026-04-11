@@ -83,24 +83,28 @@ module.exports = {
       const fillBar = '█'.repeat(Math.round((members / maxMembers) * 12)) +
                       '░'.repeat(12 - Math.round((members / maxMembers) * 12));
 
-      const statusText = places === 0 ? '🔴 Complet'
-        : places <= 3 ? `🟠 ${places} place(s)`
-        : `🟢 ${places} places`;
+      const statusText = places === 0 ? '🔴 **Complet**'
+        : places <= 3 ? `🟠 **${places} place(s) disponible(s)**`
+        : `🟢 **${places} places disponibles**`;
 
       // Lien Brawlify
       const cleanTag = clubTag?.replace('#', '') || '';
       const brawlifyUrl = `https://brawlify.com/stats/club/${cleanTag}`;
 
-      fields.push({
-        name: `${club.emoji} [${club.name}](${brawlifyUrl}) • ${statusText}`,
-        value: [
-          `🏆 **${club.trophies?.toLocaleString('fr-FR')}** • 📊 Moy: **${avgTrophies.toLocaleString('fr-FR')}** • 🎯 Requis: **${club.requiredTrophies?.toLocaleString('fr-FR')}**`,
-          `👥 ${fillBar} **${members}/30** • 🔗 **${linkedCount}** liés Discord`,
-          `📈 Meilleur: **${maxTrophies.toLocaleString('fr-FR')}** 🏆 — 👑 ${topMember?.name || '?'}`,
-          `${worldStr} (record: **${bestWorldStr}**) • ${frStr} (record: **${bestFrStr}**)`,
-        ].join('\n'),
-        inline: false,
-      });
+    fields.push({
+      name: `${club.emoji} ${club.name}`,
+      value: [
+        `${statusText} • [Voir sur Brawlify](${brawlifyUrl})`,
+        ``,
+        `🏆 **${club.trophies?.toLocaleString('fr-FR')}** trophées • 📊 Moy: **${avgTrophies.toLocaleString('fr-FR')}** • 🎯 Requis: **${club.requiredTrophies?.toLocaleString('fr-FR')}**`,
+        ``,
+        `👥 ${fillBar} **${members}/30** • 🔗 **${linkedCount}** liés Discord`,
+        `📈 Meilleur: **${maxTrophies.toLocaleString('fr-FR')}** 🏆 — 👑 ${topMember?.name || '?'}`,
+        ``,
+        `${worldStr} *(record: **${bestWorldStr}**)* • ${frStr} *(record: **${bestFrStr}**)*`,
+      ].join('\n'),
+      inline: false,
+    });
     }
 
     // Stats globales famille
