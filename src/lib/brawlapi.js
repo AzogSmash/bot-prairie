@@ -37,4 +37,9 @@ async function getClub(tag) {
   return brawlFetch(`/clubs/%23${cleanTag}`);
 }
 
-module.exports = { getPlayer, getClub };
+async function getBattleLog(tag) {
+  const cleanTag = tag.replace('#', '').toUpperCase();
+  return brawlFetch(`/players/%23${cleanTag}/battlelog`);
+}
+
+module.exports = { getPlayer, getClub, getBattleLog };
