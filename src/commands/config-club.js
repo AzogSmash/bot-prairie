@@ -63,8 +63,9 @@ module.exports = {
 
     const club = PRAIRIE_CLUBS.find(c => c.tag === clubTag);
 
-    if (!trophees && !description && !niveau && !recordMonde && !recordFr) {
-      return interaction.editReply({ content: '❌ Tu dois renseigner au moins une valeur à modifier.' });
+    // Par :
+    if (trophees === null && !description && !niveau && recordMonde === null && recordFr === null) {
+    return interaction.editReply({ content: '❌ Tu dois renseigner au moins une valeur à modifier.' });
     }
 
     if (trophees || description || niveau) {
@@ -85,7 +86,8 @@ module.exports = {
         }, { onConflict: 'club_tag' });
     }
 
-    if (recordMonde !== null || recordFr !== null) {
+// Par :
+    if (recordMonde !== null && recordMonde !== undefined || recordFr !== null && recordFr !== undefined) {
     const { data: existing } = await supabase
         .from('club_rankings')
         .select('*')
