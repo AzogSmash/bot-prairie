@@ -68,33 +68,37 @@ client.on('interactionCreate', async interaction => {
       await absencesCmd.handleSelect(interaction);
     }
     if (interaction.customId.startsWith('classement_')) {
-    const classementCmd = require('./commands/classement');
-    await classementCmd.handleSelect(interaction);
+      const classementCmd = require('./commands/classement');
+      await classementCmd.handleSelect(interaction);
     }
     return;
   }
 
   // ── Boutons ───────────────────────────────────────────────
   if (interaction.isButton()) {
-    const [action, userId] = interaction.customId.split('_');
+    const parts = interaction.customId.split('_');
+    const action = parts[0];
 
+    // Pagination classement
+    if (action === 'classement') {
+      const classementCmd = require('./commands/classement');
+      await classementCmd.handleButton(interaction);
+      return;
+    }
+
+    // Refresh profil
     if (action === 'refresh') {
       await interaction.deferUpdate();
-      const target = await interaction.client.users.fetch(userId);
+      const target = await interaction.client.users.fetch(parts[1]);
       try {
         const embed = await buildProfileEmbed(target, interaction.client);
         if (embed) await interaction.editReply({ embeds: [embed] });
       } catch (err) {
         console.error(err);
       }
+      return;
     }
 
-    if (action === 'classement') {
-      await interaction.reply({
-        content: '🏆 Utilise la commande `/classement` !',
-        ephemeral: true
-      });
-    }
     return;
   }
 
@@ -119,8 +123,7 @@ client.on('interactionCreate', async interaction => {
 client.once('clientReady', async () => {
   console.log(`✅ Bot Prairie connecté en tant que ${client.user.tag}`);
   await deployCommands();
-  
-  // Attend 3 secondes que le cache soit chargé
+
   setTimeout(async () => {
     await updateClubsPanel(client);
     setInterval(() => updateClubsPanel(client), 60 * 60 * 1000);

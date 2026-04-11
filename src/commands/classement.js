@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { getClub } = require('../lib/brawlapi');
 const { supabase } = require('../lib/supabase');
 
@@ -13,7 +13,6 @@ const PRAIRIE_CLUBS = [
 ];
 
 async function buildClassement(clubFilter = 'tous') {
-  // Récupère tous les membres BS des clubs sélectionnés
   const clubsToFetch = clubFilter === 'tous'
     ? PRAIRIE_CLUBS
     : PRAIRIE_CLUBS.filter(c => c.tag === clubFilter);
@@ -37,13 +36,11 @@ async function buildClassement(clubFilter = 'tous') {
     }
   }
 
-  // Récupère les membres Discord liés
   const { data: linkedMembers } = await supabase
     .from('members')
     .select('discord_username, brawlstars_tag')
     .not('brawlstars_tag', 'is', null);
 
-  // Crée un map tag BS → discord username
   const discordMap = {};
   if (linkedMembers) {
     for (const m of linkedMembers) {
@@ -51,7 +48,6 @@ async function buildClassement(clubFilter = 'tous') {
     }
   }
 
-  // Trie par trophées
   allMembers.sort((a, b) => b.trophies - a.trophies);
 
   return { allMembers, discordMap };
@@ -86,20 +82,57 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0) {
     .setColor('#f1c40f')
     .setTitle(`🏆 Classement Prairie — ${clubLabel}`)
     .setDescription(lines.join('\n'))
-    .addFields(
-      {
-        name: '📊 Stats',
-        value: [
-          `👥 **${allMembers.length}** membres`,
-          `🏆 Total : **${totalTrophies.toLocaleString('fr-FR')}**`,
-          `📈 Moyenne : **${avgTrophies.toLocaleString('fr-FR')}**`,
-          `🔗 Liés Discord : **${Object.keys(discordMap).length}**`,
-        ].join(' • '),
-        inline: false
-      }
-    )
+    .addFields({
+      name: '📊 Stats',
+      value: [
+        `👥 **${allMembers.length}** membres`,
+        `🏆 Total : **${totalTrophies.toLocaleString('fr-FR')}**`,
+        `📈 Moyenne : **${avgTrophies.toLocaleString('fr-FR')}**`,
+        `🔗 Liés Discord : **${Object.keys(discordMap).length}**`,
+      ].join(' • '),
+      inline: false
+    })
     .setFooter({ text: `Prairie Brawl Stars • Page ${page + 1}/${totalPages} • 🔗 = compte Discord lié` })
     .setTimestamp();
+}
+
+function buildComponents(clubFilter, page, totalPages) {
+  // Menu filtre club
+  const clubMenu = new StringSelectMenuBuilder()
+    .setCustomId(`classement_club_${page}`)
+    .setPlaceholder('🌿 Filtrer par club')
+    .addOptions([
+      { label: '🌿 Toute la famille', value: 'tous', default: clubFilter === 'tous' },
+      ...PRAIRIE_CLUBS.map(c => ({
+        label: `${c.emoji} ${c.name}`,
+        value: c.tag,
+        default: c.tag === clubFilter
+      }))
+    ]);
+
+  // Boutons pagination
+  const prevBtn = new ButtonBuilder()
+    .setCustomId(`classement_prev_${page}_${clubFilter}`)
+    .setLabel('◀ Précédent')
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(page === 0);
+
+  const nextBtn = new ButtonBuilder()
+    .setCustomId(`classement_next_${page}_${clubFilter}`)
+    .setLabel('Suivant ▶')
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(page >= totalPages - 1);
+
+  const pageBtn = new ButtonBuilder()
+    .setCustomId('classement_page_info')
+    .setLabel(`Page ${page + 1} / ${totalPages}`)
+    .setStyle(ButtonStyle.Primary)
+    .setDisabled(true);
+
+  return [
+    new ActionRowBuilder().addComponents(clubMenu),
+    new ActionRowBuilder().addComponents(prevBtn, pageBtn, nextBtn),
+  ];
 }
 
 module.exports = {
@@ -111,47 +144,40 @@ module.exports = {
     await interaction.deferReply();
 
     const { allMembers, discordMap } = await buildClassement('tous');
-    const embed = buildEmbed(allMembers, discordMap, 'tous', 0);
     const totalPages = Math.ceil(allMembers.length / 10);
+    const embed = buildEmbed(allMembers, discordMap, 'tous', 0);
+    const components = buildComponents('tous', 0, totalPages);
 
-    // Menu filtre par club
-    const clubMenu = new StringSelectMenuBuilder()
-      .setCustomId('classement_club_0')
-      .setPlaceholder('🌿 Filtrer par club')
-      .addOptions([
-        { label: '🌿 Toute la famille', value: 'tous', default: true },
-        ...PRAIRIE_CLUBS.map(c => ({ label: `${c.emoji} ${c.name}`, value: c.tag }))
-      ]);
-
-    const row = new ActionRowBuilder().addComponents(clubMenu);
-
-    await interaction.editReply({ embeds: [embed], components: [row] });
+    await interaction.editReply({ embeds: [embed], components });
   },
 
   async handleSelect(interaction) {
     await interaction.deferUpdate();
 
-    const parts = interaction.customId.split('_');
     const clubFilter = interaction.values[0];
-    const page = 0;
+    const { allMembers, discordMap } = await buildClassement(clubFilter);
+    const totalPages = Math.ceil(allMembers.length / 10);
+    const embed = buildEmbed(allMembers, discordMap, clubFilter, 0);
+    const components = buildComponents(clubFilter, 0, totalPages);
+
+    await interaction.editReply({ embeds: [embed], components });
+  },
+
+  async handleButton(interaction) {
+    await interaction.deferUpdate();
+
+    const parts = interaction.customId.split('_');
+    const action = parts[1];
+    const currentPage = parseInt(parts[2]);
+    const clubFilter = parts[3];
+
+    const newPage = action === 'next' ? currentPage + 1 : currentPage - 1;
 
     const { allMembers, discordMap } = await buildClassement(clubFilter);
-    const embed = buildEmbed(allMembers, discordMap, clubFilter, page);
+    const totalPages = Math.ceil(allMembers.length / 10);
+    const embed = buildEmbed(allMembers, discordMap, clubFilter, newPage);
+    const components = buildComponents(clubFilter, newPage, totalPages);
 
-    const clubMenu = new StringSelectMenuBuilder()
-      .setCustomId(`classement_club_${page}`)
-      .setPlaceholder('🌿 Filtrer par club')
-      .addOptions([
-        { label: '🌿 Toute la famille', value: 'tous', default: clubFilter === 'tous' },
-        ...PRAIRIE_CLUBS.map(c => ({
-          label: `${c.emoji} ${c.name}`,
-          value: c.tag,
-          default: c.tag === clubFilter
-        }))
-      ]);
-
-    const row = new ActionRowBuilder().addComponents(clubMenu);
-
-    await interaction.editReply({ embeds: [embed], components: [row] });
+    await interaction.editReply({ embeds: [embed], components });
   }
 };
