@@ -13,62 +13,67 @@ module.exports = {
       .setTitle('🌿 Bot Prairie — Commandes disponibles')
       .setDescription(
         'Bienvenue sur le bot officiel de la famille Prairie !\n' +
-        'Ce bot a été développé spécialement pour notre communauté de 7 clubs et 200+ membres actifs.\n\n' +
-        'Si tu rencontres un problème, ping un <@&' + process.env.TECH_ROLE_ID + '> 🛠️'
+        'Développé spécialement pour notre communauté de 7 clubs et 350+ membres actifs.\n\n' +
+        `Un problème ? Ping <@&${process.env.TECH_ROLE_ID}> 🛠️`
       )
-      .addFields(
-        // Brawl Stars
-        {
-          name: '🎮 Brawl Stars',
-          value: [
-            '`/lier` — Lie ton compte Brawl Stars à ton profil Prairie',
-            '`/profil` — Affiche ton profil complet ou celui d\'un membre',
-            '`/classement` — Classement des membres Prairie par trophées',
-            '`/clubs` — Vue globale des 7 clubs Prairie en temps réel',
-          ].join('\n'),
-          inline: false,
-        },
 
-        // Absences
-        {
-          name: '📋 Absences',
-          value: [
-            '`/absence` — Déclare une absence via formulaire',
-            '`/absence-annuler` — Annule ton absence déclarée',
-          ].join('\n'),
-          inline: false,
-        },
+      // ── Brawl Stars ───────────────────────────────────────
+      .addFields({
+        name: '🎮 Brawl Stars',
+        value: [
+          '`/lier` — Lie ton compte Brawl Stars à ton profil Prairie',
+          '`/profil` — Affiche ton profil complet ou celui d\'un membre',
+          '`/classement` — Classement Prairie par trophées avec filtres par club',
+          '`/clubs` — Vue globale des 7 clubs en temps réel',
+        ].join('\n'),
+        inline: false,
+      })
 
-        // Staff only
-        {
-          name: '🔒 Staff uniquement',
-          value: [
-            '`/absences` — Voir toutes les absences + annuler celle de n\'importe quel membre',
-            '`/absence-annuler @membre` — Annuler l\'absence d\'un membre spécifique',
-            '`/reset-panels` — Réinitialise les panels du salon infos-clubs',
-          ].join('\n'),
-          inline: false,
-        },
+      // ── Absences ──────────────────────────────────────────
+      .addFields({
+        name: '📋 Absences',
+        value: [
+          '`/absence` — Déclare une absence via formulaire',
+          '`/absences` — Liste les absences avec filtres par club et période',
+          '`/absence-annuler` — Annule une de tes absences actives',
+        ].join('\n'),
+        inline: false,
+      })
 
-        // Aide
-        {
-          name: '❓ Aide',
-          value: '`/help` — Affiche ce message',
-          inline: false,
-        },
+      // ── Aide ──────────────────────────────────────────────
+      .addFields({
+        name: '❓ Aide',
+        value: '`/help` — Affiche ce message',
+        inline: false,
+      })
 
-        // Bon à savoir
-        {
-          name: '💡 Bon à savoir',
-          value: [
-            '• `/profil` fonctionne uniquement après avoir fait `/lier`',
-            '• Les stats BS sont récupérées en temps réel',
-            '• Les panels clubs se mettent à jour automatiquement toutes les heures',
-            `• Un problème ? Ping <@&${process.env.TECH_ROLE_ID}> 🛠️`,
-          ].join('\n'),
-          inline: false,
-        },
-      )
+      // ── Staff ─────────────────────────────────────────────
+      .addFields({
+        name: '🔒 Staff Prairie',
+        value: [
+          '`/absence @membre` — Créer une absence pour un membre',
+          '`/absence-annuler @membre` — Annuler l\'absence d\'un membre',
+          '`/absences` — Voir toutes les absences + annuler celles des membres',
+          '`/config-club` — Modifier les infos d\'un club (description, trophées requis, records)',
+          '`/reset-panels` — Réinitialise les panels du salon infos-clubs',
+          '`/setup-regles` — Publie/met à jour le règlement dans le salon dédié',
+        ].join('\n'),
+        inline: false,
+      })
+
+      // ── Bon à savoir ──────────────────────────────────────
+      .addFields({
+        name: '💡 Bon à savoir',
+        value: [
+          '• `/profil` et `/classement` fonctionnent uniquement après `/lier`',
+          '• Les stats BS sont récupérées en temps réel depuis l\'API Brawl Stars',
+          '• Les panels clubs se mettent à jour automatiquement toutes les heures',
+          '• Le classement affiche tous les membres des 7 clubs, liés ou non',
+          `• Un problème ? Ping <@&${process.env.TECH_ROLE_ID}> 🛠️`,
+        ].join('\n'),
+        inline: false,
+      })
+
       .setFooter({ text: 'Prairie Brawl Stars • Bot officiel de la famille Prairie' })
       .setTimestamp();
 
