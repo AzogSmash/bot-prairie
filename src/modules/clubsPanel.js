@@ -46,13 +46,11 @@ async function getClubRankings(tag) {
     fetchRanking('FR'),
   ]);
 
-  // Récupère les records existants
   const { data: existing } = await supabase
     .from('club_rankings')
     .select('*')
     .eq('club_tag', tag)
-    .single()
-    .catch(() => ({ data: null }));
+    .maybeSingle();
 
   const bestWorld = existing
     ? (worldRank && worldRank < (existing.best_world_rank || 9999) ? worldRank : existing.best_world_rank)
@@ -62,7 +60,6 @@ async function getClubRankings(tag) {
     ? (frRank && frRank < (existing.best_fr_rank || 9999) ? frRank : existing.best_fr_rank)
     : frRank;
 
-  // Sauvegarde
   await supabase
     .from('club_rankings')
     .upsert({
@@ -109,7 +106,6 @@ async function buildClubEmbed(clubData, clubConfig, rankings, customConfig) {
     : places <= 3 ? `🟠 **${places} place(s) disponible(s)**`
     : `🟢 **${places} places disponibles**`;
 
-  // Utilise la config custom si disponible, sinon les valeurs par défaut
   const description = customConfig?.description || clubConfig.description;
   const level = customConfig?.level || clubConfig.level;
   const requiredTrophies = customConfig?.required_trophies || clubData.requiredTrophies;
@@ -132,7 +128,6 @@ async function buildClubEmbed(clubData, clubConfig, rankings, customConfig) {
     .setThumbnail(badgeUrl || null)
     .setDescription(`*${description}*`)
 
-    // ── Statut & Classements ──────────────────────────────
     .addFields(
       { name: '📋 Statut', value: statusText, inline: true },
       {
@@ -146,22 +141,16 @@ async function buildClubEmbed(clubData, clubConfig, rankings, customConfig) {
         inline: true,
       },
     )
-
-    // ── Trophées ──────────────────────────────────────────
     .addFields(
       { name: '🏆 Trophées club', value: `**${clubData.trophies?.toLocaleString('fr-FR')}**`, inline: true },
       { name: '📊 Moyenne', value: `**${avgTrophies.toLocaleString('fr-FR')}**`, inline: true },
       { name: '🎯 Requis', value: `**${requiredTrophies?.toLocaleString('fr-FR')}**`, inline: true },
     )
-
-    // ── Min/Max ───────────────────────────────────────────
     .addFields(
       { name: '📈 Meilleur', value: `**${maxTrophies.toLocaleString('fr-FR')}** 🏆`, inline: true },
       { name: '📉 Plus bas', value: `**${minTrophies.toLocaleString('fr-FR')}** 🏆`, inline: true },
       { name: '🏷️ Tag', value: `\`${clubData.tag}\``, inline: true },
     )
-
-    // ── Membres ───────────────────────────────────────────
     .addFields({
       name: `👥 Membres — ${fillBar} ${memberCount}/30`,
       value: '\u200b',
@@ -177,10 +166,7 @@ async function buildClubEmbed(clubData, clubConfig, rankings, customConfig) {
       { name: '👤 Membre(s)', value: `**${regulars.length}** membre(s)`, inline: true },
       { name: '\u200b', value: '\u200b', inline: true },
     )
-
-    // ── Top 5 ─────────────────────────────────────────────
     .addFields({ name: '🏅 Top 5', value: top5 || 'Aucun membre', inline: false })
-
     .setFooter({ text: 'Prairie Brawl Stars • Mis à jour toutes les heures • Clique sur le nom pour voir sur Brawlify' })
     .setTimestamp();
 }
@@ -207,7 +193,6 @@ async function updateClubsPanel(client) {
     }
   }
 
-  // Récupère toutes les configs custom
   const { data: configs } = await supabase
     .from('club_config')
     .select('*');
