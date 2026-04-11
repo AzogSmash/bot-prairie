@@ -14,9 +14,8 @@ const PRAIRIE_CLUBS = [
   { tag: '#C9JUYQQY',  emoji: '🍃', name: 'Prairie Sauvage', color: '#827717', description: 'Club d\'entrée de la famille Prairie. Parfait pour progresser et rejoindre la structure.', level: '🥉 Débutant' },
 ];
 
-function formatRank(rank, limit) {
+function formatRank(rank) {
   if (!rank) return '/';
-  if (rank > limit) return `+${limit}`;
   return `#${rank}`;
 }
 
@@ -24,7 +23,7 @@ async function getClubRankings(tag) {
   const cleanTag = tag.replace('#', '').toUpperCase();
 
   async function fetchRanking(region) {
-    const limit = region === 'global' ? 500 : 200;
+    const limit = 1000;
     return new Promise((resolve) => {
       const url = `https://bsproxy.royaleapi.dev/v1/rankings/${region}/clubs?limit=${limit}`;
       const options = { headers: { 'Authorization': `Bearer ${process.env.BRAWLSTARS_API_KEY}` } };
@@ -133,12 +132,12 @@ async function buildClubEmbed(clubData, clubConfig, rankings, customConfig) {
       { name: '📋 Statut', value: statusText, inline: true },
       {
         name: '🌍 Monde',
-        value: `Actuel : **${formatRank(worldRank, 500)}**\nRecord : **${formatRank(bestWorld, 500)}**`,
+        value: `Actuel : **${formatRank(worldRank)}**\nRecord : **${formatRank(bestWorld)}**`,
         inline: true,
       },
       {
         name: '🇫🇷 France',
-        value: `Actuel : **${formatRank(frRank, 200)}**\nRecord : **${formatRank(bestFr, 200)}**`,
+        value: `Actuel : **${formatRank(frRank)}**\nRecord : **${formatRank(bestFr)}**`,
         inline: true,
       },
     )
