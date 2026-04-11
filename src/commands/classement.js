@@ -52,7 +52,7 @@ async function buildClassement(clubFilter = 'tous') {
   return { allMembers, discordMap };
 }
 
-function buildEmbed(allMembers, discordMap, clubFilter, page = 0) {
+function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers = []) {
   const pageSize = 30;
   const totalPages = Math.ceil(allMembers.length / pageSize);
   const start = page * pageSize;
@@ -67,7 +67,6 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0) {
     ? Math.round(totalTrophies / allMembers.length)
     : 0;
 
-  // Podium séparé (seulement page 1)
   let description = '';
 
   if (page === 0) {
@@ -78,14 +77,22 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0) {
       const medals = ['👑', '🥈', '🥉'];
       const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]}` : m.bsName;
       const linked = discordMap[m.bsTag] ? ' 🔗' : '';
-      return `${medals[i]} **${name}**${linked}\n┗ 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}`;
+      const globalRank = clubFilter !== 'tous' && globalMembers.length > 0
+        ? globalMembers.findIndex(gm => gm.bsTag === m.bsTag) + 1
+        : null;
+      const globalStr = globalRank > 0 ? ` • 🌿 #${globalRank} global` : '';
+      return `${medals[i]} **${name}**${linked}\n┗ 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}${globalStr}`;
     }).join('\n\n');
 
     const restLines = rest.map((m, i) => {
       const rank = i + 4;
       const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]} *(${m.bsName})*` : m.bsName;
       const linked = discordMap[m.bsTag] ? '🔗' : '';
-      return `**#${rank}** ${linked} ${name} — 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}`;
+      const globalRank = clubFilter !== 'tous' && globalMembers.length > 0
+        ? globalMembers.findIndex(gm => gm.bsTag === m.bsTag) + 1
+        : null;
+      const globalStr = globalRank > 0 ? ` • 🌿 #${globalRank}` : '';
+      return `**#${rank}** ${linked} ${name} — 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}${globalStr}`;
     }).join('\n');
 
     description = `${podiumLines}\n\n─────────────────\n${restLines}`;
@@ -94,7 +101,11 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0) {
       const rank = start + i + 1;
       const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]} *(${m.bsName})*` : m.bsName;
       const linked = discordMap[m.bsTag] ? '🔗' : '';
-      return `**#${rank}** ${linked} ${name} — 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}`;
+      const globalRank = clubFilter !== 'tous' && globalMembers.length > 0
+        ? globalMembers.findIndex(gm => gm.bsTag === m.bsTag) + 1
+        : null;
+      const globalStr = globalRank > 0 ? ` • 🌿 #${globalRank}` : '';
+      return `**#${rank}** ${linked} ${name} — 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}${globalStr}`;
     }).join('\n');
   }
 
@@ -111,14 +122,13 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0) {
         `🔗 Liés Discord : **${Object.keys(discordMap).length}**`,
       ].join(' • '),
     })
-    .setFooter({ text: `Prairie Brawl Stars • Page ${page + 1}/${totalPages} • 🔗 = Discord lié` })
+    .setFooter({ text: `Prairie Brawl Stars • Page ${page + 1}/${totalPages} • 🔗 = Discord lié${clubFilter !== 'tous' ? ' • 🌿 = rang global' : ''}` })
     .setTimestamp();
 }
 
 function buildComponents(clubFilter, page, totalPages) {
   const rows = [];
 
-  // Menu filtre club
   const clubMenu = new StringSelectMenuBuilder()
     .setCustomId(`classement_club_${page}`)
     .setPlaceholder('🌿 Filtrer par club')
@@ -133,9 +143,7 @@ function buildComponents(clubFilter, page, totalPages) {
 
   rows.push(new ActionRowBuilder().addComponents(clubMenu));
 
-  // Boutons numérotés — max 5 par ligne Discord
   if (totalPages > 1) {
-    // Première ligne : pages 1-5
     const row1 = new ActionRowBuilder();
     for (let i = 0; i < Math.min(5, totalPages); i++) {
       row1.addComponents(
@@ -148,7 +156,6 @@ function buildComponents(clubFilter, page, totalPages) {
     }
     rows.push(row1);
 
-    // Deuxième ligne : pages 6-10 si besoin
     if (totalPages > 5) {
       const row2 = new ActionRowBuilder();
       for (let i = 5; i < Math.min(10, totalPages); i++) {
@@ -176,7 +183,7 @@ module.exports = {
     await interaction.deferReply();
     const { allMembers, discordMap } = await buildClassement('tous');
     const totalPages = Math.ceil(allMembers.length / 30);
-    const embed = buildEmbed(allMembers, discordMap, 'tous', 0);
+    const embed = buildEmbed(allMembers, discordMap, 'tous', 0, []);
     const components = buildComponents('tous', 0, totalPages);
     await interaction.editReply({ embeds: [embed], components });
   },
@@ -185,8 +192,15 @@ module.exports = {
     await interaction.deferUpdate();
     const clubFilter = interaction.values[0];
     const { allMembers, discordMap } = await buildClassement(clubFilter);
+
+    let globalMembers = [];
+    if (clubFilter !== 'tous') {
+      const { allMembers: global } = await buildClassement('tous');
+      globalMembers = global;
+    }
+
     const totalPages = Math.ceil(allMembers.length / 30);
-    const embed = buildEmbed(allMembers, discordMap, clubFilter, 0);
+    const embed = buildEmbed(allMembers, discordMap, clubFilter, 0, globalMembers);
     const components = buildComponents(clubFilter, 0, totalPages);
     await interaction.editReply({ embeds: [embed], components });
   },
@@ -194,12 +208,18 @@ module.exports = {
   async handleButton(interaction) {
     await interaction.deferUpdate();
     const parts = interaction.customId.split('_');
-    // format: classement_goto_PAGE_CLUBFILTER
     const page = parseInt(parts[2]);
     const clubFilter = parts[3];
     const { allMembers, discordMap } = await buildClassement(clubFilter);
+
+    let globalMembers = [];
+    if (clubFilter !== 'tous') {
+      const { allMembers: global } = await buildClassement('tous');
+      globalMembers = global;
+    }
+
     const totalPages = Math.ceil(allMembers.length / 30);
-    const embed = buildEmbed(allMembers, discordMap, clubFilter, page);
+    const embed = buildEmbed(allMembers, discordMap, clubFilter, page, globalMembers);
     const components = buildComponents(clubFilter, page, totalPages);
     await interaction.editReply({ embeds: [embed], components });
   }
