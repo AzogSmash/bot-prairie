@@ -37,18 +37,18 @@ module.exports = {
         )
     )
     .addIntegerOption(option =>
-      option.setName('record_monde')
-        .setDescription('Meilleur classement mondial (1-500)')
+    option.setName('record_monde')
+        .setDescription('Meilleur classement mondial (1-1000, ou 0 pour mettre /)')
         .setRequired(false)
-        .setMinValue(1)
-        .setMaxValue(500)
+        .setMinValue(0)
+        .setMaxValue(1000)
     )
     .addIntegerOption(option =>
-      option.setName('record_fr')
-        .setDescription('Meilleur classement France (1-200)')
+    option.setName('record_fr')
+        .setDescription('Meilleur classement France (1-1000, ou 0 pour mettre /)')
         .setRequired(false)
-        .setMinValue(1)
-        .setMaxValue(200)
+        .setMinValue(0)
+        .setMaxValue(1000)
     ),
 
   async execute(interaction) {
@@ -85,22 +85,23 @@ module.exports = {
         }, { onConflict: 'club_tag' });
     }
 
-    if (recordMonde || recordFr) {
-      const { data: existing } = await supabase
+    if (recordMonde !== null || recordFr !== null) {
+    const { data: existing } = await supabase
         .from('club_rankings')
         .select('*')
         .eq('club_tag', clubTag)
         .maybeSingle();
 
-      await supabase
+    await supabase
         .from('club_rankings')
         .upsert({
-          club_tag: clubTag,
-          best_world_rank: recordMonde || existing?.best_world_rank || null,
-          best_fr_rank: recordFr || existing?.best_fr_rank || null,
-          current_world_rank: existing?.current_world_rank || null,
-          current_fr_rank: existing?.current_fr_rank || null,
-          updated_at: new Date().toISOString(),
+        club_tag: clubTag,
+        // 0 = pas de classement connu → null en base
+        best_world_rank: recordMonde === 0 ? null : (recordMonde || existing?.best_world_rank || null),
+        best_fr_rank: recordFr === 0 ? null : (recordFr || existing?.best_fr_rank || null),
+        current_world_rank: existing?.current_world_rank || null,
+        current_fr_rank: existing?.current_fr_rank || null,
+        updated_at: new Date().toISOString(),
         }, { onConflict: 'club_tag' });
     }
 
@@ -108,8 +109,8 @@ module.exports = {
       trophees ? `🎯 Trophées requis → **${trophees.toLocaleString('fr-FR')}**` : null,
       description ? `📝 Description → *${description}*` : null,
       niveau ? `📋 Niveau → ${niveau}` : null,
-      recordMonde ? `🌍 Record monde → **#${recordMonde}**` : null,
-      recordFr ? `🇫🇷 Record France → **#${recordFr}**` : null,
+      recordMonde !== null ? `🌍 Record monde → **${recordMonde === 0 ? '/' : '#' + recordMonde}**` : null,
+      recordFr !== null ? `🇫🇷 Record France → **${recordFr === 0 ? '/' : '#' + recordFr}**` : null,
     ].filter(Boolean);
 
     const embed = new EmbedBuilder()

@@ -15,7 +15,8 @@ const PRAIRIE_CLUBS = [
 ];
 
 function formatRank(rank, limit) {
-  if (!rank) return `+${limit}`;
+  if (!rank) return '/';
+  if (rank > limit) return `+${limit}`;
   return `#${rank}`;
 }
 
