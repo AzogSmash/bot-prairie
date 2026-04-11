@@ -49,25 +49,14 @@ async function buildClassement(clubFilter = 'tous') {
   }
 
   allMembers.sort((a, b) => b.trophies - a.trophies);
-
   return { allMembers, discordMap };
 }
 
 function buildEmbed(allMembers, discordMap, clubFilter, page = 0) {
-  const pageSize = 10;
+  const pageSize = 30;
   const totalPages = Math.ceil(allMembers.length / pageSize);
   const start = page * pageSize;
   const slice = allMembers.slice(start, start + pageSize);
-
-  const medals = ['👑', '🥈', '🥉'];
-
-  const lines = slice.map((m, i) => {
-    const rank = start + i + 1;
-    const medal = rank <= 3 ? medals[rank - 1] : `**#${rank}**`;
-    const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]} *(${m.bsName})*` : m.bsName;
-    const linked = discordMap[m.bsTag] ? '🔗' : '';
-    return `${medal} ${linked} ${name} — 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}`;
-  });
 
   const clubLabel = clubFilter === 'tous'
     ? 'Toute la famille Prairie'
@@ -78,10 +67,41 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0) {
     ? Math.round(totalTrophies / allMembers.length)
     : 0;
 
+  // Podium séparé (seulement page 1)
+  let description = '';
+
+  if (page === 0) {
+    const podium = slice.slice(0, 3);
+    const rest = slice.slice(3);
+
+    const podiumLines = podium.map((m, i) => {
+      const medals = ['👑', '🥈', '🥉'];
+      const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]}` : m.bsName;
+      const linked = discordMap[m.bsTag] ? ' 🔗' : '';
+      return `${medals[i]} **${name}**${linked}\n┗ 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}`;
+    }).join('\n\n');
+
+    const restLines = rest.map((m, i) => {
+      const rank = i + 4;
+      const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]} *(${m.bsName})*` : m.bsName;
+      const linked = discordMap[m.bsTag] ? '🔗' : '';
+      return `**#${rank}** ${linked} ${name} — 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}`;
+    }).join('\n');
+
+    description = `${podiumLines}\n\n─────────────────\n${restLines}`;
+  } else {
+    description = slice.map((m, i) => {
+      const rank = start + i + 1;
+      const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]} *(${m.bsName})*` : m.bsName;
+      const linked = discordMap[m.bsTag] ? '🔗' : '';
+      return `**#${rank}** ${linked} ${name} — 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}`;
+    }).join('\n');
+  }
+
   return new EmbedBuilder()
     .setColor('#f1c40f')
     .setTitle(`🏆 Classement Prairie — ${clubLabel}`)
-    .setDescription(lines.join('\n'))
+    .setDescription(description)
     .addFields({
       name: '📊 Stats',
       value: [
@@ -90,13 +110,14 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0) {
         `📈 Moyenne : **${avgTrophies.toLocaleString('fr-FR')}**`,
         `🔗 Liés Discord : **${Object.keys(discordMap).length}**`,
       ].join(' • '),
-      inline: false
     })
-    .setFooter({ text: `Prairie Brawl Stars • Page ${page + 1}/${totalPages} • 🔗 = compte Discord lié` })
+    .setFooter({ text: `Prairie Brawl Stars • Page ${page + 1}/${totalPages} • 🔗 = Discord lié` })
     .setTimestamp();
 }
 
 function buildComponents(clubFilter, page, totalPages) {
+  const rows = [];
+
   // Menu filtre club
   const clubMenu = new StringSelectMenuBuilder()
     .setCustomId(`classement_club_${page}`)
@@ -110,29 +131,40 @@ function buildComponents(clubFilter, page, totalPages) {
       }))
     ]);
 
-  // Boutons pagination
-  const prevBtn = new ButtonBuilder()
-    .setCustomId(`classement_prev_${page}_${clubFilter}`)
-    .setLabel('◀ Précédent')
-    .setStyle(ButtonStyle.Secondary)
-    .setDisabled(page === 0);
+  rows.push(new ActionRowBuilder().addComponents(clubMenu));
 
-  const nextBtn = new ButtonBuilder()
-    .setCustomId(`classement_next_${page}_${clubFilter}`)
-    .setLabel('Suivant ▶')
-    .setStyle(ButtonStyle.Secondary)
-    .setDisabled(page >= totalPages - 1);
+  // Boutons numérotés — max 5 par ligne Discord
+  if (totalPages > 1) {
+    // Première ligne : pages 1-5
+    const row1 = new ActionRowBuilder();
+    for (let i = 0; i < Math.min(5, totalPages); i++) {
+      row1.addComponents(
+        new ButtonBuilder()
+          .setCustomId(`classement_goto_${i}_${clubFilter}`)
+          .setLabel(`${i + 1}`)
+          .setStyle(i === page ? ButtonStyle.Primary : ButtonStyle.Secondary)
+          .setDisabled(i === page)
+      );
+    }
+    rows.push(row1);
 
-  const pageBtn = new ButtonBuilder()
-    .setCustomId('classement_page_info')
-    .setLabel(`Page ${page + 1} / ${totalPages}`)
-    .setStyle(ButtonStyle.Primary)
-    .setDisabled(true);
+    // Deuxième ligne : pages 6-10 si besoin
+    if (totalPages > 5) {
+      const row2 = new ActionRowBuilder();
+      for (let i = 5; i < Math.min(10, totalPages); i++) {
+        row2.addComponents(
+          new ButtonBuilder()
+            .setCustomId(`classement_goto_${i}_${clubFilter}`)
+            .setLabel(`${i + 1}`)
+            .setStyle(i === page ? ButtonStyle.Primary : ButtonStyle.Secondary)
+            .setDisabled(i === page)
+        );
+      }
+      rows.push(row2);
+    }
+  }
 
-  return [
-    new ActionRowBuilder().addComponents(clubMenu),
-    new ActionRowBuilder().addComponents(prevBtn, pageBtn, nextBtn),
-  ];
+  return rows;
 }
 
 module.exports = {
@@ -142,42 +174,33 @@ module.exports = {
 
   async execute(interaction) {
     await interaction.deferReply();
-
     const { allMembers, discordMap } = await buildClassement('tous');
-    const totalPages = Math.ceil(allMembers.length / 10);
+    const totalPages = Math.ceil(allMembers.length / 30);
     const embed = buildEmbed(allMembers, discordMap, 'tous', 0);
     const components = buildComponents('tous', 0, totalPages);
-
     await interaction.editReply({ embeds: [embed], components });
   },
 
   async handleSelect(interaction) {
     await interaction.deferUpdate();
-
     const clubFilter = interaction.values[0];
     const { allMembers, discordMap } = await buildClassement(clubFilter);
-    const totalPages = Math.ceil(allMembers.length / 10);
+    const totalPages = Math.ceil(allMembers.length / 30);
     const embed = buildEmbed(allMembers, discordMap, clubFilter, 0);
     const components = buildComponents(clubFilter, 0, totalPages);
-
     await interaction.editReply({ embeds: [embed], components });
   },
 
   async handleButton(interaction) {
     await interaction.deferUpdate();
-
     const parts = interaction.customId.split('_');
-    const action = parts[1];
-    const currentPage = parseInt(parts[2]);
+    // format: classement_goto_PAGE_CLUBFILTER
+    const page = parseInt(parts[2]);
     const clubFilter = parts[3];
-
-    const newPage = action === 'next' ? currentPage + 1 : currentPage - 1;
-
     const { allMembers, discordMap } = await buildClassement(clubFilter);
-    const totalPages = Math.ceil(allMembers.length / 10);
-    const embed = buildEmbed(allMembers, discordMap, clubFilter, newPage);
-    const components = buildComponents(clubFilter, newPage, totalPages);
-
+    const totalPages = Math.ceil(allMembers.length / 30);
+    const embed = buildEmbed(allMembers, discordMap, clubFilter, page);
+    const components = buildComponents(clubFilter, page, totalPages);
     await interaction.editReply({ embeds: [embed], components });
   }
 };
