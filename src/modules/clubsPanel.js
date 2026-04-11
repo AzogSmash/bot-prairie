@@ -14,16 +14,19 @@ const PRAIRIE_CLUBS = [
   { tag: '#C9JUYQQY',  emoji: '🍃', name: 'Prairie Sauvage', color: '#827717', description: 'Club d\'entrée de la famille Prairie. Parfait pour progresser et rejoindre la structure.', level: '🥉 Débutant' },
 ];
 
-// Récupère les classements FR et monde pour un club
+function formatRank(rank, limit) {
+  if (!rank) return `+${limit}`;
+  return `#${rank}`;
+}
+
 async function getClubRankings(tag) {
   const cleanTag = tag.replace('#', '').toUpperCase();
 
   async function fetchRanking(region) {
+    const limit = region === 'global' ? 500 : 200;
     return new Promise((resolve) => {
-      const url = `https://bsproxy.royaleapi.dev/v1/rankings/${region}/clubs`;
-      const options = {
-        headers: { 'Authorization': `Bearer ${process.env.BRAWLSTARS_API_KEY}` }
-      };
+      const url = `https://bsproxy.royaleapi.dev/v1/rankings/${region}/clubs?limit=${limit}`;
+      const options = { headers: { 'Authorization': `Bearer ${process.env.BRAWLSTARS_API_KEY}` } };
       https.get(url, options, (res) => {
         let d = '';
         res.on('data', c => d += c);
@@ -43,10 +46,38 @@ async function getClubRankings(tag) {
     fetchRanking('FR'),
   ]);
 
-  return { worldRank, frRank };
+  // Récupère les records existants
+  const { data: existing } = await supabase
+    .from('club_rankings')
+    .select('*')
+    .eq('club_tag', tag)
+    .single()
+    .catch(() => ({ data: null }));
+
+  const bestWorld = existing
+    ? (worldRank && worldRank < (existing.best_world_rank || 9999) ? worldRank : existing.best_world_rank)
+    : worldRank;
+
+  const bestFr = existing
+    ? (frRank && frRank < (existing.best_fr_rank || 9999) ? frRank : existing.best_fr_rank)
+    : frRank;
+
+  // Sauvegarde
+  await supabase
+    .from('club_rankings')
+    .upsert({
+      club_tag: tag,
+      best_world_rank: bestWorld,
+      best_fr_rank: bestFr,
+      current_world_rank: worldRank,
+      current_fr_rank: frRank,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'club_tag' });
+
+  return { worldRank, frRank, bestWorld, bestFr };
 }
 
-async function buildClubEmbed(clubData, clubConfig) {
+async function buildClubEmbed(clubData, clubConfig, rankings, customConfig) {
   const members = clubData.members || [];
   const memberCount = members.length;
   const maxMembers = 30;
@@ -57,13 +88,11 @@ async function buildClubEmbed(clubData, clubConfig) {
   const maxTrophies = memberCount ? Math.max(...trophiesList) : 0;
   const minTrophies = memberCount ? Math.min(...trophiesList) : 0;
 
-  // Répartition des rôles
   const president = members.filter(m => m.role === 'president');
   const vps = members.filter(m => m.role === 'vicePresident');
   const seniors = members.filter(m => m.role === 'senior');
   const regulars = members.filter(m => m.role === 'member');
 
-  // Top 5 membres
   const top5 = [...members]
     .sort((a, b) => b.trophies - a.trophies)
     .slice(0, 5)
@@ -73,145 +102,85 @@ async function buildClubEmbed(clubData, clubConfig) {
     })
     .join('\n');
 
-  // Barre de remplissage
   const filled = Math.round((memberCount / maxMembers) * 15);
   const fillBar = '█'.repeat(filled) + '░'.repeat(15 - filled);
 
-  // Statut
   const statusText = places === 0 ? '🔴 **Complet**'
     : places <= 3 ? `🟠 **${places} place(s) disponible(s)**`
     : `🟢 **${places} places disponibles**`;
 
-  // Classements
-  const { worldRank, frRank } = await getClubRankings(clubConfig.tag);
+  // Utilise la config custom si disponible, sinon les valeurs par défaut
+  const description = customConfig?.description || clubConfig.description;
+  const level = customConfig?.level || clubConfig.level;
+  const requiredTrophies = customConfig?.required_trophies || clubData.requiredTrophies;
 
-  // Icône du club
+  const cleanTag = clubConfig.tag.replace('#', '');
+  const brawlifyUrl = `https://brawlify.com/stats/club/${cleanTag}`;
   const badgeUrl = clubData.badgeId
     ? `https://cdn.brawlify.com/club-badges/regular/${clubData.badgeId}.png`
     : null;
 
-  // Lien Brawlify
-  const cleanTag = clubConfig.tag.replace('#', '');
-  const brawlifyUrl = `https://brawlify.com/stats/club/${cleanTag}`;
+  const { worldRank, frRank, bestWorld, bestFr } = rankings;
 
   return new EmbedBuilder()
     .setColor(clubConfig.color)
     .setAuthor({
-      name: `${clubConfig.emoji} ${clubData.name} • ${clubConfig.level}`,
+      name: `${clubConfig.emoji} ${clubData.name} • ${level}`,
       iconURL: badgeUrl || undefined,
       url: brawlifyUrl,
     })
     .setThumbnail(badgeUrl || null)
-    .setDescription(
-      `*${clubConfig.description}*`
-    )
+    .setDescription(`*${description}*`)
 
-    // ── Ligne 1 : Statut & Classements ───────────────────────
+    // ── Statut & Classements ──────────────────────────────
     .addFields(
+      { name: '📋 Statut', value: statusText, inline: true },
       {
-        name: '📋 Statut',
-        value: statusText,
+        name: '🌍 Monde',
+        value: `Actuel : **${formatRank(worldRank, 500)}**\nRecord : **${formatRank(bestWorld, 500)}**`,
         inline: true,
       },
       {
-        name: '🌍 Classement Monde',
-        value: worldRank ? `**#${worldRank}**` : '**+200**',
-        inline: true,
-        },
-        {
-        name: '🇫🇷 Classement France',
-        value: frRank ? `**#${frRank}**` : '**+200**',
+        name: '🇫🇷 France',
+        value: `Actuel : **${formatRank(frRank, 200)}**\nRecord : **${formatRank(bestFr, 200)}**`,
         inline: true,
       },
     )
 
-    // ── Ligne 2 : Trophées ────────────────────────────────────
+    // ── Trophées ──────────────────────────────────────────
     .addFields(
-      {
-        name: '🏆 Trophées club',
-        value: `**${clubData.trophies?.toLocaleString('fr-FR')}**`,
-        inline: true,
-      },
-      {
-        name: '📊 Moyenne',
-        value: `**${avgTrophies.toLocaleString('fr-FR')}**`,
-        inline: true,
-      },
-      {
-        name: '🎯 Requis',
-        value: `**${clubData.requiredTrophies?.toLocaleString('fr-FR')}**`,
-        inline: true,
-      },
+      { name: '🏆 Trophées club', value: `**${clubData.trophies?.toLocaleString('fr-FR')}**`, inline: true },
+      { name: '📊 Moyenne', value: `**${avgTrophies.toLocaleString('fr-FR')}**`, inline: true },
+      { name: '🎯 Requis', value: `**${requiredTrophies?.toLocaleString('fr-FR')}**`, inline: true },
     )
 
-    // ── Ligne 3 : Min/Max ─────────────────────────────────────
+    // ── Min/Max ───────────────────────────────────────────
     .addFields(
-      {
-        name: '📈 Meilleur membre',
-        value: `**${maxTrophies.toLocaleString('fr-FR')}** 🏆`,
-        inline: true,
-      },
-      {
-        name: '📉 Membre le plus bas',
-        value: `**${minTrophies.toLocaleString('fr-FR')}** 🏆`,
-        inline: true,
-      },
-      {
-        name: '🏷️ Tag',
-        value: `\`${clubData.tag}\``,
-        inline: true,
-      },
+      { name: '📈 Meilleur', value: `**${maxTrophies.toLocaleString('fr-FR')}** 🏆`, inline: true },
+      { name: '📉 Plus bas', value: `**${minTrophies.toLocaleString('fr-FR')}** 🏆`, inline: true },
+      { name: '🏷️ Tag', value: `\`${clubData.tag}\``, inline: true },
     )
 
-    // ── Ligne 4 : Membres ─────────────────────────────────────
+    // ── Membres ───────────────────────────────────────────
     .addFields({
-    name: `👥 Membres — ${fillBar} ${memberCount}/30`,
-    value: '\u200b',
-    inline: false,
-    })
-    .addFields(
-    {
-        name: '👑 Président',
-        value: president.length > 0 ? president.map(m => `**${m.name}**`).join(', ') : '—',
-        inline: true,
-    },
-    {
-        name: '⭐ Vice-président(s)',
-        value: vps.length > 0 ? vps.map(m => `**${m.name}**`).join(', ') : '—',
-        inline: true,
-    },
-    {
-        name: '\u200b',
-        value: '\u200b',
-        inline: true,
-    },
-    )
-    .addFields(
-    {
-        name: '🔰 Senior(s)',
-        value: `**${seniors.length}** membre(s)`,
-        inline: true,
-    },
-    {
-        name: '👤 Membre(s)',
-        value: `**${regulars.length}** membre(s)`,
-        inline: true,
-    },
-    {
-        name: '\u200b',
-        value: '\u200b',
-        inline: true,
-    },
-    )
-
-    // ── Ligne 5 : Top 5 ───────────────────────────────────────
-    .addFields({
-      name: '🏅 Top 5 membres',
-      value: top5 || 'Aucun membre',
+      name: `👥 Membres — ${fillBar} ${memberCount}/30`,
+      value: '\u200b',
       inline: false,
     })
+    .addFields(
+      { name: '👑 Président', value: president.length > 0 ? president.map(m => `**${m.name}**`).join(', ') : '—', inline: true },
+      { name: '⭐ Vice-président(s)', value: vps.length > 0 ? vps.map(m => `**${m.name}**`).join(', ') : '—', inline: true },
+      { name: '\u200b', value: '\u200b', inline: true },
+    )
+    .addFields(
+      { name: '🔰 Senior(s)', value: `**${seniors.length}** membre(s)`, inline: true },
+      { name: '👤 Membre(s)', value: `**${regulars.length}** membre(s)`, inline: true },
+      { name: '\u200b', value: '\u200b', inline: true },
+    )
 
-    // ── Footer ────────────────────────────────────────────────
+    // ── Top 5 ─────────────────────────────────────────────
+    .addFields({ name: '🏅 Top 5', value: top5 || 'Aucun membre', inline: false })
+
     .setFooter({ text: 'Prairie Brawl Stars • Mis à jour toutes les heures • Clique sur le nom pour voir sur Brawlify' })
     .setTimestamp();
 }
@@ -238,12 +207,26 @@ async function updateClubsPanel(client) {
     }
   }
 
+  // Récupère toutes les configs custom
+  const { data: configs } = await supabase
+    .from('club_config')
+    .select('*');
+
+  const configMap = {};
+  if (configs) {
+    for (const c of configs) configMap[c.club_tag] = c;
+  }
+
   const allMembers = [];
 
   for (const clubConfig of PRAIRIE_CLUBS) {
     try {
-      const clubData = await getClub(clubConfig.tag);
-      const embed = await buildClubEmbed(clubData, clubConfig);
+      const [clubData, rankings] = await Promise.all([
+        getClub(clubConfig.tag),
+        getClubRankings(clubConfig.tag),
+      ]);
+
+      const embed = await buildClubEmbed(clubData, clubConfig, rankings, configMap[clubConfig.tag]);
 
       clubData.members?.forEach(m => allMembers.push({
         bsTag: m.tag,
@@ -261,7 +244,6 @@ async function updateClubsPanel(client) {
           await supabase
             .from('panel_messages')
             .upsert({ club_tag: clubConfig.tag, message_id: msg.id, channel_id: channel.id }, { onConflict: 'club_tag' });
-          console.log(`[ClubsPanel] 📝 Recréé: ${clubConfig.name}`);
         }
       } else {
         const msg = await channel.send({ embeds: [embed] });
@@ -282,4 +264,4 @@ async function updateClubsPanel(client) {
   console.log('[ClubsPanel] ✅ Panels mis à jour');
 }
 
-module.exports = { updateClubsPanel };
+module.exports = { updateClubsPanel, PRAIRIE_CLUBS };
