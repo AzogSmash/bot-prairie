@@ -115,12 +115,12 @@ async function buildClubEmbed(clubData, clubConfig) {
       },
       {
         name: '🌍 Classement Monde',
-        value: worldRank ? `**#${worldRank}** / 200` : '> 200',
+        value: worldRank ? `**#${worldRank}**` : '**+200**',
         inline: true,
-      },
-      {
+        },
+        {
         name: '🇫🇷 Classement France',
-        value: frRank ? `**#${frRank}** / 200` : '> 200',
+        value: frRank ? `**#${frRank}**` : '**+200**',
         inline: true,
       },
     )
@@ -165,15 +165,44 @@ async function buildClubEmbed(clubData, clubConfig) {
 
     // ── Ligne 4 : Membres ─────────────────────────────────────
     .addFields({
-      name: `👥 Membres — ${fillBar} ${memberCount}/30`,
-      value: [
-        `👑 Président : **${president.length}** — ${president.map(m => m.name).join(', ') || '—'}`,
-        `⭐ Vice-président(s) : **${vps.length}** — ${vps.map(m => m.name).join(', ') || '—'}`,
-        `🔰 Senior(s) : **${seniors.length}**`,
-        `👤 Membre(s) : **${regulars.length}**`,
-      ].join('\n'),
-      inline: false,
+    name: `👥 Membres — ${fillBar} ${memberCount}/30`,
+    value: '\u200b',
+    inline: false,
     })
+    .addFields(
+    {
+        name: '👑 Président',
+        value: president.length > 0 ? president.map(m => `**${m.name}**`).join(', ') : '—',
+        inline: true,
+    },
+    {
+        name: '⭐ Vice-président(s)',
+        value: vps.length > 0 ? vps.map(m => `**${m.name}**`).join(', ') : '—',
+        inline: true,
+    },
+    {
+        name: '\u200b',
+        value: '\u200b',
+        inline: true,
+    },
+    )
+    .addFields(
+    {
+        name: '🔰 Senior(s)',
+        value: `**${seniors.length}** membre(s)`,
+        inline: true,
+    },
+    {
+        name: '👤 Membre(s)',
+        value: `**${regulars.length}** membre(s)`,
+        inline: true,
+    },
+    {
+        name: '\u200b',
+        value: '\u200b',
+        inline: true,
+    },
+    )
 
     // ── Ligne 5 : Top 5 ───────────────────────────────────────
     .addFields({
