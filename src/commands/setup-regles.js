@@ -20,7 +20,7 @@ module.exports = {
       .setTitle('📜 Règlement de La Prairie')
       .setDescription(
         'Bienvenue sur le serveur officiel de la famille Prairie 🌿\n\n' +
-        'Ce serveur réunit **7 clubs et 350+ membres actifs** autour de Brawl Stars.\n' +
+        'Ce serveur réunit **7 clubs et 300+ membres actifs** autour de Brawl Stars.\n' +
         'Pour que tout le monde soit bien ici, merci de respecter les règles suivantes.\n\n' +
         '*Le non-respect de ces règles peut entraîner un avertissement, une exclusion temporaire ou définitive.*'
       )
