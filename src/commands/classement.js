@@ -1,67 +1,157 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { getClub } = require('../lib/brawlapi');
 const { supabase } = require('../lib/supabase');
+
+const PRAIRIE_CLUBS = [
+  { tag: '#29UPLG8QQ', emoji: '🌟', name: 'Prairie Étoilée' },
+  { tag: '#2C9Y28JPP', emoji: '🌿', name: 'Prairie Fleurie' },
+  { tag: '#2JUVYQ0YV', emoji: '⚡', name: 'Prairie Céleste' },
+  { tag: '#2CJJLLUQ9', emoji: '❄️', name: 'Prairie Gelée' },
+  { tag: '#2YGPRQYCC', emoji: '🔥', name: 'Prairie Brûlée' },
+  { tag: '#JY89VGGP',  emoji: '🌱', name: 'Mini Prairie' },
+  { tag: '#C9JUYQQY',  emoji: '🍃', name: 'Prairie Sauvage' },
+];
+
+async function buildClassement(clubFilter = 'tous') {
+  // Récupère tous les membres BS des clubs sélectionnés
+  const clubsToFetch = clubFilter === 'tous'
+    ? PRAIRIE_CLUBS
+    : PRAIRIE_CLUBS.filter(c => c.tag === clubFilter);
+
+  let allMembers = [];
+
+  for (const club of clubsToFetch) {
+    try {
+      const clubData = await getClub(club.tag);
+      const members = (clubData.members || []).map(m => ({
+        bsTag: m.tag,
+        bsName: m.name,
+        trophies: m.trophies,
+        role: m.role,
+        clubName: clubData.name,
+        clubEmoji: club.emoji,
+      }));
+      allMembers = [...allMembers, ...members];
+    } catch (err) {
+      console.error(`[Classement] Erreur club ${club.name}:`, err.message);
+    }
+  }
+
+  // Récupère les membres Discord liés
+  const { data: linkedMembers } = await supabase
+    .from('members')
+    .select('discord_username, brawlstars_tag')
+    .not('brawlstars_tag', 'is', null);
+
+  // Crée un map tag BS → discord username
+  const discordMap = {};
+  if (linkedMembers) {
+    for (const m of linkedMembers) {
+      discordMap[m.brawlstars_tag] = m.discord_username;
+    }
+  }
+
+  // Trie par trophées
+  allMembers.sort((a, b) => b.trophies - a.trophies);
+
+  return { allMembers, discordMap };
+}
+
+function buildEmbed(allMembers, discordMap, clubFilter, page = 0) {
+  const pageSize = 10;
+  const totalPages = Math.ceil(allMembers.length / pageSize);
+  const start = page * pageSize;
+  const slice = allMembers.slice(start, start + pageSize);
+
+  const medals = ['👑', '🥈', '🥉'];
+
+  const lines = slice.map((m, i) => {
+    const rank = start + i + 1;
+    const medal = rank <= 3 ? medals[rank - 1] : `**#${rank}**`;
+    const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]} *(${m.bsName})*` : m.bsName;
+    const linked = discordMap[m.bsTag] ? '🔗' : '';
+    return `${medal} ${linked} ${name} — 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}`;
+  });
+
+  const clubLabel = clubFilter === 'tous'
+    ? 'Toute la famille Prairie'
+    : PRAIRIE_CLUBS.find(c => c.tag === clubFilter)?.name || clubFilter;
+
+  const totalTrophies = allMembers.reduce((sum, m) => sum + m.trophies, 0);
+  const avgTrophies = allMembers.length
+    ? Math.round(totalTrophies / allMembers.length)
+    : 0;
+
+  return new EmbedBuilder()
+    .setColor('#f1c40f')
+    .setTitle(`🏆 Classement Prairie — ${clubLabel}`)
+    .setDescription(lines.join('\n'))
+    .addFields(
+      {
+        name: '📊 Stats',
+        value: [
+          `👥 **${allMembers.length}** membres`,
+          `🏆 Total : **${totalTrophies.toLocaleString('fr-FR')}**`,
+          `📈 Moyenne : **${avgTrophies.toLocaleString('fr-FR')}**`,
+          `🔗 Liés Discord : **${Object.keys(discordMap).length}**`,
+        ].join(' • '),
+        inline: false
+      }
+    )
+    .setFooter({ text: `Prairie Brawl Stars • Page ${page + 1}/${totalPages} • 🔗 = compte Discord lié` })
+    .setTimestamp();
+}
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('classement')
-    .setDescription('Affiche le classement interne Prairie 🏆'),
+    .setDescription('Classement des membres de la famille Prairie 🏆'),
 
   async execute(interaction) {
     await interaction.deferReply();
 
-    // Récupère le top 10 depuis Supabase
-    const { data, error } = await supabase
-      .from('members')
-      .select('discord_id, discord_username, brawlstars_trophies, club_name, brawlstars_tag')
-      .not('brawlstars_trophies', 'is', null)
-      .order('brawlstars_trophies', { ascending: false })
-      .limit(10);
+    const { allMembers, discordMap } = await buildClassement('tous');
+    const embed = buildEmbed(allMembers, discordMap, 'tous', 0);
+    const totalPages = Math.ceil(allMembers.length / 10);
 
-    if (error || !data || data.length === 0) {
-      return interaction.editReply({
-        content: '❌ Aucun membre lié pour l\'instant. Utilisez `/lier` pour apparaître dans le classement !'
-      });
-    }
+    // Menu filtre par club
+    const clubMenu = new StringSelectMenuBuilder()
+      .setCustomId('classement_club_0')
+      .setPlaceholder('🌿 Filtrer par club')
+      .addOptions([
+        { label: '🌿 Toute la famille', value: 'tous', default: true },
+        ...PRAIRIE_CLUBS.map(c => ({ label: `${c.emoji} ${c.name}`, value: c.tag }))
+      ]);
 
-    // Médailles pour le podium
-    const medals = ['👑', '🥈', '🥉'];
+    const row = new ActionRowBuilder().addComponents(clubMenu);
 
-    // Construit le classement
-    const lines = data.map((member, index) => {
-      const medal = medals[index] || `**#${index + 1}**`;
-      const trophies = member.brawlstars_trophies?.toLocaleString('fr-FR') || '?';
-      const club = member.club_name || 'Sans club';
-      const name = member.discord_username || 'Inconnu';
-      return `${medal} **${name}** — 🏆 ${trophies} • 🌿 ${club}`;
-    });
+    await interaction.editReply({ embeds: [embed], components: [row] });
+  },
 
-    // Rang de l'utilisateur qui a lancé la commande
-    const { data: allMembers } = await supabase
-      .from('members')
-      .select('discord_id')
-      .not('brawlstars_trophies', 'is', null)
-      .order('brawlstars_trophies', { ascending: false });
+  async handleSelect(interaction) {
+    await interaction.deferUpdate();
 
-    const userRank = allMembers
-      ? allMembers.findIndex(m => m.discord_id === interaction.user.id) + 1
-      : null;
+    const parts = interaction.customId.split('_');
+    const clubFilter = interaction.values[0];
+    const page = 0;
 
-    const totalMembers = allMembers?.length || 0;
+    const { allMembers, discordMap } = await buildClassement(clubFilter);
+    const embed = buildEmbed(allMembers, discordMap, clubFilter, page);
 
-    const embed = new EmbedBuilder()
-      .setColor('#f1c40f')
-      .setTitle('🏆 Classement Prairie')
-      .setDescription(lines.join('\n'))
-      .addFields({
-        name: '📊 Ton rang',
-        value: userRank
-          ? `Tu es **#${userRank}** sur ${totalMembers} membres liés`
-          : 'Tu n\'apparais pas encore — utilise `/lier` !',
-        inline: false
-      })
-      .setFooter({ text: `Prairie Brawl Stars • ${totalMembers} membres liés` })
-      .setTimestamp();
+    const clubMenu = new StringSelectMenuBuilder()
+      .setCustomId(`classement_club_${page}`)
+      .setPlaceholder('🌿 Filtrer par club')
+      .addOptions([
+        { label: '🌿 Toute la famille', value: 'tous', default: clubFilter === 'tous' },
+        ...PRAIRIE_CLUBS.map(c => ({
+          label: `${c.emoji} ${c.name}`,
+          value: c.tag,
+          default: c.tag === clubFilter
+        }))
+      ]);
 
-    await interaction.editReply({ embeds: [embed] });
+    const row = new ActionRowBuilder().addComponents(clubMenu);
+
+    await interaction.editReply({ embeds: [embed], components: [row] });
   }
 };

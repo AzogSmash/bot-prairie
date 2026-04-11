@@ -67,6 +67,10 @@ client.on('interactionCreate', async interaction => {
       const absencesCmd = require('./commands/absences');
       await absencesCmd.handleSelect(interaction);
     }
+    if (interaction.customId.startsWith('classement_')) {
+    const classementCmd = require('./commands/classement');
+    await classementCmd.handleSelect(interaction);
+    }
     return;
   }
 
