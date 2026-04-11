@@ -54,7 +54,7 @@ client.on('interactionCreate', async interaction => {
 
   // ── Modals ────────────────────────────────────────────────
   if (interaction.isModalSubmit()) {
-    if (interaction.customId === 'absence_modal') {
+    if (interaction.customId.startsWith('absence_modal')) {
       const absenceCmd = require('./commands/absence');
       await absenceCmd.handleModal(interaction);
     }
@@ -70,6 +70,10 @@ client.on('interactionCreate', async interaction => {
     if (interaction.customId.startsWith('classement_')) {
       const classementCmd = require('./commands/classement');
       await classementCmd.handleSelect(interaction);
+    }
+    if (interaction.customId.startsWith('annuler_absence_select_')) {
+      const absenceAnnulerCmd = require('./commands/absence-annuler');
+      await absenceAnnulerCmd.handleSelect(interaction);
     }
     return;
   }
