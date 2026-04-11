@@ -23,9 +23,8 @@ async function getClubRankings(tag) {
   const cleanTag = tag.replace('#', '').toUpperCase();
 
   async function fetchRanking(region) {
-    const limit = 1000;
     return new Promise((resolve) => {
-      const url = `https://bsproxy.royaleapi.dev/v1/rankings/${region}/clubs?limit=${limit}`;
+      const url = `https://bsproxy.royaleapi.dev/v1/rankings/${region}/clubs?limit=200`;
       const options = { headers: { 'Authorization': `Bearer ${process.env.BRAWLSTARS_API_KEY}` } };
       https.get(url, options, (res) => {
         let d = '';
@@ -33,8 +32,6 @@ async function getClubRankings(tag) {
         res.on('end', () => {
           try {
             const data = JSON.parse(d);
-            console.log(`[Rankings] ${region} → ${data.items?.length} clubs, paging: ${JSON.stringify(data.paging)}`);
-            console.log(`[Rankings] ${region} → ${data.items?.length} clubs retournés`);
             const rank = data.items?.findIndex(c => c.tag === `#${cleanTag}`) + 1;
             resolve(rank > 0 ? rank : null);
           } catch { resolve(null); }
