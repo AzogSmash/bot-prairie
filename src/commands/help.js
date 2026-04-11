@@ -13,8 +13,8 @@ module.exports = {
       .setTitle('🌿 Bot Prairie — Commandes disponibles')
       .setDescription(
         'Bienvenue sur le bot officiel de la famille Prairie !\n' +
-        'Ce bot a été développé spécialement pour notre communauté de 7 clubs et 350+ membres actifs.\n\n' +
-        'Si tu rencontres un problème, ping un <@&' + process.env.STAFF_ROLE_ID + '> 🛠️'
+        'Ce bot a été développé spécialement pour notre communauté de 7 clubs et 200+ membres actifs.\n\n' +
+        'Si tu rencontres un problème, ping un <@&' + process.env.TECH_ROLE_ID + '> 🛠️'
       )
       .addFields(
         // Brawl Stars
@@ -34,7 +34,6 @@ module.exports = {
           name: '📋 Absences',
           value: [
             '`/absence` — Déclare une absence via formulaire',
-            '`/absences` — Liste les absences avec filtres par club et période',
             '`/absence-annuler` — Annule ton absence déclarée',
           ].join('\n'),
           inline: false,
@@ -65,7 +64,7 @@ module.exports = {
             '• `/profil` fonctionne uniquement après avoir fait `/lier`',
             '• Les stats BS sont récupérées en temps réel',
             '• Les panels clubs se mettent à jour automatiquement toutes les heures',
-            `• Un problème ? Ping <@&${process.env.STAFF_ROLE_ID}> 🛠️`,
+            `• Un problème ? Ping <@&${process.env.TECH_ROLE_ID}> 🛠️`,
           ].join('\n'),
           inline: false,
         },
