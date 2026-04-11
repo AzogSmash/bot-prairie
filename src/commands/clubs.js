@@ -92,16 +92,17 @@ module.exports = {
       const brawlifyUrl = `https://brawlify.com/stats/club/${cleanTag}`;
 
     fields.push({
-      name: `${club.emoji} ${club.name}`,
+      name: `${club.emoji} ${club.name} • [Brawlify ↗](${brawlifyUrl})`,
       value: [
-        `${statusText} • [Voir sur Brawlify](${brawlifyUrl})`,
+        `${statusText}`,
+        `${fillBar} **${members}/30** • 🔗 **${linkedCount}** liés Discord`,
         ``,
-        `🏆 **${club.trophies?.toLocaleString('fr-FR')}** trophées • 📊 Moy: **${avgTrophies.toLocaleString('fr-FR')}** • 🎯 Requis: **${club.requiredTrophies?.toLocaleString('fr-FR')}**`,
+        `🏆 **${club.trophies?.toLocaleString('fr-FR')}** • 📊 **${avgTrophies.toLocaleString('fr-FR')}** moy • 🎯 **${club.requiredTrophies?.toLocaleString('fr-FR')}** requis`,
+        `📈 Meilleur : **${maxTrophies.toLocaleString('fr-FR')}** 🏆 — 👑 **${topMember?.name || '?'}**`,
         ``,
-        `👥 ${fillBar} **${members}/30** • 🔗 **${linkedCount}** liés Discord`,
-        `📈 Meilleur: **${maxTrophies.toLocaleString('fr-FR')}** 🏆 — 👑 ${topMember?.name || '?'}`,
-        ``,
-        `${worldStr} *(record: **${bestWorldStr}**)* • ${frStr} *(record: **${bestFrStr}**)*`,
+        `🌍 Actuel : **${worldStr.replace('🌍 ', '')}** • Record : **${bestWorldStr}**`,
+        `🇫🇷 Actuel : **${frStr.replace('🇫🇷 ', '')}** • Record : **${bestFrStr}**`,
+        `\u200b`,
       ].join('\n'),
       inline: false,
     });
