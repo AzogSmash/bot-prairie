@@ -1,3 +1,4 @@
+const { setCache } = require('../lib/cache');
 const { DateTime } = require('luxon');
 const { EmbedBuilder } = require('discord.js');
 const { getClub } = require('../lib/brawlapi');
