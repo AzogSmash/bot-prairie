@@ -1,4 +1,4 @@
-const { setCache, getCache } = require('../lib/cache');
+const { setCache, getCache, isCacheValid } = require('../lib/cache');
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { getPlayer, getBattleLog } = require('../lib/brawlapi');
 const { supabase } = require('../lib/supabase');
