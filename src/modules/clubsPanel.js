@@ -273,7 +273,12 @@ async function updateClubsPanel(client) {
     }
   }
 
-  setCache(allMembers);
+  const progression = {};
+  for (const club of PRAIRIE_CLUBS) {
+    progression[club.tag] = await getProgressionStats(club.tag);
+  }
+  progression['tous'] = await getProgressionStats('tous');
+  setCache(allMembers, progression);
 
   // Snapshots
   const now = getNowParis();

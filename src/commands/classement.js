@@ -1,3 +1,4 @@
+const { getCache, isCacheValid } = require('../lib/cache');
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { getClub } = require('../lib/brawlapi');
 const { supabase } = require('../lib/supabase');
@@ -314,7 +315,8 @@ module.exports = {
     const { allMembers, discordMap } = await buildClassement('tous');
     const requesterBsTag = await getRequesterBsTag(interaction.user.id);
     const totalPages = Math.ceil(allMembers.length / 30);
-    const progression = await getProgressionStats('tous');
+    const { progressionCache } = getCache();
+    const progression = isCacheValid() ? (progressionCache['tous'] || null) : null;
     const embed = buildEmbed(allMembers, discordMap, 'tous', 0, [], requesterBsTag, progression);
     const components = buildComponents('tous', 0, totalPages);
     await interaction.editReply({ embeds: [embed], components });
@@ -334,7 +336,8 @@ module.exports = {
     }
 
     const totalPages = Math.ceil(allMembers.length / 30);
-    const progression = await getProgressionStats(clubFilter);
+    const { progressionCache } = getCache();
+    const progression = isCacheValid() ? (progressionCache[clubFilter] || null) : null;
     const embed = buildEmbed(allMembers, discordMap, clubFilter, 0, globalMembers, requesterBsTag, progression);
     const components = buildComponents(clubFilter, 0, totalPages, fromProfil);
     await interaction.editReply({ embeds: [embed], components });
@@ -361,7 +364,8 @@ module.exports = {
     }
 
     const totalPages = Math.ceil(allMembers.length / 30);
-    const progression = await getProgressionStats(clubFilter);
+    const { progressionCache } = getCache();
+    const progression = isCacheValid() ? (progressionCache[clubFilter] || null) : null;
     const embed = buildEmbed(allMembers, discordMap, clubFilter, page, globalMembers, requesterBsTag, progression);
     const components = buildComponents(clubFilter, page, totalPages, fromProfil);
     await interaction.editReply({ embeds: [embed], components });
