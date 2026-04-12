@@ -50,46 +50,41 @@ async function deployCommands() {
 }
 
 // Gestion des interactions
-client.on('interactionCreate', async interaction => {
+  client.on('interactionCreate', async interaction => {
 
-  // ── Modals ────────────────────────────────────────────────
-  if (interaction.isModalSubmit()) {
-    if (interaction.customId.startsWith('absence_modal')) {
-      const absenceCmd = require('./commands/absence');
-      await absenceCmd.handleModal(interaction);
+    // ── Modals ────────────────────────────────────────────────
+    if (interaction.isModalSubmit()) {
+      if (interaction.customId.startsWith('absence_modal')) {
+        const absenceCmd = require('./commands/absence');
+        await absenceCmd.handleModal(interaction);
+      }
+      return;
     }
-    return;
-  }
 
-  // ── Menus déroulants ──────────────────────────────────────
-  if (interaction.isStringSelectMenu()) {
-    if (interaction.customId.startsWith('absences_')) {
-      const absencesCmd = require('./commands/absences');
-      await absencesCmd.handleSelect(interaction);
+    // ── Menus déroulants ──────────────────────────────────────
+    if (interaction.isStringSelectMenu()) {
+      if (interaction.customId.startsWith('absences_')) {
+        const absencesCmd = require('./commands/absences');
+        await absencesCmd.handleSelect(interaction);
+      }
+      if (interaction.customId.startsWith('classement_')) {
+        const classementCmd = require('./commands/classement');
+        await classementCmd.handleSelect(interaction);
+      }
+      if (interaction.customId.startsWith('annuler_absence_select_')) {
+        const absenceAnnulerCmd = require('./commands/absence-annuler');
+        await absenceAnnulerCmd.handleSelect(interaction);
+      }
+      return;
     }
-    if (interaction.customId.startsWith('classement_')) {
-      const classementCmd = require('./commands/classement');
-      await classementCmd.handleSelect(interaction);
-    }
-    if (interaction.customId.startsWith('annuler_absence_select_')) {
-      const absenceAnnulerCmd = require('./commands/absence-annuler');
-      await absenceAnnulerCmd.handleSelect(interaction);
-    }
-    return;
-  }
 
-  // ── Boutons ───────────────────────────────────────────────
+    // ── Boutons ───────────────────────────────────────────────
   if (interaction.isButton()) {
     const parts = interaction.customId.split('_');
     const action = parts[0];
 
-    // Pagination classement
-    if (action === 'classement') {
-      const classementCmd = require('./commands/classement');
-      await classementCmd.handleButton(interaction);
-      return;
-    }
-    if (parts[1] === 'profil') {
+    // Bouton retour profil depuis classement
+    if (action === 'classement' && parts[1] === 'profil') {
       await interaction.deferReply({ ephemeral: true });
       try {
         const embed = await buildProfileEmbed(interaction.user, interaction.client);
@@ -115,6 +110,14 @@ client.on('interactionCreate', async interaction => {
       }
       return;
     }
+
+    // Pagination classement
+    if (action === 'classement') {
+      const classementCmd = require('./commands/classement');
+      await classementCmd.handleButton(interaction);
+      return;
+    }
+
     // Refresh profil
     if (action === 'refresh') {
       await interaction.deferUpdate();
