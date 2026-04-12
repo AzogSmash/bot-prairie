@@ -3,7 +3,6 @@ const { DateTime } = require('luxon');
 const { EmbedBuilder } = require('discord.js');
 const { getClub } = require('../lib/brawlapi');
 const { getProgressionStats } = require('../lib/progression');
-const { getMemberProgression } = require('../lib/progression');
 const { supabase } = require('../lib/supabase');
 const https = require('https');
 
@@ -280,7 +279,9 @@ async function updateClubsPanel(client) {
     progression[club.tag] = await getProgressionStats(club.tag);
   }
   progression['tous'] = await getProgressionStats('tous');
+  console.log('setCache type:', typeof setCache);
   setCache(allMembers, progression);
+
 
   // Snapshots
   const now = getNowParis();
