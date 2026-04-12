@@ -170,108 +170,86 @@ const formatProg = (val, current) => val === null ? '—' : `+${(current - val).
     : 'Inconnu';
 
   const embed = new EmbedBuilder()
-    .setColor(color)
-    .setAuthor({
-      name: `${player.name} • ${player.tag}`,
-      iconURL: target.displayAvatarURL({ dynamic: true }),
-    })
-    .setTitle(`${rankEmoji} Profil Prairie`)
-    .setThumbnail(bsIconUrl || target.displayAvatarURL({ dynamic: true, size: 256 }))
+  .setColor(color)
+  .setAuthor({
+    name: `${player.name} • ${player.tag}`,
+    iconURL: target.displayAvatarURL({ dynamic: true }),
+  })
+  .setTitle(`${rankEmoji} Profil Prairie — #${rankInFamily} / ${totalInFamily}`)
+  .setThumbnail(bsIconUrl || target.displayAvatarURL({ dynamic: true, size: 256 }))
 
-    // ── Bloc 1 : Identité ─────────────────────────────────
-    .addFields(
-      { name: '🌿 Club', value: player.club?.name || 'Sans club', inline: true },
-      { name: '📅 Sur le serveur', value: joinedAt, inline: true },
-      { name: '\u200b', value: '\u200b', inline: true },
-    )
+  // ── Identité ──────────────────────────────────────────────
+  .addFields({
+    name: '━━━━━━━━━━━━━━━━━━━━━━\n👤 IDENTITÉ',
+    value: [
+      `🌿 **${player.club?.name || 'Sans club'}**  •  🎯 Niv. **${player.expLevel}**  •  ⭐ Prestige **${player.totalPrestigeLevel || 0}**`,
+      `📅 Sur le serveur : ${joinedAt}`,
+    ].join('\n'),
+    inline: false,
+  })
 
-    // ── Bloc 2 : Trophées ─────────────────────────────────
-    .addFields(
-      { name: '🏆 Trophées', value: `**${player.trophies.toLocaleString('fr-FR')}**`, inline: true },
-      { name: '🥇 Record', value: `**${player.highestTrophies?.toLocaleString('fr-FR') || '?'}**`, inline: true },
-      { name: `${rankEmoji} Rang Prairie`, value: rankInFamily > 0 ? `**#${rankInFamily}** / ${totalInFamily}` : 'Non classé', inline: true },
-    )
+  // ── Trophées & Progression ────────────────────────────────
+  .addFields({
+    name: '━━━━━━━━━━━━━━━━━━━━━━\n🏆 TROPHÉES & PROGRESSION',
+    value: [
+      `🏆 **${player.trophies.toLocaleString('fr-FR')}**  •  🥇 Record : **${player.highestTrophies?.toLocaleString('fr-FR') || '?'}**  •  ${rankEmoji} **#${rankInFamily}** / ${totalInFamily}`,
+      `\`${progress}\` ${player.trophies.toLocaleString('fr-FR')} / ${nextMilestone ? nextMilestone.toLocaleString('fr-FR') : 'Max 🎉'}`,
+      `\u200b`,
+      `🔥 Aujourd'hui : **${formatProg(progression.daily, player.trophies)}**  •  📅 Semaine : **${formatProg(progression.weekly, player.trophies)}**  •  🏆 Saison : **${formatProg(progression.seasonRef, player.trophies)}**`,
+    ].join('\n'),
+    inline: false,
+  })
 
-    // ── Bloc 3 : Niveau & Prestige ────────────────────────
-    .addFields(
-      { name: '🎯 Niveau', value: `**${player.expLevel}**`, inline: true },
-      { name: '⭐ Prestige', value: `**${player.totalPrestigeLevel || 0}**`, inline: true },
-      { name: '\u200b', value: '\u200b', inline: true },
-    )
+  // ── Brawler favori ────────────────────────────────────────
+  .addFields({
+    name: `━━━━━━━━━━━━━━━━━━━━━━\n🎮 BRAWLER FAVORI — ${topBrawler?.name || '?'}`,
+    value: topBrawler ? [
+      `${getRankEmoji(topBrawler.rank)} Rang **${topBrawler.rank}**  •  🏆 **${topBrawler.trophies.toLocaleString('fr-FR')}** trophées  •  ⚡ Power **${topBrawler.power}**/11`,
+      `⚡ HC ${topBrawler.hyperCharges?.length > 0 ? '✅' : '❌'}${topBrawler.skin?.name ? `  •  🎨 **${topBrawler.skin.name}**` : ''}  •  🔥 Streak max : **${topBrawler.maxWinStreak || 0}**`,
+    ].join('\n') : 'Aucun brawler',
+    inline: false,
+  })
 
-    // ── Séparateur + Progression ──────────────────────────
-    .addFields({
-      name: nextMilestone
-        ? `📈 Vers ${nextMilestone.toLocaleString('fr-FR')} trophées`
-        : '📈 Progression',
-      value: nextMilestone
-        ? `\`${progress}\` ${player.trophies.toLocaleString('fr-FR')} / ${nextMilestone.toLocaleString('fr-FR')}`
-        : `\`████████████\` Palier max atteint 🎉`,
-      inline: false,
-    })
+  // ── Collection ────────────────────────────────────────────
+  .addFields({
+    name: '━━━━━━━━━━━━━━━━━━━━━━\n📦 COLLECTION',
+    value: `🗂️ **${brawlers.length}** débloqués  •  💪 **${maxedBrawlers}**/${brawlers.length} au max  •  ⚡ **${hyperchargeBrawlers}** HC`,
+    inline: false,
+  })
 
-    .addFields({
-      name: '📊 Progression en trophées',
-      value: [
-        `🔥 Aujourd'hui : **${formatProg(progression.daily, player.trophies)}**`,
-        `📅 Cette semaine : **${formatProg(progression.weekly, player.trophies)}**`,
-        `🏆 Cette saison : **${formatProg(progression.seasonRef, player.trophies)}**`,
-      ].join('\n'),
-      inline: false,
-    })
+  // ── Victoires ─────────────────────────────────────────────
+  .addFields({
+    name: '━━━━━━━━━━━━━━━━━━━━━━\n⚔️ VICTOIRES',
+    value: `⚔️ 3v3 : **${player['3vs3Victories']?.toLocaleString('fr-FR') || '?'}**  •  ☠️ Solo : **${player.soloVictories?.toLocaleString('fr-FR') || '?'}**  •  👥 Duo : **${player.duoVictories?.toLocaleString('fr-FR') || '?'}**`,
+    inline: false,
+  })
 
-    // ── Bloc 4 : Brawler favori ───────────────────────────
-    .addFields({
-      name: `🎮 Brawler favori — ${topBrawler?.name || '?'}`,
-      value: topBrawler ? [
-        `${getRankEmoji(topBrawler.rank)} **Rang ${topBrawler.rank}** • 🏆 **${topBrawler.trophies.toLocaleString('fr-FR')}** trophées`,
-        `⚡ Power **${topBrawler.power}**/11 • ${topBrawler.hyperCharges?.length > 0 ? '⚡ HC ✅' : '⚡ HC ❌'}`,
-        topBrawler.skin?.name ? `🎨 **${topBrawler.skin.name}**` : null,
-        `🔥 Win streak max : **${topBrawler.maxWinStreak || 0}**`,
-      ].filter(Boolean).join('\n') : 'Aucun brawler',
-      inline: false,
-    })
+  // ── Battle log ────────────────────────────────────────────
+  .addFields({
+    name: '━━━━━━━━━━━━━━━━━━━━━━\n📊 25 DERNIÈRES PARTIES',
+    value: [
+      winRate !== null ? `🎯 Win rate : **${winRate}%**` : null,
+      favoriteMode ? `🕹️ Mode favori : **${modeLabel(favoriteMode)}**` : null,
+      recentBrawler ? `🎮 Dernier brawler : **${recentBrawler}**` : null,
+      `🔥 Meilleure win streak : **${maxWinStreak}**`,
+    ].filter(Boolean).join('  •  ') || 'Aucune partie récente',
+    inline: false,
+  })
 
-    // ── Bloc 5 : Collection ───────────────────────────────
-    .addFields(
-      { name: '🗂️ Débloqués', value: `**${brawlers.length}**`, inline: true },
-      { name: '💪 Au max', value: `**${maxedBrawlers}** / ${brawlers.length}`, inline: true },
-      { name: '⚡ Hypercharges', value: `**${hyperchargeBrawlers}**`, inline: true },
-    )
+  // ── Statut ────────────────────────────────────────────────
+  .addFields({
+    name: '\u200b',
+    value: data.status === 'staff' ? '🛡️ **Staff Prairie**'
+      : data.status === 'inactif' ? '⚠️ **Inactif**'
+      : data.status === 'nouveau' ? '🆕 **Nouveau membre**'
+      : '✅ **Membre actif**',
+    inline: false,
+  })
 
-    // ── Bloc 6 : Victoires ────────────────────────────────
-    .addFields(
-      { name: '⚔️ 3v3', value: `**${player['3vs3Victories']?.toLocaleString('fr-FR') || '?'}**`, inline: true },
-      { name: '☠️ Solo', value: `**${player.soloVictories?.toLocaleString('fr-FR') || '?'}**`, inline: true },
-      { name: '👥 Duo', value: `**${player.duoVictories?.toLocaleString('fr-FR') || '?'}**`, inline: true },
-    )
+  .setFooter({ text: 'Prairie Brawl Stars • Stats en temps réel' })
+  .setTimestamp();
 
-    // ── Bloc 7 : Battle log ───────────────────────────────
-    .addFields({
-      name: '📊 25 dernières parties',
-      value: [
-        winRate !== null ? `🎯 Win rate : **${winRate}%**` : null,
-        favoriteMode ? `🕹️ Mode favori : **${modeLabel(favoriteMode)}**` : null,
-        recentBrawler ? `🎮 Dernier brawler : **${recentBrawler}**` : null,
-        `🔥 Meilleure win streak (global) : **${maxWinStreak}**`,
-      ].filter(Boolean).join('\n') || 'Aucune partie récente',
-      inline: false,
-    })
-
-    // ── Bloc 8 : Statut ───────────────────────────────────
-    .addFields({
-      name: '📋 Statut Prairie',
-      value: data.status === 'staff' ? '🛡️ Staff Prairie'
-        : data.status === 'inactif' ? '⚠️ Inactif'
-        : data.status === 'nouveau' ? '🆕 Nouveau membre'
-        : '✅ Membre actif',
-      inline: true,
-    })
-
-    .setFooter({ text: 'Prairie Brawl Stars • Stats en temps réel' })
-    .setTimestamp();
-
-  return embed;
+return embed;
 }
 
 module.exports = {
