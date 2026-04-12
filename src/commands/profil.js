@@ -1,7 +1,8 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { getPlayer, getBattleLog } = require('../lib/brawlapi');
 const { supabase } = require('../lib/supabase');
-const { getCache, isCacheValid } = require('../lib/cache');
+const { getProgressionStats } = require('../lib/progression');
+const { getMemberProgression } = require('../lib/progression');
 const { getClub } = require('../lib/brawlapi');
 
 const PRAIRIE_CLUBS = [

@@ -1,4 +1,5 @@
-const { getCache, isCacheValid } = require('../lib/cache');
+const { getProgressionStats } = require('../lib/progression');
+const { getMemberProgression } = require('../lib/progression');
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { getClub } = require('../lib/brawlapi');
 const { supabase } = require('../lib/supabase');

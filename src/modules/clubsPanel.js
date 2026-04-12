@@ -1,7 +1,8 @@
 const { DateTime } = require('luxon');
 const { EmbedBuilder } = require('discord.js');
 const { getClub } = require('../lib/brawlapi');
-const { setCache } = require('../lib/cache');
+const { getProgressionStats } = require('../lib/progression');
+const { getMemberProgression } = require('../lib/progression');
 const { supabase } = require('../lib/supabase');
 const https = require('https');
 
