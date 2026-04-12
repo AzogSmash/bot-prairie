@@ -6,11 +6,11 @@ const { getCache, isCacheValid } = require('../lib/cache');
 const PRAIRIE_CLUBS = [
   { tag: '#29UPLG8QQ', emoji: '🌟', name: 'Prairie Étoilée', color: '#1a237e' },
   { tag: '#2C9Y28JPP', emoji: '🌿', name: 'Prairie Fleurie', color: '#1b5e20' },
-  { tag: '#2JUVYQ0YV', emoji: '⚡', name: 'Prairie Céleste', color: '#0d47a1' },
+  { tag: '#2JUVYQ0YV', emoji: '🪽', name: 'Prairie Céleste', color: '#0d47a1' },
   { tag: '#2CJJLLUQ9', emoji: '❄️', name: 'Prairie Gelée', color: '#006064' },
   { tag: '#2YGPRQYCC', emoji: '🔥', name: 'Prairie Brûlée', color: '#bf360c' },
   { tag: '#JY89VGGP',  emoji: '🌱', name: 'Mini Prairie', color: '#33691e' },
-  { tag: '#C9JUYQQY',  emoji: '🍃', name: 'Prairie Sauvage', color: '#827717' },
+  { tag: '#C9JUYQQY',  emoji: '🐾', name: 'Prairie Sauvage', color: '#827717' },
 ];
 
 module.exports = {

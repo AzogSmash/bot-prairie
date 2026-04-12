@@ -7,11 +7,11 @@ const https = require('https');
 const PRAIRIE_CLUBS = [
   { tag: '#29UPLG8QQ', emoji: '🌟', name: 'Prairie Étoilée', color: '#1a237e', description: 'Le club élite de la famille Prairie. Discord obligatoire, Events 100%, Voc privilégié. Chill & actif, bonne ambiance.', level: '👑 Élite' },
   { tag: '#2C9Y28JPP', emoji: '🌿', name: 'Prairie Fleurie', color: '#1b5e20', description: 'Rush Mega Pig (tirelire), Discord obligatoire, Soit actif, Voc privilégié.', level: '🥇 Confirmé' },
-  { tag: '#2JUVYQ0YV', emoji: '⚡', name: 'Prairie Céleste', color: '#0d47a1', description: 'Évents & discord oblig. Être actif jeu & serveur. Mature, convivial & chill.', level: '🥇 Confirmé' },
+  { tag: '#2JUVYQ0YV', emoji: '🪽', name: 'Prairie Céleste', color: '#0d47a1', description: 'Évents & discord oblig. Être actif jeu & serveur. Mature, convivial & chill.', level: '🥇 Confirmé' },
   { tag: '#2CJJLLUQ9', emoji: '❄️', name: 'Prairie Gelée', color: '#006064', description: 'Event de club obligatoire, Discord obligatoire, Soit actif.', level: '🥈 Intermédiaire' },
   { tag: '#2YGPRQYCC', emoji: '🔥', name: 'Prairie Brûlée', color: '#bf360c', description: 'Évents & discord oblig. Être actif jeu & serveur. Mature, convivial & chill.', level: '🥈 Intermédiaire' },
   { tag: '#JY89VGGP',  emoji: '🌱', name: 'Mini Prairie', color: '#33691e', description: 'Club d\'entrée de la famille Prairie. Parfait pour progresser et rejoindre la structure.', level: '🥉 Débutant' },
-  { tag: '#C9JUYQQY',  emoji: '🍃', name: 'Prairie Sauvage', color: '#827717', description: 'Club d\'entrée de la famille Prairie. Parfait pour progresser et rejoindre la structure.', level: '🥉 Débutant' },
+  { tag: '#C9JUYQQY',  emoji: '🐾', name: 'Prairie Sauvage', color: '#827717', description: 'Club d\'entrée de la famille Prairie. Parfait pour progresser et rejoindre la structure.', level: '🥉 Débutant' },
 ];
 
 function formatRank(rank) {

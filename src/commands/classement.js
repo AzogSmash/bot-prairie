@@ -5,11 +5,11 @@ const { supabase } = require('../lib/supabase');
 const PRAIRIE_CLUBS = [
   { tag: '#29UPLG8QQ', emoji: '🌟', name: 'Prairie Étoilée' },
   { tag: '#2C9Y28JPP', emoji: '🌿', name: 'Prairie Fleurie' },
-  { tag: '#2JUVYQ0YV', emoji: '⚡', name: 'Prairie Céleste' },
+  { tag: '#2JUVYQ0YV', emoji: '🪽', name: 'Prairie Céleste' },
   { tag: '#2CJJLLUQ9', emoji: '❄️', name: 'Prairie Gelée' },
   { tag: '#2YGPRQYCC', emoji: '🔥', name: 'Prairie Brûlée' },
   { tag: '#JY89VGGP',  emoji: '🌱', name: 'Mini Prairie' },
-  { tag: '#C9JUYQQY',  emoji: '🍃', name: 'Prairie Sauvage' },
+  { tag: '#C9JUYQQY',  emoji: '🐾', name: 'Prairie Sauvage' },
 ];
 
 async function buildClassement(clubFilter = 'tous') {
@@ -84,7 +84,7 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers 
 
     const podiumLines = podium.map((m, i) => {
       const medals = ['👑', '🥈', '🥉'];
-      const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]}` : m.bsName;
+      const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]} *(${m.bsName})*` : m.bsName;
       const linked = discordMap[m.bsTag] ? ' 🔗' : '';
       const isRequester = m.bsTag === requesterBsTag;
       const globalRank = clubFilter !== 'tous' && globalMembers.length > 0

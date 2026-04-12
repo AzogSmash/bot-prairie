@@ -7,11 +7,11 @@ const { getClub } = require('../lib/brawlapi');
 const PRAIRIE_CLUBS = [
   { tag: '#29UPLG8QQ', emoji: '🌟' },
   { tag: '#2C9Y28JPP', emoji: '🌿' },
-  { tag: '#2JUVYQ0YV', emoji: '⚡' },
+  { tag: '#2JUVYQ0YV', emoji: '🪽' },
   { tag: '#2CJJLLUQ9', emoji: '❄️' },
   { tag: '#2YGPRQYCC', emoji: '🔥' },
   { tag: '#JY89VGGP',  emoji: '🌱' },
-  { tag: '#C9JUYQQY',  emoji: '🍃' },
+  { tag: '#C9JUYQQY',  emoji: '🐾' },
 ];
 
 async function getAllClubMembers() {
