@@ -94,15 +94,10 @@ module.exports = {
     fields.push({
       name: `${club.emoji} ${club.name} • [Brawlify ↗](${brawlifyUrl})`,
       value: [
-        `${statusText}`,
-        `${fillBar} **${members}/30** • 🔗 **${linkedCount}** liés Discord`,
-        ``,
-        `🌍 Actuel : **${worldStr.replace('🌍 ', '')}** • Record : **${bestWorldStr}**`,
-        `🇫🇷 Actuel : **${frStr.replace('🇫🇷 ', '')}** • Record : **${bestFrStr}**`,
+        `${statusText} — ${fillBar} **${members}/30** • 🔗 **${linkedCount}** liés Discord`,
         `🏆 **${club.trophies?.toLocaleString('fr-FR')}** • 📊 **${avgTrophies.toLocaleString('fr-FR')}** moy • 🎯 **${club.requiredTrophies?.toLocaleString('fr-FR')}** requis`,
-        `📈 Meilleur : **${maxTrophies.toLocaleString('fr-FR')}** 🏆 — 👑 **${topMember?.name || '?'}**`,
-        ``,
-
+        `🌍 Actuel : **${worldStr}** • Record : **${bestWorldStr}** • 🇫🇷 Actuel : **${frStr}** • Record : **${bestFrStr}**`,
+        `👑 Meilleur : **${topMember?.name || '?'}** — ${maxTrophies.toLocaleString('fr-FR')} 🏆`,
         `\u200b`,
       ].join('\n'),
       inline: false,
@@ -118,11 +113,8 @@ module.exports = {
       .setColor('#2ecc71')
       .setTitle('🌿 Famille Prairie — Vue d\'ensemble')
       .setDescription([
-        `👥 **${totalMembers}** membres actifs sur **7 clubs**`,
-        `🏆 Total famille : **${totalTrophies.toLocaleString('fr-FR')}** trophées`,
-        `📊 Moyenne famille : **${avgFamily.toLocaleString('fr-FR')}** trophées`,
-        `🟢 Places disponibles : **${totalPlaces}** au total`,
-        `🔗 Membres liés Discord : **${linkedTags.size}**`,
+        `👥 **${totalMembers}** membres actifs sur **7 clubs** • 🟢 **${totalPlaces}** places disponibles`,
+        `🏆 Total : **${totalTrophies.toLocaleString('fr-FR')}** • 📊 Moyenne : **${avgFamily.toLocaleString('fr-FR')}** • 🔗 **${linkedTags.size}** liés Discord`,
       ].join('\n'))
       .addFields(fields)
       .setFooter({ text: 'Prairie Brawl Stars • Données en temps réel • Clique sur un club pour Brawlify' })
