@@ -143,7 +143,7 @@ function buildEmbed(rusheurs, clubFilter, periode) {
       const roi = rusheurs.find(r => r.clubName === club.name);
       if (roi) {
         const name = roi.discordName || roi.bsName || roi.bsTag;
-        rois.push(`${club.emoji} **${name}** — +${roi.progression.toLocaleString('fr-FR')} 🏆`);
+        rois.push(`${club.emoji} **${name}** • +${roi.progression.toLocaleString('fr-FR')} 🏆`);
       }
     }
     if (rois.length) {
@@ -164,7 +164,7 @@ function buildEmbed(rusheurs, clubFilter, periode) {
   // Reste
   const restLines = rusheurs.slice(3, 30).map((r, i) => {
     const name = r.discordName ? `${r.discordName} *(${r.bsName || r.bsTag})*` : (r.bsName || r.bsTag);
-    return `\`#${String(i + 4).padStart(2, ' ')}\` ${r.clubEmoji} **${name}**  •  +${r.progression.toLocaleString('fr-FR')} 🏆  •  ${r.trophies.toLocaleString('fr-FR')} total`;
+    return `\`#${i + 4}\` ${r.clubEmoji} **${name}** • +${r.progression.toLocaleString('fr-FR')} 🏆 • ${r.trophies.toLocaleString('fr-FR')} total`;
   }).join('\n');
 
   const totalPush = rusheurs.reduce((a, r) => a + r.progression, 0);
