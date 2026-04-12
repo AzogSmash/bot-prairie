@@ -15,45 +15,6 @@ const PRAIRIE_CLUBS = [
   { tag: '#C9JUYQQY',  emoji: '🐾' },
 ];
 
-async function getMemberProgression(bsTag) {
-  async function getDelta(type) {
-    const { data } = await supabase
-      .from('trophies_snapshots')
-      .select('trophies')
-      .eq('bs_tag', bsTag)
-      .eq('type', type)
-      .order('snapshot_at', { ascending: false })
-      .limit(1);
-    return data?.[0]?.trophies || null;
-  }
-
-  async function getSeasonDelta() {
-    const { data: season } = await supabase
-      .from('season_starts')
-      .select('started_at')
-      .order('started_at', { ascending: false })
-      .limit(1);
-    if (!season?.length) return null;
-
-    const { data } = await supabase
-      .from('trophies_snapshots')
-      .select('trophies')
-      .eq('bs_tag', bsTag)
-      .eq('type', 'hourly')
-      .gte('snapshot_at', season[0].started_at)
-      .order('snapshot_at', { ascending: true })
-      .limit(1);
-    return data?.[0]?.trophies || null;
-  }
-
-  const [daily, weekly, seasonRef] = await Promise.all([
-    getDelta('daily'),
-    getDelta('weekly'),
-    getSeasonDelta(),
-  ]);
-
-  return { daily, weekly, seasonRef };
-}
 
 async function getAllClubMembers() {
   const { clubMembersCache } = getCache();
