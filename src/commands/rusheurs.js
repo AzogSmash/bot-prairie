@@ -3,7 +3,7 @@ const { supabase } = require('../lib/supabase');
 
 const PRAIRIE_CLUBS = [
   { tag: '#29UPLG8QQ', emoji: '🌟', name: 'Prairie Étoilée' },
-  { tag: '#2C9Y28JPP', emoji: '🌿', name: 'Prairie Fleurie' },
+  { tag: '#2C9Y28JPP', emoji: '🌿', name: 'Prairie fleurie' },
   { tag: '#2JUVYQ0YV', emoji: '🪽', name: 'Prairie Céleste' },
   { tag: '#2CJJLLUQ9', emoji: '❄️', name: 'Prairie Gelée' },
   { tag: '#2YGPRQYCC', emoji: '🔥', name: 'Prairie Brûlée' },
@@ -145,7 +145,7 @@ function buildEmbed(rusheurs, clubFilter, periode) {
   }).join('\n\n');
 
   const restLines = rest.map((r, i) => {
-    const name = r.discordName ? `${r.discordName} *(${r.bsTag})*` : r.bsTag;
+    const name = r.discordName || r.bsName || r.bsTag;
     return `**#${i + 4}** ${name} — +${r.progression.toLocaleString('fr-FR')} 🏆 • ${r.clubEmoji} ${r.clubName}`;
   }).join('\n');
 
