@@ -247,11 +247,14 @@ module.exports = {
   async handleButton(interaction) {
     await interaction.deferUpdate();
     const parts = interaction.customId.split('_');
+    console.log('[handleButton] customId:', interaction.customId);
+    console.log('[handleButton] parts:', parts);
     const page = parseInt(parts[2]);
     const fromProfil = interaction.customId.endsWith('_fromprofil');
     const clubFilter = fromProfil
       ? parts.slice(3, -1).join('_')
       : parts.slice(3).join('_');
+    console.log('[handleButton] page:', page, 'clubFilter:', clubFilter, 'fromProfil:', fromProfil);
     const { allMembers, discordMap } = await buildClassement(clubFilter);
     const requesterBsTag = await getRequesterBsTag(interaction.user.id);
 
