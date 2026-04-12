@@ -93,9 +93,11 @@ async function buildProfileEmbed(target, client) {
     getBattleLog(data.brawlstars_tag).catch(() => null),
     getAllClubMembers(),
   ]);
+  console.log('[DEBUG currentSeason]', JSON.stringify(player.currentSeason));
+  console.log('[DEBUG ranked]', JSON.stringify(player.ranked));
 
   const progression = await getMemberProgression(data.brawlstars_tag);
-const formatProg = (val, current) => val === null ? '—' : `+${(current - val).toLocaleString('fr-FR')}`;
+  const formatProg = (val, current) => val === null ? '—' : `+${(current - val).toLocaleString('fr-FR')}`;
 
   // Rang sur tous les membres des 7 clubs
   const sortedMembers = [...allClubMembers].sort((a, b) => b.trophies - a.trophies);
