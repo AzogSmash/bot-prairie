@@ -89,30 +89,6 @@ client.on('interactionCreate', async interaction => {
       await classementCmd.handleButton(interaction);
       return;
     }
-    if (action === 'classement') {
-      const parts2 = interaction.customId.split('_');
-      
-      // Bouton mon profil
-      if (parts2[1] === 'profil') {
-        await interaction.deferUpdate();
-        try {
-          const embed = await buildProfileEmbed(interaction.user, interaction.client);
-          if (!embed) {
-            await interaction.followUp({ content: '❌ Tu n\'as pas encore lié ton compte BS. Utilise `/lier` !', ephemeral: true });
-          } else {
-            await interaction.followUp({ embeds: [embed], ephemeral: true });
-          }
-        } catch (err) {
-          console.error(err);
-        }
-        return;
-      }
-
-      // Pagination classement
-      const classementCmd = require('./commands/classement');
-      await classementCmd.handleButton(interaction);
-      return;
-    }
 
     // Refresh profil
     if (action === 'refresh') {

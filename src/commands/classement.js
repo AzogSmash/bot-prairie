@@ -52,7 +52,16 @@ async function buildClassement(clubFilter = 'tous') {
   return { allMembers, discordMap };
 }
 
-function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers = []) {
+async function getRequesterBsTag(userId) {
+  const { data } = await supabase
+    .from('members')
+    .select('brawlstars_tag')
+    .eq('discord_id', userId)
+    .maybeSingle();
+  return data?.brawlstars_tag || null;
+}
+
+function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers = [], requesterBsTag = null) {
   const pageSize = 30;
   const totalPages = Math.ceil(allMembers.length / pageSize);
   const start = page * pageSize;
@@ -77,37 +86,51 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers 
       const medals = ['👑', '🥈', '🥉'];
       const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]}` : m.bsName;
       const linked = discordMap[m.bsTag] ? ' 🔗' : '';
+      const isRequester = m.bsTag === requesterBsTag;
       const globalRank = clubFilter !== 'tous' && globalMembers.length > 0
         ? globalMembers.findIndex(gm => gm.bsTag === m.bsTag) + 1
         : null;
       const globalStr = globalRank > 0 ? ` • 🌿 #${globalRank} global` : '';
-      return `${medals[i]} **${name}**${linked}\n┗ 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}${globalStr}`;
+      const highlight = isRequester ? ' 👈 **toi**' : '';
+      return `${medals[i]} **${name}**${linked}${highlight}\n┗ 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}${globalStr}`;
     }).join('\n\n');
 
     const restLines = rest.map((m, i) => {
       const rank = i + 4;
       const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]} *(${m.bsName})*` : m.bsName;
       const linked = discordMap[m.bsTag] ? '🔗' : '';
+      const isRequester = m.bsTag === requesterBsTag;
       const globalRank = clubFilter !== 'tous' && globalMembers.length > 0
         ? globalMembers.findIndex(gm => gm.bsTag === m.bsTag) + 1
         : null;
       const globalStr = globalRank > 0 ? ` • 🌿 #${globalRank}` : '';
-      return `**#${rank}** ${linked} ${name} — 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}${globalStr}`;
+      const highlight = isRequester ? ' 👈 **toi**' : '';
+      return `**#${rank}** ${linked} ${name} — 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}${globalStr}${highlight}`;
     }).join('\n');
 
-    description = `${podiumLines}\n\n─────────────────\n${restLines}`;
+    description = podiumLines + (restLines ? `\n\n─────────────────\n${restLines}` : '');
   } else {
     description = slice.map((m, i) => {
       const rank = start + i + 1;
       const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]} *(${m.bsName})*` : m.bsName;
       const linked = discordMap[m.bsTag] ? '🔗' : '';
+      const isRequester = m.bsTag === requesterBsTag;
       const globalRank = clubFilter !== 'tous' && globalMembers.length > 0
         ? globalMembers.findIndex(gm => gm.bsTag === m.bsTag) + 1
         : null;
       const globalStr = globalRank > 0 ? ` • 🌿 #${globalRank}` : '';
-      return `**#${rank}** ${linked} ${name} — 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}${globalStr}`;
+      const highlight = isRequester ? ' 👈 **toi**' : '';
+      return `**#${rank}** ${linked} ${name} — 🏆 ${m.trophies.toLocaleString('fr-FR')} • ${m.clubEmoji} ${m.clubName}${globalStr}${highlight}`;
     }).join('\n');
   }
+
+  const myRank = requesterBsTag
+    ? allMembers.findIndex(m => m.bsTag === requesterBsTag) + 1
+    : null;
+
+  const myRankStr = myRank > 0
+    ? `\n👤 Ton rang : **#${myRank}** / ${allMembers.length}`
+    : '';
 
   return new EmbedBuilder()
     .setColor('#f1c40f')
@@ -120,7 +143,7 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers 
         `🏆 Total : **${totalTrophies.toLocaleString('fr-FR')}**`,
         `📈 Moyenne : **${avgTrophies.toLocaleString('fr-FR')}**`,
         `🔗 Liés Discord : **${Object.keys(discordMap).length}**`,
-      ].join(' • '),
+      ].join(' • ') + myRankStr,
     })
     .setFooter({ text: `Prairie Brawl Stars • Page ${page + 1}/${totalPages} • 🔗 = Discord lié${clubFilter !== 'tous' ? ' • 🌿 = rang global' : ''}` })
     .setTimestamp();
@@ -143,19 +166,9 @@ function buildComponents(clubFilter, page, totalPages) {
 
   rows.push(new ActionRowBuilder().addComponents(clubMenu));
 
-  // Boutons pagination + profil
-  const row1 = new ActionRowBuilder();
-
-  // Bouton profil toujours présent
-  row1.addComponents(
-    new ButtonBuilder()
-      .setCustomId(`classement_profil`)
-      .setLabel('👤 Mon profil')
-      .setStyle(ButtonStyle.Success)
-  );
-
   if (totalPages > 1) {
-    for (let i = 0; i < Math.min(4, totalPages); i++) {
+    const row1 = new ActionRowBuilder();
+    for (let i = 0; i < Math.min(5, totalPages); i++) {
       row1.addComponents(
         new ButtonBuilder()
           .setCustomId(`classement_goto_${i}_${clubFilter}`)
@@ -164,22 +177,21 @@ function buildComponents(clubFilter, page, totalPages) {
           .setDisabled(i === page)
       );
     }
-  }
+    rows.push(row1);
 
-  rows.push(row1);
-
-  if (totalPages > 4) {
-    const row2 = new ActionRowBuilder();
-    for (let i = 4; i < Math.min(9, totalPages); i++) {
-      row2.addComponents(
-        new ButtonBuilder()
-          .setCustomId(`classement_goto_${i}_${clubFilter}`)
-          .setLabel(`${i + 1}`)
-          .setStyle(i === page ? ButtonStyle.Primary : ButtonStyle.Secondary)
-          .setDisabled(i === page)
-      );
+    if (totalPages > 5) {
+      const row2 = new ActionRowBuilder();
+      for (let i = 5; i < Math.min(10, totalPages); i++) {
+        row2.addComponents(
+          new ButtonBuilder()
+            .setCustomId(`classement_goto_${i}_${clubFilter}`)
+            .setLabel(`${i + 1}`)
+            .setStyle(i === page ? ButtonStyle.Primary : ButtonStyle.Secondary)
+            .setDisabled(i === page)
+        );
+      }
+      rows.push(row2);
     }
-    rows.push(row2);
   }
 
   return rows;
@@ -193,8 +205,9 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply();
     const { allMembers, discordMap } = await buildClassement('tous');
+    const requesterBsTag = await getRequesterBsTag(interaction.user.id);
     const totalPages = Math.ceil(allMembers.length / 30);
-    const embed = buildEmbed(allMembers, discordMap, 'tous', 0, []);
+    const embed = buildEmbed(allMembers, discordMap, 'tous', 0, [], requesterBsTag);
     const components = buildComponents('tous', 0, totalPages);
     await interaction.editReply({ embeds: [embed], components });
   },
@@ -203,6 +216,7 @@ module.exports = {
     await interaction.deferUpdate();
     const clubFilter = interaction.values[0];
     const { allMembers, discordMap } = await buildClassement(clubFilter);
+    const requesterBsTag = await getRequesterBsTag(interaction.user.id);
 
     let globalMembers = [];
     if (clubFilter !== 'tous') {
@@ -211,7 +225,7 @@ module.exports = {
     }
 
     const totalPages = Math.ceil(allMembers.length / 30);
-    const embed = buildEmbed(allMembers, discordMap, clubFilter, 0, globalMembers);
+    const embed = buildEmbed(allMembers, discordMap, clubFilter, 0, globalMembers, requesterBsTag);
     const components = buildComponents(clubFilter, 0, totalPages);
     await interaction.editReply({ embeds: [embed], components });
   },
@@ -219,9 +233,11 @@ module.exports = {
   async handleButton(interaction) {
     await interaction.deferUpdate();
     const parts = interaction.customId.split('_');
+    // format: classement_goto_PAGE_CLUBFILTER
     const page = parseInt(parts[2]);
-    const clubFilter = parts[3];
+    const clubFilter = parts.slice(3).join('_');
     const { allMembers, discordMap } = await buildClassement(clubFilter);
+    const requesterBsTag = await getRequesterBsTag(interaction.user.id);
 
     let globalMembers = [];
     if (clubFilter !== 'tous') {
@@ -230,7 +246,7 @@ module.exports = {
     }
 
     const totalPages = Math.ceil(allMembers.length / 30);
-    const embed = buildEmbed(allMembers, discordMap, clubFilter, page, globalMembers);
+    const embed = buildEmbed(allMembers, discordMap, clubFilter, page, globalMembers, requesterBsTag);
     const components = buildComponents(clubFilter, page, totalPages);
     await interaction.editReply({ embeds: [embed], components });
   }
