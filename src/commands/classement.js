@@ -64,8 +64,86 @@ async function getRequesterBsTag(userId) {
     .maybeSingle();
   return data?.brawlstars_tag || null;
 }
-
 function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers = [], requesterBsTag = null, progression = null) {
+  const pageSize = 30;
+  const totalPages = Math.ceil(allMembers.length / pageSize);
+  const start = page * pageSize;
+  const slice = allMembers.slice(start, start + pageSize);
+
+  const clubLabel = clubFilter === 'tous'
+    ? 'Toute la famille Prairie'
+    : PRAIRIE_CLUBS.find(c => c.tag === clubFilter)?.name || clubFilter;
+
+  const totalTrophies = allMembers.reduce((sum, m) => sum + m.trophies, 0);
+  const avgTrophies = allMembers.length ? Math.round(totalTrophies / allMembers.length) : 0;
+
+  const formatProg = (val) => val === null ? '—' : val >= 0 ? `+${val.toLocaleString('fr-FR')}` : val.toLocaleString('fr-FR');
+
+  const myRank = requesterBsTag ? allMembers.findIndex(m => m.bsTag === requesterBsTag) + 1 : null;
+
+  let description = '';
+
+  if (page === 0) {
+    const podium = slice.slice(0, 3);
+    const rest = slice.slice(3);
+
+    const medals = ['👑', '🥈', '🥉'];
+    const podiumLines = podium.map((m, i) => {
+      const name = discordMap[m.bsTag] ? `**${discordMap[m.bsTag]}** *(${m.bsName || m.bsTag})*` : `**${m.bsName || m.bsTag}**`;
+      const linked = discordMap[m.bsTag] ? ' 🔗' : '';
+      const isRequester = m.bsTag === requesterBsTag;
+      const globalRank = clubFilter !== 'tous' && globalMembers.length > 0
+        ? globalMembers.findIndex(gm => gm.bsTag === m.bsTag) + 1 : null;
+      const globalStr = globalRank > 0 ? `  •  🌿 #${globalRank} global` : '';
+      const highlight = isRequester ? '  👈 **toi**' : '';
+      return `${medals[i]} ${name}${linked}${highlight}\n┗ 🏆 **${m.trophies.toLocaleString('fr-FR')}**  •  ${m.clubEmoji} ${m.clubName}${globalStr}`;
+    }).join('\n\n');
+
+    const restLines = rest.map((m, i) => {
+      const rank = i + 4;
+      const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]} *(${m.bsName || m.bsTag})*` : (m.bsName || m.bsTag);
+      const linked = discordMap[m.bsTag] ? ' 🔗' : '';
+      const isRequester = m.bsTag === requesterBsTag;
+      const globalRank = clubFilter !== 'tous' && globalMembers.length > 0
+        ? globalMembers.findIndex(gm => gm.bsTag === m.bsTag) + 1 : null;
+      const globalStr = globalRank > 0 ? `  •  🌿 #${globalRank}` : '';
+      const highlight = isRequester ? '  👈 **toi**' : '';
+      return `\`#${rank}\` ${m.clubEmoji} **${name}**${linked}  •  🏆 ${m.trophies.toLocaleString('fr-FR')}${globalStr}${highlight}`;
+    }).join('\n');
+
+    description = podiumLines + (restLines ? `\n\n━━━━━━━━━━━━━━━━━━━━━━\n${restLines}` : '');
+  } else {
+    description = slice.map((m, i) => {
+      const rank = start + i + 1;
+      const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]} *(${m.bsName || m.bsTag})*` : (m.bsName || m.bsTag);
+      const linked = discordMap[m.bsTag] ? ' 🔗' : '';
+      const isRequester = m.bsTag === requesterBsTag;
+      const globalRank = clubFilter !== 'tous' && globalMembers.length > 0
+        ? globalMembers.findIndex(gm => gm.bsTag === m.bsTag) + 1 : null;
+      const globalStr = globalRank > 0 ? `  •  🌿 #${globalRank}` : '';
+      const highlight = isRequester ? '  👈 **toi**' : '';
+      return `\`#${rank}\` ${m.clubEmoji} **${name}**${linked}  •  🏆 ${m.trophies.toLocaleString('fr-FR')}${globalStr}${highlight}`;
+    }).join('\n');
+  }
+
+  const statsLines = [
+    `👥 **${allMembers.length}** membres  •  🏆 Total : **${totalTrophies.toLocaleString('fr-FR')}**  •  📈 Moyenne : **${avgTrophies.toLocaleString('fr-FR')}**`,
+    `🔗 Liés Discord : **${Object.keys(discordMap).length}**${myRank > 0 ? `  •  👤 Ton rang : **#${myRank}** / ${allMembers.length}` : ''}`,
+    (progression && page === 0) ? `\n🔥 Aujourd'hui : **${formatProg(progression.today)}**  •  📅 Cette semaine : **${formatProg(progression.week)}**  •  🏆 Cette saison : **${formatProg(progression.season)}**` : '',
+  ].filter(Boolean).join('\n');
+
+  return new EmbedBuilder()
+    .setColor('#f1c40f')
+    .setTitle(`🏆 Classement Prairie — ${clubLabel}`)
+    .setDescription(description || '\u200b')
+    .addFields({
+      name: '━━━━━━━━━━━━━━━━━━━━━━\n📊 Stats',
+      value: statsLines,
+    })
+    .setFooter({ text: `Prairie Brawl Stars • Page ${page + 1}/${totalPages} • 🔗 = Discord lié${clubFilter !== 'tous' ? ' • 🌿 = rang global' : ''}` })
+    .setTimestamp();
+}
+
   const pageSize = 30;
   const totalPages = Math.ceil(allMembers.length / pageSize);
   const start = page * pageSize;
@@ -152,7 +230,6 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers 
     })
     .setFooter({ text: `Prairie Brawl Stars • Page ${page + 1}/${totalPages} • 🔗 = Discord lié${clubFilter !== 'tous' ? ' • 🌿 = rang global' : ''}` })
     .setTimestamp();
-}
 
 function buildComponents(clubFilter, page, totalPages, fromProfil = false) {
   const rows = [];
