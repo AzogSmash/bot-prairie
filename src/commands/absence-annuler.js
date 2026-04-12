@@ -24,7 +24,7 @@ module.exports = {
     }
 
     const discordId = targetUser ? targetUser.id : interaction.user.id;
-    const username = targetUser ? targetUser.username : interaction.user.username;
+    const displayName = targetUser ? targetUser.displayName : interaction.user.displayName;
     const today = new Date().toISOString().split('T')[0];
 
     // Récupère TOUTES les absences actives
@@ -38,13 +38,13 @@ module.exports = {
 
     if (error || !data || data.length === 0) {
       return interaction.editReply({
-        content: `❌ **${username}** n'a aucune absence active à annuler.`
+        content: `❌ **${displayName}** n'a aucune absence active à annuler.`
       });
     }
 
     // Si une seule absence → annule directement
     if (data.length === 1) {
-      return annulerAbsence(interaction, data[0], username, isStaff, targetUser);
+      return annulerAbsence(interaction, data[0], displayName, isStaff, targetUser);
     }
 
     // Si plusieurs absences → menu déroulant pour choisir
@@ -62,7 +62,7 @@ module.exports = {
     const row = new ActionRowBuilder().addComponents(menu);
 
     await interaction.editReply({
-      content: `**${username}** a plusieurs absences actives — laquelle annuler ?`,
+      content: `**${displayName}** a plusieurs absences actives — laquelle annuler ?`,
       components: [row],
     });
   },
@@ -83,13 +83,13 @@ module.exports = {
       return interaction.editReply({ content: '❌ Absence introuvable.', components: [] });
     }
 
-    const username = data.discord_username;
+    const displayName = data.discord_username;
     const targetUser = null;
-    await annulerAbsence(interaction, data, username, isStaff, targetUser);
+    await annulerAbsence(interaction, data, displayName, isStaff, targetUser);
   }
 };
 
-async function annulerAbsence(interaction, absence, username, isStaff, targetUser) {
+async function annulerAbsence(interaction, absence, displayName, isStaff, targetUser) {
   await supabase
     .from('absences')
     .update({ active: false })
@@ -99,7 +99,7 @@ async function annulerAbsence(interaction, absence, username, isStaff, targetUse
   const finFormate = new Date(absence.date_fin).toLocaleDateString('fr-FR');
 
   await interaction.editReply({
-    content: `✅ Absence de **${username}** du **${debutFormate}** au **${finFormate}** annulée.`,
+    content: `✅ Absence de **${displayName}** du **${debutFormate}** au **${finFormate}** annulée.`,
     components: [],
   });
 
@@ -111,7 +111,7 @@ async function annulerAbsence(interaction, absence, username, isStaff, targetUse
           .setColor('#e74c3c')
           .setTitle('❌ Absence annulée')
           .setDescription(
-            `**${username}** — absence du **${debutFormate}** au **${finFormate}** annulée` +
+            `**${displayName}** — absence du **${debutFormate}** au **${finFormate}** annulée` +
             (isStaff && targetUser ? `\nPar le staff : ${interaction.user}` : '')
           )
           .setTimestamp()

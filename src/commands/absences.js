@@ -82,7 +82,7 @@ function formatLine(a) {
   const duree = Math.ceil((new Date(a.date_fin) - new Date(a.date_debut)) / (1000 * 60 * 60 * 24)) + 1;
   const trophies = a.trophies ? ` • 🏆 ${a.trophies.toLocaleString('fr-FR')}` : '';
   const raison = a.raison && a.raison !== 'Non précisée' ? `\n> _${a.raison}_` : '';
-  return `👤 **${a.discord_username}** • 🌿 ${a.club_name}${trophies}\n📅 <t:${debut}:D> → <t:${fin}:D> • ⏳ ${duree}j${raison}`;
+  return `👤 **${a.discord_userame}** • 🌿 ${a.club_name}${trophies}\n📅 <t:${debut}:D> → <t:${fin}:D> • ⏳ ${duree}j${raison}`;
 }
 
 function buildEmbed(absences, clubFilter, periodeFilter) {
