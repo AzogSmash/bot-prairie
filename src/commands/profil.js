@@ -95,6 +95,7 @@ async function buildProfileEmbed(target, client) {
   ]);
   console.log('[DEBUG currentSeason]', JSON.stringify(player.currentSeason));
   console.log('[DEBUG ranked]', JSON.stringify(player.ranked));
+  console.log('[DEBUG player keys]', Object.keys(player));
 
   const progression = await getMemberProgression(data.brawlstars_tag);
   const formatProg = (val, current) => val === null ? '—' : `+${(current - val).toLocaleString('fr-FR')}`;
