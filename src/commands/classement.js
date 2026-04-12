@@ -149,7 +149,7 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers 
     .setTimestamp();
 }
 
-function buildComponents(clubFilter, page, totalPages) {
+function buildComponents(clubFilter, page, totalPages, fromProfil = false) {
   const rows = [];
 
   const clubMenu = new StringSelectMenuBuilder()
@@ -166,9 +166,21 @@ function buildComponents(clubFilter, page, totalPages) {
 
   rows.push(new ActionRowBuilder().addComponents(clubMenu));
 
+  const row1 = new ActionRowBuilder();
+
+  // Bouton retour profil uniquement si on vient du profil
+  if (fromProfil) {
+    row1.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`classement_profil`)
+        .setLabel('👤 Mon profil')
+        .setStyle(ButtonStyle.Success)
+    );
+  }
+
   if (totalPages > 1) {
-    const row1 = new ActionRowBuilder();
-    for (let i = 0; i < Math.min(5, totalPages); i++) {
+    const maxBtns = fromProfil ? 4 : 5;
+    for (let i = 0; i < Math.min(maxBtns, totalPages); i++) {
       row1.addComponents(
         new ButtonBuilder()
           .setCustomId(`classement_goto_${i}_${clubFilter}`)
@@ -177,21 +189,22 @@ function buildComponents(clubFilter, page, totalPages) {
           .setDisabled(i === page)
       );
     }
-    rows.push(row1);
+  }
 
-    if (totalPages > 5) {
-      const row2 = new ActionRowBuilder();
-      for (let i = 5; i < Math.min(10, totalPages); i++) {
-        row2.addComponents(
-          new ButtonBuilder()
-            .setCustomId(`classement_goto_${i}_${clubFilter}`)
-            .setLabel(`${i + 1}`)
-            .setStyle(i === page ? ButtonStyle.Primary : ButtonStyle.Secondary)
-            .setDisabled(i === page)
-        );
-      }
-      rows.push(row2);
+  if (row1.components.length > 0) rows.push(row1);
+
+  if (totalPages > 5) {
+    const row2 = new ActionRowBuilder();
+    for (let i = 5; i < Math.min(10, totalPages); i++) {
+      row2.addComponents(
+        new ButtonBuilder()
+          .setCustomId(`classement_goto_${i}_${clubFilter}`)
+          .setLabel(`${i + 1}`)
+          .setStyle(i === page ? ButtonStyle.Primary : ButtonStyle.Secondary)
+          .setDisabled(i === page)
+      );
     }
+    rows.push(row2);
   }
 
   return rows;
@@ -215,6 +228,7 @@ module.exports = {
   async handleSelect(interaction) {
     await interaction.deferUpdate();
     const clubFilter = interaction.values[0];
+    const fromProfil = interaction.customId.includes('fromprofil');
     const { allMembers, discordMap } = await buildClassement(clubFilter);
     const requesterBsTag = await getRequesterBsTag(interaction.user.id);
 
@@ -226,7 +240,7 @@ module.exports = {
 
     const totalPages = Math.ceil(allMembers.length / 30);
     const embed = buildEmbed(allMembers, discordMap, clubFilter, 0, globalMembers, requesterBsTag);
-    const components = buildComponents(clubFilter, 0, totalPages);
+    const components = buildComponents(clubFilter, 0, totalPages, fromProfil);
     await interaction.editReply({ embeds: [embed], components });
   },
 
@@ -235,7 +249,9 @@ module.exports = {
     const parts = interaction.customId.split('_');
     // format: classement_goto_PAGE_CLUBFILTER
     const page = parseInt(parts[2]);
-    const clubFilter = parts.slice(3).join('_');
+    const clubFilter = fromProfil
+      ? parts.slice(3, -1).join('_')
+      : parts.slice(3).join('_');
     const { allMembers, discordMap } = await buildClassement(clubFilter);
     const requesterBsTag = await getRequesterBsTag(interaction.user.id);
 
@@ -247,7 +263,7 @@ module.exports = {
 
     const totalPages = Math.ceil(allMembers.length / 30);
     const embed = buildEmbed(allMembers, discordMap, clubFilter, page, globalMembers, requesterBsTag);
-    const components = buildComponents(clubFilter, page, totalPages);
+    const components = buildComponents(clubFilter, page, totalPages, fromProfil);
     await interaction.editReply({ embeds: [embed], components });
   }
 };

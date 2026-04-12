@@ -89,7 +89,32 @@ client.on('interactionCreate', async interaction => {
       await classementCmd.handleButton(interaction);
       return;
     }
-
+    if (parts[1] === 'profil') {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        const embed = await buildProfileEmbed(interaction.user, interaction.client);
+        if (!embed) {
+          await interaction.editReply({ content: '❌ Tu n\'as pas encore lié ton compte BS.' });
+        } else {
+          const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+          const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId(`refresh_${interaction.user.id}`)
+              .setLabel('🔄 Actualiser')
+              .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+              .setCustomId(`classement_goto_0_tous_fromprofil`)
+              .setLabel('🏆 Classement Prairie')
+              .setStyle(ButtonStyle.Primary),
+          );
+          await interaction.editReply({ embeds: [embed], components: [row] });
+        }
+      } catch (err) {
+        console.error(err);
+        await interaction.editReply({ content: '❌ Erreur.' });
+      }
+      return;
+    }
     // Refresh profil
     if (action === 'refresh') {
       await interaction.deferUpdate();
