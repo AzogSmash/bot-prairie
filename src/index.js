@@ -76,6 +76,10 @@ async function deployCommands() {
         const absenceAnnulerCmd = require('./commands/absence-annuler');
         await absenceAnnulerCmd.handleSelect(interaction);
       }
+      if (interaction.customId.startsWith('rusheurs_')) {
+        const rusheursCmd = require('./commands/rusheurs');
+        await rusheursCmd.handleSelect(interaction);
+      }
       return;
     }
 
