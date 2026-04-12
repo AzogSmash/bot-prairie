@@ -63,7 +63,7 @@ async function getRusheurs(clubFilter, periode) {
   async function getCurrentRows() {
     const { data } = await supabase
       .from('trophies_snapshots')
-      .select('bs_tag, trophies, club_name')
+      .select('bs_tag, bs_name, trophies, club_name')
       .eq('type', 'hourly')
       .order('snapshot_at', { ascending: false })
       .limit(1000);
