@@ -14,6 +14,46 @@ const PRAIRIE_CLUBS = [
   { tag: '#C9JUYQQY',  emoji: '🐾' },
 ];
 
+async function getMemberProgression(bsTag) {
+  async function getDelta(type) {
+    const { data } = await supabase
+      .from('trophies_snapshots')
+      .select('trophies')
+      .eq('bs_tag', bsTag)
+      .eq('type', type)
+      .order('snapshot_at', { ascending: false })
+      .limit(1);
+    return data?.[0]?.trophies || null;
+  }
+
+  async function getSeasonDelta() {
+    const { data: season } = await supabase
+      .from('season_starts')
+      .select('started_at')
+      .order('started_at', { ascending: false })
+      .limit(1);
+    if (!season?.length) return null;
+
+    const { data } = await supabase
+      .from('trophies_snapshots')
+      .select('trophies')
+      .eq('bs_tag', bsTag)
+      .eq('type', 'hourly')
+      .gte('snapshot_at', season[0].started_at)
+      .order('snapshot_at', { ascending: true })
+      .limit(1);
+    return data?.[0]?.trophies || null;
+  }
+
+  const [daily, weekly, seasonRef] = await Promise.all([
+    getDelta('daily'),
+    getDelta('weekly'),
+    getSeasonDelta(),
+  ]);
+
+  return { daily, weekly, seasonRef };
+}
+
 async function getAllClubMembers() {
   const { clubMembersCache } = getCache();
   if (isCacheValid() && clubMembersCache.length > 0) return clubMembersCache;
@@ -90,6 +130,9 @@ async function buildProfileEmbed(target, client) {
     getBattleLog(data.brawlstars_tag).catch(() => null),
     getAllClubMembers(),
   ]);
+
+  const progression = await getMemberProgression(data.brawlstars_tag);
+const formatProg = (val, current) => val === null ? '—' : `+${(current - val).toLocaleString('fr-FR')}`;
 
   // Rang sur tous les membres des 7 clubs
   const sortedMembers = [...allClubMembers].sort((a, b) => b.trophies - a.trophies);
@@ -201,6 +244,16 @@ async function buildProfileEmbed(target, client) {
       value: nextMilestone
         ? `\`${progress}\` ${player.trophies.toLocaleString('fr-FR')} / ${nextMilestone.toLocaleString('fr-FR')}`
         : `\`████████████\` Palier max atteint 🎉`,
+      inline: false,
+    })
+
+    .addFields({
+      name: '📊 Progression en trophées',
+      value: [
+        `🔥 Aujourd'hui : **${formatProg(progression.daily, player.trophies)}**`,
+        `📅 Cette semaine : **${formatProg(progression.weekly, player.trophies)}**`,
+        `🏆 Cette saison : **${formatProg(progression.seasonRef, player.trophies)}**`,
+      ].join('\n'),
       inline: false,
     })
 

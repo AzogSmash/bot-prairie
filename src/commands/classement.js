@@ -226,7 +226,7 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers 
         `👥 **${allMembers.length}** membres • 🏆 Total : **${totalTrophies.toLocaleString('fr-FR')}** • 📈 Moyenne : **${avgTrophies.toLocaleString('fr-FR')}**`,
         `🔗 Liés Discord : **${Object.keys(discordMap).length}**` + myRankStr,
         progression ? `🔥 Aujourd'hui : **${formatProg(progression.today)}** • 📅 Cette semaine : **${formatProg(progression.week)}** • 🏆 Cette saison : **${formatProg(progression.season)}**` : '',
-      ].filter(Boolean).join('\n'),
+      ].filter(Boolean).join('\n\n'),
     })
     .setFooter({ text: `Prairie Brawl Stars • Page ${page + 1}/${totalPages} • 🔗 = Discord lié${clubFilter !== 'tous' ? ' • 🌿 = rang global' : ''}` })
     .setTimestamp();
