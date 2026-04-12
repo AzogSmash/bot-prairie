@@ -6,10 +6,13 @@ function getCache() {
   return { clubMembersCache, progressionCache, lastUpdate };
 }
 
-function setCache(members, progression = {}) {
+function setCache(members) {
   clubMembersCache = members;
-  progressionCache = progression;
   lastUpdate = new Date();
+}
+
+function setProgressionCache(progression) {
+  progressionCache = progression;
 }
 
 function isCacheValid() {
@@ -17,4 +20,4 @@ function isCacheValid() {
   return (new Date() - lastUpdate) < 60 * 60 * 1000;
 }
 
-module.exports = { getCache, setCache, isCacheValid };
+module.exports = { getCache, setCache, setProgressionCache, isCacheValid };

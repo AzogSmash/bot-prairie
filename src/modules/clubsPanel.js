@@ -1,8 +1,6 @@
 const { setCache } = require('../lib/cache');
-const { DateTime } = require('luxon');
 const { EmbedBuilder } = require('discord.js');
 const { getClub } = require('../lib/brawlapi');
-const { getProgressionStats } = require('../lib/progression');
 const { supabase } = require('../lib/supabase');
 const https = require('https');
 
@@ -15,34 +13,6 @@ const PRAIRIE_CLUBS = [
   { tag: '#JY89VGGP',  emoji: '🌱', name: 'Mini Prairie', color: '#33691e', description: 'Club d\'entrée de la famille Prairie. Parfait pour progresser et rejoindre la structure.', level: '🥉 Débutant' },
   { tag: '#C9JUYQQY',  emoji: '🐾', name: 'Prairie Sauvage', color: '#827717', description: 'Club d\'entrée de la famille Prairie. Parfait pour progresser et rejoindre la structure.', level: '🥉 Débutant' },
 ];
-
-function getNowParis() {
-  return DateTime.now().setZone('Europe/Paris');
-}
-
-async function saveSnapshots(members, type) {
-  if (members.length === 0) return;
-  const rows = members.map(m => ({
-    bs_tag: m.bsTag,
-    trophies: m.trophies,
-    club_name: m.clubName,
-    type,
-    snapshot_at: new Date().toISOString(),
-  }));
-  await supabase.from('trophies_snapshots').insert(rows);
-}
-
-function shouldSaveDaily(now) {
-  return now.hour === 0 && now.minute < 60; // entre 00h00 et 00h59
-}
-
-function shouldSaveWeekly(now) {
-  return now.weekday === 1 && now.hour === 0; // lundi minuit
-}
-
-function shouldSaveMonthly(now) {
-  return now.day === 1 && now.hour === 0; // 1er du mois minuit
-}
 
 function formatRank(rank) {
   if (!rank) return '/';
@@ -274,22 +244,7 @@ async function updateClubsPanel(client) {
     }
   }
 
-  const progression = {};
-  for (const club of PRAIRIE_CLUBS) {
-    progression[club.tag] = await getProgressionStats(club.tag);
-  }
-  progression['tous'] = await getProgressionStats('tous');
-  console.log('setCache type:', typeof setCache);
-  setCache(allMembers, progression);
-
-
-  // Snapshots
-  const now = getNowParis();
-  await saveSnapshots(allMembers, 'hourly');
-  if (shouldSaveDaily(now)) await saveSnapshots(allMembers, 'daily');
-  if (shouldSaveWeekly(now)) await saveSnapshots(allMembers, 'weekly');
-  if (shouldSaveMonthly(now)) await saveSnapshots(allMembers, 'monthly');
-
+  setCache(allMembers);
   console.log('[ClubsPanel] ✅ Panels mis à jour');
 }
 

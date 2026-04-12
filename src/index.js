@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { buildProfileEmbed } = require('./commands/profil');
 const { updateClubsPanel } = require('./modules/clubsPanel');
+const { updateSnapshots } = require('./jobs/snapshots');
 
 const client = new Client({
   intents: [
@@ -159,6 +160,10 @@ client.once('clientReady', async () => {
     await updateClubsPanel(client);
     setInterval(() => updateClubsPanel(client), 60 * 60 * 1000);
   }, 3000);
+  setTimeout(async () => {
+    await updateSnapshots();
+    setInterval(() => updateSnapshots(), 60 * 60 * 1000);
+  }, 33000);
 });
 
 client.login(process.env.DISCORD_TOKEN);
