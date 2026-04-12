@@ -143,9 +143,19 @@ function buildComponents(clubFilter, page, totalPages) {
 
   rows.push(new ActionRowBuilder().addComponents(clubMenu));
 
+  // Boutons pagination + profil
+  const row1 = new ActionRowBuilder();
+
+  // Bouton profil toujours présent
+  row1.addComponents(
+    new ButtonBuilder()
+      .setCustomId(`classement_profil`)
+      .setLabel('👤 Mon profil')
+      .setStyle(ButtonStyle.Success)
+  );
+
   if (totalPages > 1) {
-    const row1 = new ActionRowBuilder();
-    for (let i = 0; i < Math.min(5, totalPages); i++) {
+    for (let i = 0; i < Math.min(4, totalPages); i++) {
       row1.addComponents(
         new ButtonBuilder()
           .setCustomId(`classement_goto_${i}_${clubFilter}`)
@@ -154,21 +164,22 @@ function buildComponents(clubFilter, page, totalPages) {
           .setDisabled(i === page)
       );
     }
-    rows.push(row1);
+  }
 
-    if (totalPages > 5) {
-      const row2 = new ActionRowBuilder();
-      for (let i = 5; i < Math.min(10, totalPages); i++) {
-        row2.addComponents(
-          new ButtonBuilder()
-            .setCustomId(`classement_goto_${i}_${clubFilter}`)
-            .setLabel(`${i + 1}`)
-            .setStyle(i === page ? ButtonStyle.Primary : ButtonStyle.Secondary)
-            .setDisabled(i === page)
-        );
-      }
-      rows.push(row2);
+  rows.push(row1);
+
+  if (totalPages > 4) {
+    const row2 = new ActionRowBuilder();
+    for (let i = 4; i < Math.min(9, totalPages); i++) {
+      row2.addComponents(
+        new ButtonBuilder()
+          .setCustomId(`classement_goto_${i}_${clubFilter}`)
+          .setLabel(`${i + 1}`)
+          .setStyle(i === page ? ButtonStyle.Primary : ButtonStyle.Secondary)
+          .setDisabled(i === page)
+      );
     }
+    rows.push(row2);
   }
 
   return rows;
