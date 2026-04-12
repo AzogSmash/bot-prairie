@@ -84,7 +84,7 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers 
 
     const podiumLines = podium.map((m, i) => {
       const medals = ['👑', '🥈', '🥉'];
-      const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]} *(${m.bsName})*` : m.bsName;
+      const name = discordMap[m.bsTag] ? `${m.bsName} *(${discordMap[m.bsTag]})*` : m.bsName;
       const linked = discordMap[m.bsTag] ? ' 🔗' : '';
       const isRequester = m.bsTag === requesterBsTag;
       const globalRank = clubFilter !== 'tous' && globalMembers.length > 0
@@ -97,7 +97,7 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers 
 
     const restLines = rest.map((m, i) => {
       const rank = i + 4;
-      const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]} *(${m.bsName})*` : m.bsName;
+      const name = discordMap[m.bsTag] ? `${m.bsName} *(${discordMap[m.bsTag]})*` : m.bsName;
       const linked = discordMap[m.bsTag] ? '🔗' : '';
       const isRequester = m.bsTag === requesterBsTag;
       const globalRank = clubFilter !== 'tous' && globalMembers.length > 0
@@ -112,7 +112,7 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers 
   } else {
     description = slice.map((m, i) => {
       const rank = start + i + 1;
-      const name = discordMap[m.bsTag] ? `${discordMap[m.bsTag]} *(${m.bsName})*` : m.bsName;
+      const name = discordMap[m.bsTag] ? `${m.bsName} *(${discordMap[m.bsTag]})*` : m.bsName;
       const linked = discordMap[m.bsTag] ? '🔗' : '';
       const isRequester = m.bsTag === requesterBsTag;
       const globalRank = clubFilter !== 'tous' && globalMembers.length > 0
