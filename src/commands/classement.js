@@ -112,7 +112,7 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers 
   return new EmbedBuilder()
     .setColor('#f1c40f')
     .setTitle(`🏆 Classement Prairie — ${clubLabel}`)
-    .setDescription(description)
+    .setDescription(description || '\u200b')
     .addFields({
       name: '📊 Stats',
       value: [
