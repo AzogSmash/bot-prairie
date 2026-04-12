@@ -93,7 +93,12 @@ async function buildProfileEmbed(target, client) {
     getBattleLog(data.brawlstars_tag).catch(() => null),
     getAllClubMembers(),
   ]);
-  console.log('[DEBUG FULL PLAYER]', JSON.stringify(player, null, 2));
+   
+  const playerDebug = Object.fromEntries(
+    Object.entries(player).filter(([key]) => key !== 'brawlers')
+  );
+  console.log('[DEBUG PLAYER]', JSON.stringify(playerDebug, null, 2));
+
 
   const progression = await getMemberProgression(data.brawlstars_tag);
   const formatProg = (val, current) => val === null ? '—' : `+${(current - val).toLocaleString('fr-FR')}`;
