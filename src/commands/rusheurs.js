@@ -147,7 +147,7 @@ function buildEmbed(rusheurs, clubFilter, periode) {
       }
     }
     if (rois.length) {
-      roisSection = `👑 **ROIS DU PUSH ACTUELS**\n${rois.join('\n')}\n\u200b`;
+      roisSection = `👑 **ROIS DU PUSH ACTUELS**\n\n${rois.join('\n')}\n\u200b`;
     }
   }
 
