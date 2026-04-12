@@ -126,7 +126,7 @@ function buildEmbed(rusheurs, clubFilter, periode) {
     return new EmbedBuilder()
       .setColor('#e67e22')
       .setTitle('🔥 Classement Rusheurs')
-      .setDescription(`Pas encore de données pour cette période.\n\nLes stats se remplissent au fil du temps !`)
+      .setDescription(`Pas encore de données pour cette période.\nLes stats se remplissent au fil du temps !`)
       .addFields(
         { name: '🌿 Périmètre', value: clubLabel, inline: true },
         { name: `${periodeLabel.emoji} Période`, value: periodeLabel.label, inline: true },
@@ -135,31 +135,59 @@ function buildEmbed(rusheurs, clubFilter, periode) {
       .setTimestamp();
   }
 
-  const medals = ['👑', '🥈', '🥉'];
-  const top3 = rusheurs.slice(0, 3);
-  const rest = rusheurs.slice(3, 20);
+  // Rois du push — #1 de chaque club (uniquement vue globale + saison)
+  let roisSection = '';
+  if (clubFilter === 'tous' && periode === 'season') {
+    const rois = [];
+    for (const club of PRAIRIE_CLUBS) {
+      const roi = rusheurs.find(r => r.clubName === club.name);
+      if (roi) {
+        const name = roi.discordName || roi.bsName || roi.bsTag;
+        rois.push(`${club.emoji} **${name}** — +${roi.progression.toLocaleString('fr-FR')} 🏆`);
+      }
+    }
+    if (rois.length) {
+      roisSection = `👑 **ROIS DU PUSH ACTUELS**\n${rois.join('\n')}\n\u200b`;
+    }
+  }
 
-  const podium = top3.map((r, i) => {
-    const name = r.discordName || r.bsName || r.bsTag;
-    return `${medals[i]} **${name}**\n┗ +${r.progression.toLocaleString('fr-FR')} 🏆 • ${r.clubEmoji} ${r.clubName}`;
+  // Podium
+  const medals = ['👑', '🥈', '🥉'];
+  const podiumLines = rusheurs.slice(0, 3).map((r, i) => {
+    const name = r.discordName ? `**${r.discordName}** *(${r.bsName || r.bsTag})*` : `**${r.bsName || r.bsTag}**`;
+    return [
+      `${medals[i]} ${name}`,
+      `┗ +${r.progression.toLocaleString('fr-FR')} 🏆  •  ${r.trophies.toLocaleString('fr-FR')} total  •  ${r.clubEmoji} ${r.clubName}`,
+    ].join('\n');
   }).join('\n\n');
 
-  const restLines = rest.map((r, i) => {
-    const name = r.discordName || r.bsName || r.bsTag;
-    return `**#${i + 4}** ${name} — +${r.progression.toLocaleString('fr-FR')} 🏆 • ${r.clubEmoji} ${r.clubName}`;
+  // Reste
+  const restLines = rusheurs.slice(3, 30).map((r, i) => {
+    const name = r.discordName ? `${r.discordName} *(${r.bsName || r.bsTag})*` : (r.bsName || r.bsTag);
+    return `\`#${String(i + 4).padStart(2, ' ')}\` ${r.clubEmoji} **${name}**  •  +${r.progression.toLocaleString('fr-FR')} 🏆  •  ${r.trophies.toLocaleString('fr-FR')} total`;
   }).join('\n');
 
   const totalPush = rusheurs.reduce((a, r) => a + r.progression, 0);
 
+  const description = [
+    roisSection,
+    roisSection ? '━━━━━━━━━━━━━━━━━━━━━━' : '',
+    podiumLines,
+    '\u200b',
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    restLines,
+  ].filter(Boolean).join('\n');
+
   return new EmbedBuilder()
     .setColor('#e67e22')
     .setTitle(`🔥 Classement Rusheurs — ${periodeLabel.emoji} ${periodeLabel.label}`)
-    .setDescription(podium + (restLines ? `\n\n─────────────────\n${restLines}` : ''))
-    .addFields(
-      { name: '🌿 Périmètre', value: clubLabel, inline: true },
-      { name: '👥 Rusheurs actifs', value: `**${rusheurs.length}**`, inline: true },
-      { name: '🏆 Total pushé', value: `**+${totalPush.toLocaleString('fr-FR')}**`, inline: true },
-    )
+    .setDescription(description)
+    .addFields({
+      name: '\u200b',
+      value: [
+        `🌿 **${clubLabel}**  •  👥 **${rusheurs.length}** rusheurs actifs  •  🏆 **+${totalPush.toLocaleString('fr-FR')}** pushés`,
+      ].join('\n'),
+    })
     .setFooter({ text: 'Prairie Brawl Stars • Classement rusheurs' })
     .setTimestamp();
 }
