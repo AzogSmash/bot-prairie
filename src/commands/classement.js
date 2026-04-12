@@ -12,6 +12,88 @@ const PRAIRIE_CLUBS = [
   { tag: '#C9JUYQQY',  emoji: '🐾', name: 'Prairie Sauvage' },
 ];
 
+async function getProgressionStats(clubFilter) {
+  const now = new Date();
+
+  // Récupère le dernier snapshot de chaque type
+  async function getLatestSnapshot(type) {
+    const { data } = await supabase
+      .from('trophies_snapshots')
+      .select('bs_tag, trophies')
+      .eq('type', type)
+      .order('snapshot_at', { ascending: false })
+      .limit(1000);
+    return data || [];
+  }
+
+  async function getSeasonSnapshot() {
+    // Récupère la dernière season_start
+    const { data: season } = await supabase
+      .from('season_starts')
+      .select('started_at')
+      .order('started_at', { ascending: false })
+      .limit(1);
+
+    if (!season?.length) return [];
+
+    const { data } = await supabase
+      .from('trophies_snapshots')
+      .select('bs_tag, trophies')
+      .eq('type', 'hourly')
+      .gte('snapshot_at', season[0].started_at)
+      .order('snapshot_at', { ascending: true })
+      .limit(1000);
+    return data || [];
+  }
+
+  const [daily, weekly, season, current] = await Promise.all([
+    getLatestSnapshot('daily'),
+    getLatestSnapshot('weekly'),
+    getSeasonSnapshot(),
+    supabase.from('trophies_snapshots')
+      .select('bs_tag, trophies, club_name')
+      .eq('type', 'hourly')
+      .order('snapshot_at', { ascending: false })
+      .limit(1000)
+      .then(r => r.data || []),
+  ]);
+
+  // Filtre par club si nécessaire
+  const filterByClub = (rows) => {
+    if (clubFilter === 'tous') return rows;
+    const clubName = PRAIRIE_CLUBS.find(c => c.tag === clubFilter)?.name;
+    return rows.filter(r => r.club_name === clubName);
+  };
+
+  const currentFiltered = filterByClub(current);
+  const tags = new Set(currentFiltered.map(r => r.bs_tag));
+
+  const sum = (rows) => rows
+    .filter(r => tags.has(r.bs_tag))
+    .reduce((acc, r) => acc + r.trophies, 0);
+
+  const currentTotal = sum(currentFiltered);
+
+  // Pour chaque snapshot, prend le plus ancien par membre (premier snapshot du type)
+  const firstByTag = (rows) => {
+    const map = {};
+    for (const r of rows) {
+      if (tags.has(r.bs_tag) && !map[r.bs_tag]) map[r.bs_tag] = r.trophies;
+    }
+    return Object.values(map).reduce((a, b) => a + b, 0);
+  };
+
+  const dailyTotal = firstByTag(daily);
+  const weeklyTotal = firstByTag(weekly);
+  const seasonTotal = firstByTag(season);
+
+  return {
+    today: dailyTotal ? currentTotal - dailyTotal : null,
+    week: weeklyTotal ? currentTotal - weeklyTotal : null,
+    season: seasonTotal ? currentTotal - seasonTotal : null,
+  };
+}
+
 async function buildClassement(clubFilter = 'tous') {
   const clubsToFetch = clubFilter === 'tous'
     ? PRAIRIE_CLUBS
@@ -61,7 +143,7 @@ async function getRequesterBsTag(userId) {
   return data?.brawlstars_tag || null;
 }
 
-function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers = [], requesterBsTag = null) {
+function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers = [], requesterBsTag = null, progression = null) {
   const pageSize = 30;
   const totalPages = Math.ceil(allMembers.length / pageSize);
   const start = page * pageSize;
@@ -132,6 +214,8 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers 
     ? `\n👤 Ton rang : **#${myRank}** / ${allMembers.length}`
     : '';
 
+  const formatProg = (val) => val === null ? '—' : val >= 0 ? `+${val.toLocaleString('fr-FR')}` : val.toLocaleString('fr-FR');
+  
   return new EmbedBuilder()
     .setColor('#f1c40f')
     .setTitle(`🏆 Classement Prairie — ${clubLabel}`)
@@ -139,11 +223,10 @@ function buildEmbed(allMembers, discordMap, clubFilter, page = 0, globalMembers 
     .addFields({
       name: '📊 Stats',
       value: [
-        `👥 **${allMembers.length}** membres`,
-        `🏆 Total : **${totalTrophies.toLocaleString('fr-FR')}**`,
-        `📈 Moyenne : **${avgTrophies.toLocaleString('fr-FR')}**`,
-        `🔗 Liés Discord : **${Object.keys(discordMap).length}**`,
-      ].join(' • ') + myRankStr,
+        `👥 **${allMembers.length}** membres • 🏆 Total : **${totalTrophies.toLocaleString('fr-FR')}** • 📈 Moyenne : **${avgTrophies.toLocaleString('fr-FR')}**`,
+        `🔗 Liés Discord : **${Object.keys(discordMap).length}**` + myRankStr,
+        progression ? `🔥 Aujourd'hui : **${formatProg(progression.today)}** • 📅 Cette semaine : **${formatProg(progression.week)}** • 🏆 Cette saison : **${formatProg(progression.season)}**` : '',
+      ].filter(Boolean).join('\n'),
     })
     .setFooter({ text: `Prairie Brawl Stars • Page ${page + 1}/${totalPages} • 🔗 = Discord lié${clubFilter !== 'tous' ? ' • 🌿 = rang global' : ''}` })
     .setTimestamp();
@@ -220,7 +303,8 @@ module.exports = {
     const { allMembers, discordMap } = await buildClassement('tous');
     const requesterBsTag = await getRequesterBsTag(interaction.user.id);
     const totalPages = Math.ceil(allMembers.length / 30);
-    const embed = buildEmbed(allMembers, discordMap, 'tous', 0, [], requesterBsTag);
+    const progression = await getProgressionStats('tous');
+    const embed = buildEmbed(allMembers, discordMap, 'tous', 0, [], requesterBsTag, progression);
     const components = buildComponents('tous', 0, totalPages);
     await interaction.editReply({ embeds: [embed], components });
   },
@@ -239,7 +323,8 @@ module.exports = {
     }
 
     const totalPages = Math.ceil(allMembers.length / 30);
-    const embed = buildEmbed(allMembers, discordMap, clubFilter, 0, globalMembers, requesterBsTag);
+    const progression = await getProgressionStats(clubFilter);
+    const embed = buildEmbed(allMembers, discordMap, clubFilter, 0, globalMembers, requesterBsTag, progression);
     const components = buildComponents(clubFilter, 0, totalPages, fromProfil);
     await interaction.editReply({ embeds: [embed], components });
   },
@@ -265,7 +350,8 @@ module.exports = {
     }
 
     const totalPages = Math.ceil(allMembers.length / 30);
-    const embed = buildEmbed(allMembers, discordMap, clubFilter, page, globalMembers, requesterBsTag);
+    const progression = await getProgressionStats(clubFilter);
+    const embed = buildEmbed(allMembers, discordMap, clubFilter, page, globalMembers, requesterBsTag, progression);
     const components = buildComponents(clubFilter, page, totalPages, fromProfil);
     await interaction.editReply({ embeds: [embed], components });
   }
