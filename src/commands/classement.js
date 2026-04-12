@@ -13,84 +13,95 @@ const PRAIRIE_CLUBS = [
 ];
 
 async function getProgressionStats(clubFilter) {
-  const now = new Date();
-
-  // Récupère le dernier snapshot de chaque type
-  async function getLatestSnapshot(type) {
-    const { data } = await supabase
+  // Snapshot de référence selon le type
+  async function getRefSnapshot(type, sinceDate = null) {
+    let query = supabase
       .from('trophies_snapshots')
-      .select('bs_tag, trophies')
+      .select('bs_tag, trophies, club_name')
       .eq('type', type)
-      .order('snapshot_at', { ascending: false })
-      .limit(1000);
-    return data || [];
+      .order('snapshot_at', { ascending: false });
+
+    if (sinceDate) query = query.gte('snapshot_at', sinceDate);
+    const { data } = await query.limit(1000);
+    // Garde uniquement le plus récent par membre
+    const map = {};
+    for (const r of (data || [])) {
+      if (!map[r.bs_tag]) map[r.bs_tag] = r;
+    }
+    return Object.values(map);
   }
 
-  async function getSeasonSnapshot() {
-    // Récupère la dernière season_start
+  // Snapshot début de saison = premier hourly après season_start
+  async function getSeasonRef() {
     const { data: season } = await supabase
       .from('season_starts')
       .select('started_at')
       .order('started_at', { ascending: false })
       .limit(1);
-
     if (!season?.length) return [];
 
     const { data } = await supabase
       .from('trophies_snapshots')
-      .select('bs_tag, trophies')
+      .select('bs_tag, trophies, club_name')
       .eq('type', 'hourly')
       .gte('snapshot_at', season[0].started_at)
       .order('snapshot_at', { ascending: true })
       .limit(1000);
-    return data || [];
+
+    // Garde uniquement le PREMIER par membre (le plus proche du début de saison)
+    const map = {};
+    for (const r of (data || [])) {
+      if (!map[r.bs_tag]) map[r.bs_tag] = r;
+    }
+    return Object.values(map);
   }
 
-  const [daily, weekly, season, current] = await Promise.all([
-    getLatestSnapshot('daily'),
-    getLatestSnapshot('weekly'),
-    getSeasonSnapshot(),
-    supabase.from('trophies_snapshots')
+  // Trophées actuels = dernier snapshot hourly
+  async function getCurrentSnapshot() {
+    const { data } = await supabase
+      .from('trophies_snapshots')
       .select('bs_tag, trophies, club_name')
       .eq('type', 'hourly')
       .order('snapshot_at', { ascending: false })
-      .limit(1000)
-      .then(r => r.data || []),
+      .limit(1000);
+    const map = {};
+    for (const r of (data || [])) {
+      if (!map[r.bs_tag]) map[r.bs_tag] = r;
+    }
+    return Object.values(map);
+  }
+
+  const [daily, weekly, seasonRef, current] = await Promise.all([
+    getRefSnapshot('daily'),
+    getRefSnapshot('weekly'),
+    getSeasonRef(),
+    getCurrentSnapshot(),
   ]);
 
-  // Filtre par club si nécessaire
-  const filterByClub = (rows) => {
-    if (clubFilter === 'tous') return rows;
-    const clubName = PRAIRIE_CLUBS.find(c => c.tag === clubFilter)?.name;
-    return rows.filter(r => r.club_name === clubName);
-  };
+  // Filtre par club
+  const clubName = clubFilter !== 'tous'
+    ? PRAIRIE_CLUBS.find(c => c.tag === clubFilter)?.name
+    : null;
 
-  const currentFiltered = filterByClub(current);
+  const filterRows = (rows) => clubName
+    ? rows.filter(r => r.club_name === clubName)
+    : rows;
+
+  const currentFiltered = filterRows(current);
   const tags = new Set(currentFiltered.map(r => r.bs_tag));
+  const currentTotal = currentFiltered.reduce((a, r) => a + r.trophies, 0);
 
-  const sum = (rows) => rows
-    .filter(r => tags.has(r.bs_tag))
-    .reduce((acc, r) => acc + r.trophies, 0);
-
-  const currentTotal = sum(currentFiltered);
-
-  // Pour chaque snapshot, prend le plus ancien par membre (premier snapshot du type)
-  const firstByTag = (rows) => {
-    const map = {};
-    for (const r of rows) {
-      if (tags.has(r.bs_tag) && !map[r.bs_tag]) map[r.bs_tag] = r.trophies;
-    }
-    return Object.values(map).reduce((a, b) => a + b, 0);
+  const calcDelta = (refRows) => {
+    const refFiltered = refRows.filter(r => tags.has(r.bs_tag));
+    if (!refFiltered.length) return null;
+    const refTotal = refFiltered.reduce((a, r) => a + r.trophies, 0);
+    return currentTotal - refTotal;
   };
-
-  const dailyTotal = firstByTag(daily);
-  const weeklyTotal = firstByTag(weekly);
-  const seasonTotal = firstByTag(season);
 
   return {
-    today: dailyTotal ? currentTotal - dailyTotal : null,
-    week: weeklyTotal ? currentTotal - weeklyTotal : null,
-    season: seasonTotal ? currentTotal - seasonTotal : null,
+    today: calcDelta(daily),
+    week: calcDelta(weekly),
+    season: calcDelta(seasonRef),
   };
 }
 
