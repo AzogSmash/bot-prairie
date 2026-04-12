@@ -84,12 +84,13 @@ async function getRusheurs(clubFilter, periode) {
   let rusheurs = currentRows
     .filter(r => refMap[r.bs_tag] !== undefined)
     .map(r => ({
-      bsTag: r.bs_tag,
-      clubName: r.club_name,
-      clubEmoji: PRAIRIE_CLUBS.find(c => c.name === r.club_name)?.emoji || '🌿',
-      progression: r.trophies - refMap[r.bs_tag],
-      trophies: r.trophies,
-    }))
+        bsTag: r.bs_tag,
+        bsName: r.bs_name || null,
+        clubName: r.club_name,
+        clubEmoji: PRAIRIE_CLUBS.find(c => c.name === r.club_name)?.emoji || '🌿',
+        progression: r.trophies - refMap[r.bs_tag],
+        trophies: r.trophies,
+  }))
     .filter(r => r.progression > 0);
 
   // Filtre par club
