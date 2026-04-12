@@ -139,7 +139,7 @@ function buildEmbed(rusheurs, clubFilter, periode) {
   const rest = rusheurs.slice(3, 20);
 
   const podium = top3.map((r, i) => {
-    const name = r.discordName ? `${r.discordName} *(${r.bsTag})*` : r.bsTag;
+    const name = r.discordName || r.bsName || r.bsTag;
     return `${medals[i]} **${name}**\n┗ +${r.progression.toLocaleString('fr-FR')} 🏆 • ${r.clubEmoji} ${r.clubName}`;
   }).join('\n\n');
 

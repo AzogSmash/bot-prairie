@@ -12,6 +12,7 @@ async function saveSnapshots(members, type) {
   if (!members.length) return;
   const rows = members.map(m => ({
     bs_tag: m.bsTag,
+    bs_name: m.bsName,
     trophies: m.trophies,
     club_name: m.clubName,
     type,

@@ -214,6 +214,7 @@ async function updateClubsPanel(client) {
 
       clubData.members?.forEach(m => allMembers.push({
         bsTag: m.tag,
+        bsName: m.name,
         trophies: m.trophies,
         clubName: clubData.name,
       }));
