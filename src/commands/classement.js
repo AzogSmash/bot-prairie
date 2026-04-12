@@ -247,8 +247,8 @@ module.exports = {
   async handleButton(interaction) {
     await interaction.deferUpdate();
     const parts = interaction.customId.split('_');
-    // format: classement_goto_PAGE_CLUBFILTER
     const page = parseInt(parts[2]);
+    const fromProfil = interaction.customId.endsWith('_fromprofil');
     const clubFilter = fromProfil
       ? parts.slice(3, -1).join('_')
       : parts.slice(3).join('_');
