@@ -93,7 +93,10 @@ async function buildProfileEmbed(target, client) {
     getBattleLog(data.brawlstars_tag).catch(() => null),
     getAllClubMembers(),
   ]);
-   
+
+  const playerInCache = allClubMembers.find(m => m.bsTag === player.tag);
+  console.log('[DEBUG cache match]', playerInCache);
+  
   const playerDebug = Object.fromEntries(
     Object.entries(player).filter(([key]) => key !== 'brawlers')
   );
