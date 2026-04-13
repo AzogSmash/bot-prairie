@@ -98,6 +98,7 @@ async function buildProfileEmbed(target, client) {
   console.log('[DEBUG cache match]', playerInCache);
   console.log('[DEBUG cache tags]', allClubMembers.map(m => m.bsTag).slice(0, 5));
   console.log('[DEBUG cache length]', allClubMembers.length);
+  console.log('[DEBUG search]', allClubMembers.find(m => m.bsTag.toLowerCase() === player.tag.toLowerCase()));
 
 
   const playerDebug = Object.fromEntries(
