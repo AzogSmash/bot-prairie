@@ -54,6 +54,21 @@ module.exports = {
       })
 
       .addFields({
+        name: '━━━━━━━━━━━━━━━━━━━━━━\n🛡️ Modération',
+        value: [
+          '`/mod warn @membre` — Avertir un membre',
+          '`/mod mute @membre durée` — Mute temporaire (en minutes)',
+          '`/mod unmute @membre` — Unmute un membre',
+          '`/mod kick @membre` — Expulser un membre',
+          '`/mod tempban @membre durée` — Ban temporaire (en jours)',
+          '`/mod ban @membre` — Bannir définitivement',
+          '`/mod unban id` — Débannir un membre',
+          '`/mod clear nombre` — Supprimer des messages (1-100)',
+        ].join('\n'),
+        inline: false,
+      })
+
+      .addFields({
         name: '━━━━━━━━━━━━━━━━━━━━━━\n💡 Bon à savoir',
         value: [
           '• `/profil` et `/classement` fonctionnent uniquement après `/lier`',
