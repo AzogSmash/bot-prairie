@@ -25,7 +25,7 @@ module.exports = {
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
-    const nouvelleDate = interaction.options.getString('modifier_date');
+    const nouvelleDate = interaction.options.getString('modifier-date');
 
     if (nouvelleDate) {
     const parts = nouvelleDate.split('/');
