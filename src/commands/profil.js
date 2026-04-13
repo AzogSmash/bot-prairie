@@ -95,7 +95,7 @@ async function buildProfileEmbed(target, client) {
   ]);
 
   console.log('[DEBUG cache sample fleurie]', allClubMembers.filter(m => m.clubName === 'Prairie fleurie').map(m => m.bsTag).slice(0, 5));
-
+  console.log('[DEBUG fleurie count]', allClubMembers.filter(m => m.clubName === 'Prairie fleurie').length);
 
   const playerDebug = Object.fromEntries(
     Object.entries(player).filter(([key]) => key !== 'brawlers')
