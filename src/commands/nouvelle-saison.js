@@ -15,10 +15,42 @@ module.exports = {
       option.setName('label')
         .setDescription('Nom de la saison ex: Saison 49')
         .setRequired(false)
-    ),
+    )
+    .addStringOption(option =>
+        option.setName('modifier-date')
+        .setDescription('Modifier la date de début de la saison en cours (JJ/MM/AAAA)')
+        .setRequired(false)
+) ,
+    
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
+    const nouvelleDate = interaction.options.getString('modifier_date');
+
+    if (nouvelleDate) {
+    const parts = nouvelleDate.split('/');
+    if (parts.length !== 3) return interaction.editReply({ content: '❌ Format invalide. Utilise JJ/MM/AAAA' });
+    
+    const date = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00.000Z`);
+    if (isNaN(date.getTime())) return interaction.editReply({ content: '❌ Date invalide.' });
+
+    // Récupère la saison en cours (la plus récente)
+    const { data: lastSeason } = await supabase
+        .from('season_starts')
+        .select('*')
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (!lastSeason) return interaction.editReply({ content: '❌ Aucune saison en cours.' });
+
+    await supabase
+        .from('season_starts')
+        .update({ started_at: date.toISOString() })
+        .eq('id', lastSeason.id);
+
+    return interaction.editReply({ content: `✅ Date de début de saison modifiée au **${nouvelleDate}**.` });
+    }
 
     const dateInput = interaction.options.getString('date');
     const label = interaction.options.getString('label') || 'Saison sans nom';
