@@ -96,7 +96,10 @@ async function buildProfileEmbed(target, client) {
 
   const playerInCache = allClubMembers.find(m => m.bsTag === player.tag);
   console.log('[DEBUG cache match]', playerInCache);
-  
+  console.log('[DEBUG cache tags]', allClubMembers.map(m => m.bsTag).slice(0, 5));
+  console.log('[DEBUG cache length]', allClubMembers.length);
+
+
   const playerDebug = Object.fromEntries(
     Object.entries(player).filter(([key]) => key !== 'brawlers')
   );
