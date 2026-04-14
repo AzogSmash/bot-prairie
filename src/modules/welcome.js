@@ -12,7 +12,7 @@ async function welcome(member) {
       .setTitle('🌿 Bienvenue dans Prairie !')
       .setDescription(
         `Hey ${user} ! Bienvenue sur le serveur de la famille Prairie 🎮\n\n` +
-        `On est **7 clubs, 350+ membres actifs** — tous des vrais joueurs.\n` +
+        `On est **7 clubs, 300+ membres actifs** \n` +
         `Commence par lire le <#${process.env.RULES_CHANNEL_ID}> et présente-toi !`
       )
       .setThumbnail(user.displayAvatarURL({ dynamic: true }))
@@ -28,23 +28,7 @@ async function welcome(member) {
   }
 
   // ── 2. MP de bienvenue ───────────────────────────────────────
-  try {
-    await user.send({
-      embeds: [
-        new EmbedBuilder()
-          .setColor('#2ecc71')
-          .setTitle('👋 Salut, bienvenue dans Prairie !')
-          .setDescription(
-            `🎮 **Lie ton compte Brawl Stars** avec \`/lier <tag>\`\n` +
-            `📊 Tes stats s'afficheront dans ton profil Prairie\n` +
-            `🌐 Retrouve toutes les infos sur notre site\n\n` +
-            `Une question ? Ping le staff, on est là 💪`
-          )
-      ]
-    });
-  } catch {
-    // MP bloqués, on ignore
-  }
+
 
   // ── 3. Enregistrement Supabase ───────────────────────────────
   const { error } = await supabase
