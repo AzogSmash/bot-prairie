@@ -33,9 +33,8 @@ module.exports = {
       });
     }
 
-    // Stocke la cible dans le customId du modal
     const targetId = targetUser ? targetUser.id : interaction.user.id;
-    const targetUsername = targetUser ? targetUser.username : interaction.user.username;
+    const targetUsername = targetUser ? targetUser.displayName : interaction.member.displayName;
 
     const modal = new ModalBuilder()
       .setCustomId(`absence_modal_${targetId}_${targetUsername}`)
@@ -51,10 +50,10 @@ module.exports = {
 
     const finInput = new TextInputBuilder()
       .setCustomId('fin')
-      .setLabel('Date de fin (JJ/MM ou JJ/MM/AAAA)')
-      .setPlaceholder('ex: 30/04')
+      .setLabel('Date de fin (JJ/MM — vide si durée inconnue)')
+      .setPlaceholder('ex: 30/04 — laisser vide si inconnue')
       .setStyle(TextInputStyle.Short)
-      .setRequired(true)
+      .setRequired(false)
       .setMaxLength(10);
 
     const raisonInput = new TextInputBuilder()
@@ -77,7 +76,6 @@ module.exports = {
   async handleModal(interaction) {
     await interaction.deferReply({ ephemeral: true });
 
-    // Récupère la cible depuis le customId
     const parts = interaction.customId.split('_');
     const targetId = parts[2];
     const targetUsername = parts.slice(3).join('_');
@@ -88,18 +86,21 @@ module.exports = {
     const raison = interaction.fields.getTextInputValue('raison') || 'Non précisée';
 
     const debut = parseDate(rawDebut);
-    const fin = parseDate(rawFin);
 
     if (!debut) return interaction.editReply({ content: '❌ Date de début invalide. Format : **JJ/MM**' });
-    if (!fin) return interaction.editReply({ content: '❌ Date de fin invalide. Format : **JJ/MM**' });
-    if (fin.date < debut.date) return interaction.editReply({ content: '❌ La date de fin doit être après la date de début.' });
 
-    // Si c'est pour soi-même, vérifie que la date n'est pas dans le passé
+    let fin = null;
+    if (rawFin.trim()) {
+      fin = parseDate(rawFin);
+      if (!fin) return interaction.editReply({ content: '❌ Date de fin invalide. Format : **JJ/MM**' });
+      if (fin.date < debut.date) return interaction.editReply({ content: '❌ La date de fin doit être après la date de début.' });
+    }
+
     if (!isForOther && debut.date < new Date(new Date().setHours(0, 0, 0, 0))) {
       return interaction.editReply({ content: '❌ La date de début ne peut pas être dans le passé.' });
     }
 
-    const duree = Math.ceil((fin.date - debut.date) / (1000 * 60 * 60 * 24)) + 1;
+    const duree = fin ? Math.ceil((fin.date - debut.date) / (1000 * 60 * 60 * 24)) + 1 : null;
 
     const { error } = await supabase
       .from('absences')
@@ -108,7 +109,7 @@ module.exports = {
         discord_username: targetUsername,
         raison,
         date_debut: debut.raw,
-        date_fin: fin.raw,
+        date_fin: fin ? fin.raw : null,
         active: true,
       });
 
@@ -121,10 +122,10 @@ module.exports = {
       .setColor('#3498db')
       .setTitle(isForOther ? `✅ Absence enregistrée pour ${targetUsername}` : '✅ Absence enregistrée !')
       .addFields(
-        { name: '👤 Membre', value: isForOther ? `**${targetUsername}**` : `**${targetUsername}**`, inline: true },
+        { name: '👤 Membre', value: `**${targetUsername}**`, inline: true },
         { name: '📅 Début', value: debut.display, inline: true },
-        { name: '📅 Fin', value: fin.display, inline: true },
-        { name: '⏳ Durée', value: `${duree} jour(s)`, inline: true },
+        { name: '📅 Fin', value: fin ? fin.display : '**Indéterminée**', inline: true },
+        { name: '⏳ Durée', value: duree ? `${duree} jour(s)` : 'Indéterminée', inline: true },
         { name: '💬 Raison', value: raison, inline: false },
       )
       .setFooter({ text: 'Prairie Brawl Stars • Annuler avec /absence-annuler' })
@@ -139,8 +140,8 @@ module.exports = {
         .setTitle(isForOther ? '📋 Absence créée par le staff' : '📋 Nouvelle absence déclarée')
         .addFields(
           { name: '👤 Membre', value: `**${targetUsername}**`, inline: true },
-          { name: '⏳ Durée', value: `${duree} jour(s)`, inline: true },
-          { name: '📅 Période', value: `${debut.display} → ${fin.display}`, inline: false },
+          { name: '⏳ Durée', value: duree ? `${duree} jour(s)` : 'Indéterminée', inline: true },
+          { name: '📅 Période', value: fin ? `${debut.display} → ${fin.display}` : `${debut.display} → Indéterminée`, inline: false },
           { name: '💬 Raison', value: raison, inline: false },
         )
         .setFooter({ text: isForOther ? `Créée par ${interaction.user.username}` : 'Prairie Brawl Stars' })
