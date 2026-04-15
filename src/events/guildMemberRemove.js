@@ -6,20 +6,29 @@ const { generateWelcomeImage } = require('../modules/welcomeImage');
 module.exports = {
   name: 'guildMemberRemove',
   async execute(member) {
-    const channel = member.guild.channels.cache.get(process.env.LEAVE_CHANNEL_ID);
+    console.log(`[Leave] ${member.user.username} a quitté le serveur`);
     
-    // ── 1. Image de départ ────────────────────────────────
-    if (channel) {
-      const imageBuffer = await generateWelcomeImage(member.user, 'leave');
-      const attachment = new AttachmentBuilder(imageBuffer, { name: 'leave.png' });
+    try {
+      // Fetch le channel au lieu de le récupérer du cache
+      const channel = await member.guild.channels.fetch(process.env.LEAVE_CHANNEL_ID);
+      
+      if (channel) {
+        const imageBuffer = await generateWelcomeImage(member.user, 'leave');
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'leave.png' });
 
-      await channel.send({ 
-        content: `${member.user.username} a quitté la Prairie 🍂`,
-        files: [attachment] 
-      });
+        await channel.send({ 
+          content: `${member.user.username} a quitté la Prairie 🍂`,
+          files: [attachment] 
+        });
+        console.log(`[Leave] Message envoyé dans ${channel.name}`);
+      } else {
+        console.log('[Leave] Channel introuvable');
+      }
+    } catch (err) {
+      console.error('[Leave] Erreur:', err);
     }
 
-    // ── 2. Suppression Supabase ───────────────────────────
+    // Suppression Supabase
     const { error } = await supabase
       .from('members')
       .delete()
