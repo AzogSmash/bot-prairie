@@ -9,26 +9,19 @@ async function welcome(member) {
   if (welcomeChannel) {
     const embed = new EmbedBuilder()
       .setColor('#2ecc71')
-      .setTitle('🌿 Bienvenue dans Prairie !')
+      .setTitle('🌿 Bienvenue dans la Prairie !')
       .setDescription(
-        `Hey ${user} ! Bienvenue sur le serveur de la famille Prairie 🎮\n\n` +
-        `On est **7 clubs, 300+ membres actifs** \n` +
-        `Commence par lire le <#${process.env.RULES_CHANNEL_ID}> et présente-toi !`
+        `Hey ${user} ! Installe-toi, t'es chez toi maintenant 🏡\n\n` +
+        `💬 Viens te présenter dans <#1173550145955180618>\n\n` +
+        `🔗 Lie ton compte BS dans <#1173729682546495589> avec \`/lier #TAG\` pour profiter du bot Prairie\n\n` +
+        `🎙️ Passe nous voir en vocal, on sera ravis de discuter avec toi !`
       )
       .setThumbnail(user.displayAvatarURL({ dynamic: true }))
-      .addFields(
-        { name: '📋 Étape 1', value: 'Lis les règles', inline: true },
-        { name: '🏷️ Étape 2', value: 'Relie ton compte BS', inline: true },
-        { name: '🏆 Étape 3', value: 'Rejoins un club', inline: true }
-      )
-      .setFooter({ text: 'Prairie Brawl Stars • Famille de clubs' })
+      .setFooter({ text: 'Prairie Brawl Stars • Fais comme chez toi 🌿' })
       .setTimestamp();
 
     await welcomeChannel.send({ embeds: [embed] });
   }
-
-  // ── 2. MP de bienvenue ───────────────────────────────────────
-
 
   // ── 3. Enregistrement Supabase ───────────────────────────────
   const { error } = await supabase

@@ -31,9 +31,8 @@ module.exports = {
     const { data, error } = await supabase
       .from('absences')
       .select('*')
-      .eq('discord_id', discordId)
       .eq('active', true)
-      .gte('date_fin', today)
+      .or(`date_fin.gte.${today},date_fin.is.null`)
       .order('date_debut', { ascending: true });
 
     if (error || !data || data.length === 0) {
@@ -53,7 +52,7 @@ module.exports = {
       .setPlaceholder('Choisis l\'absence à annuler')
       .addOptions(
         data.map(a => ({
-          label: `${new Date(a.date_debut).toLocaleDateString('fr-FR')} → ${new Date(a.date_fin).toLocaleDateString('fr-FR')}`,
+          label: `${new Date(a.date_debut).toLocaleDateString('fr-FR')} → ${a.date_fin ? new Date(a.date_fin).toLocaleDateString('fr-FR') : 'Indéterminée'}`,
           description: a.raison !== 'Non précisée' ? a.raison.slice(0, 50) : 'Aucune raison',
           value: a.id,
         }))
@@ -96,7 +95,7 @@ async function annulerAbsence(interaction, absence, displayName, isStaff, target
     .eq('id', absence.id);
 
   const debutFormate = new Date(absence.date_debut).toLocaleDateString('fr-FR');
-  const finFormate = new Date(absence.date_fin).toLocaleDateString('fr-FR');
+  const finFormate = absence.date_fin ? new Date(absence.date_fin).toLocaleDateString('fr-FR') : 'Indéterminée';
 
   await interaction.editReply({
     content: `✅ Absence de **${displayName}** du **${debutFormate}** au **${finFormate}** annulée.`,
