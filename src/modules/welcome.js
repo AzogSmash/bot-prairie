@@ -1,5 +1,7 @@
-const { EmbedBuilder } = require('discord.js');
+// src/modules/welcome.js
+const { AttachmentBuilder } = require('discord.js');
 const { supabase } = require('../lib/supabase');
+const { generateWelcomeImage } = require('./welcomeImage');
 
 async function welcome(member) {
   const { guild, user } = member;
@@ -7,29 +9,16 @@ async function welcome(member) {
   // ── 1. Message dans le général ──────────────────────────────
   const welcomeChannel = guild.channels.cache.get(process.env.WELCOME_CHANNEL_ID);
   if (welcomeChannel) {
-    const embed = new EmbedBuilder()
-      .setColor('#2ecc71')
-      .setAuthor({ 
-        name: `${user.username} vient d'arriver !`, 
-        iconURL: user.displayAvatarURL({ dynamic: true }) 
-      })
-      .setDescription(
-        `Bienvenue ${user} dans la famille Prairie 🌿\n\n` +
-        `Installe-toi et n'hésite pas à venir discuter avec nous !\n` +
-        `On espère que t'as bien choisi tes rôles 👀`
-      )
-      .addFields(
-        { name: '💬 Général', value: `<#1173550145955180618>`, inline: true },
-        { name: '🔗 Lier ton compte', value: `<#1173729682546495589>`, inline: true },
-        { name: '🎙️ Vocal', value: `On t'attend !`, inline: true },
-      )
-      .setFooter({ text: 'Prairie Brawl Stars' })
-      .setTimestamp();
+    const imageBuffer = await generateWelcomeImage(user, 'welcome');
+    const attachment = new AttachmentBuilder(imageBuffer, { name: 'welcome.png' });
 
-    await welcomeChannel.send({ embeds: [embed] });
+    await welcomeChannel.send({ 
+      content: `Bienvenue ${user} ! Installe-toi et choisis tes rôles 🌿`,
+      files: [attachment] 
+    });
   }
 
-  // ── 3. Enregistrement Supabase ───────────────────────────────
+  // ── 2. Enregistrement Supabase ───────────────────────────────
   const { error } = await supabase
     .from('members')
     .upsert({
