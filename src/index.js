@@ -166,8 +166,8 @@ client.once('clientReady', async () => {
     setInterval(() => updateClubsPanel(client), 60 * 60 * 1000);
   }, 3000);
   setTimeout(async () => {
-    await updateSnapshots();
-    setInterval(() => updateSnapshots(), 60 * 60 * 1000);
+    await updateSnapshots(client);
+    setInterval(() => updateSnapshots(client), 60 * 60 * 1000);
   }, 33000);
 });
 
