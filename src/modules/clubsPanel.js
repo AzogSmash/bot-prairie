@@ -161,7 +161,7 @@ async function buildClubEmbed(clubData, clubConfig, rankings, customConfig) {
       { name: '\u200b', value: '\u200b', inline: true },
     )
     .addFields(
-      { name: '🔰 Senior(s)', value: `**${seniors.length}** membre(s)`, inline: true },
+      { name: '💎 Conseiller(s)', value: seniors.length > 0 ? seniors.map(m => `**${m.name}**`).join(', ') : '—', inline: true },
       { name: '👤 Membre(s)', value: `**${regulars.length}** membre(s)`, inline: true },
       { name: '\u200b', value: '\u200b', inline: true },
     )
