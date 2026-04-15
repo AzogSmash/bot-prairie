@@ -28,7 +28,7 @@ async function fetchAbsences(clubFilter, periodeFilter) {
     .from('absences')
     .select('*')
     .eq('active', true)
-    .gte('date_fin', todayStr)
+    .or(`date_fin.gte.${todayStr},date_fin.is.null`)
     .order('date_debut', { ascending: true });
 
   // Filtre période
@@ -78,11 +78,22 @@ async function fetchAbsences(clubFilter, periodeFilter) {
 
 function formatLine(a) {
   const debut = Math.floor(new Date(a.date_debut).getTime() / 1000);
-  const fin = Math.floor(new Date(a.date_fin).getTime() / 1000);
-  const duree = Math.ceil((new Date(a.date_fin) - new Date(a.date_debut)) / (1000 * 60 * 60 * 24)) + 1;
+  
+  // Gère date_fin null
+  const hasEnd = a.date_fin !== null;
+  const finDisplay = hasEnd 
+    ? `<t:${Math.floor(new Date(a.date_fin).getTime() / 1000)}:D>`
+    : '**Indéterminée**';
+  
+  const duree = hasEnd 
+    ? Math.ceil((new Date(a.date_fin) - new Date(a.date_debut)) / (1000 * 60 * 60 * 24)) + 1
+    : null;
+  const dureeStr = duree ? `${duree}j` : 'Indéterminée';
+  
   const trophies = a.trophies ? ` • 🏆 ${a.trophies.toLocaleString('fr-FR')}` : '';
   const raison = a.raison && a.raison !== 'Non précisée' ? `\n> _${a.raison}_` : '';
-  return `👤 **${a.discord_username}** • 🌿 ${a.club_name}${trophies}\n📅 <t:${debut}:D> → <t:${fin}:D> • ⏳ ${duree}j${raison}`;
+  
+  return `👤 **${a.discord_username}** • 🌿 ${a.club_name}${trophies}\n📅 <t:${debut}:D> → ${finDisplay} • ⏳ ${dureeStr}${raison}`;
 }
 
 function buildEmbed(absences, clubFilter, periodeFilter) {

@@ -34,7 +34,10 @@ module.exports = {
     }
 
     const targetId = targetUser ? targetUser.id : interaction.user.id;
-    const targetUsername = targetUser ? targetUser.displayName : interaction.member.displayName;
+    const targetMember = targetUser 
+      ? await interaction.guild.members.fetch(targetUser.id) 
+      : interaction.member;
+    const targetUsername = targetMember.displayName;
 
     const modal = new ModalBuilder()
       .setCustomId(`absence_modal_${targetId}_${targetUsername}`)
