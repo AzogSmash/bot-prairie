@@ -16,7 +16,7 @@ async function generateWelcomeImage(user, type = 'welcome') {
   ctx.drawImage(background, 0, 0, width, height);
 
   // ── 2. Overlay sombre pour lisibilité ───────────────────
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
   ctx.fillRect(0, 0, width, height);
 
   // ── 3. Avatar en cercle ─────────────────────────────────
@@ -46,15 +46,25 @@ async function generateWelcomeImage(user, type = 'welcome') {
   const title = type === 'welcome' ? 'BIENVENUE' : 'AU REVOIR';
   const titleColor = type === 'welcome' ? '#2ecc71' : '#e74c3c';
 
-  ctx.fillStyle = titleColor;
-  ctx.font = 'bold 36px Arial';
+  // Ombre du texte
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  ctx.font = 'bold 40px sans-serif';
   ctx.textAlign = 'center';
+  ctx.fillText(title, width / 2 + 2, avatarY + avatarSize / 2 + 42);
+
+  // Texte principal
+  ctx.fillStyle = titleColor;
   ctx.fillText(title, width / 2, avatarY + avatarSize / 2 + 40);
 
   // ── 5. Pseudo ───────────────────────────────────────────
+  // Ombre
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillText(user.username.toUpperCase(), width / 2 + 2, avatarY + avatarSize / 2 + 75);
+
+  // Texte
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 24px Arial';
-  ctx.fillText(user.username.toUpperCase(), width / 2, avatarY + avatarSize / 2 + 70);
+  ctx.fillText(user.username.toUpperCase(), width / 2, avatarY + avatarSize / 2 + 73);
 
   return canvas.toBuffer('image/png');
 }
