@@ -3,7 +3,6 @@ const path = require('path');
 
 const ASSETS_PATH = path.join(__dirname, '../assets');
 
-// Enregistre la police AVANT de créer le canvas
 registerFont(path.join(ASSETS_PATH, 'Roboto-Bold.ttf'), { family: 'Roboto' });
 
 async function generateWelcomeImage(user, type = 'welcome') {
@@ -25,7 +24,7 @@ async function generateWelcomeImage(user, type = 'welcome') {
   // ── 3. Avatar en cercle ─────────────────────────────────
   const avatarSize = 100;
   const avatarX = width / 2;
-  const avatarY = height / 2 - 20;
+  const avatarY = height / 2 - 30;
 
   const avatarURL = user.displayAvatarURL({ extension: 'png', size: 256 });
   const avatar = await loadImage(avatarURL);
@@ -45,29 +44,40 @@ async function generateWelcomeImage(user, type = 'welcome') {
   ctx.drawImage(avatar, avatarX - avatarSize / 2, avatarY - avatarSize / 2, avatarSize, avatarSize);
   ctx.restore();
 
-  // ── 4. Texte principal ──────────────────────────────────
-  const title = type === 'welcome' ? 'BIENVENUE' : 'AU REVOIR';
-  const titleColor = type === 'welcome' ? '#2ecc71' : '#e74c3c';
-
+  // ── 4. Textes selon le type ─────────────────────────────
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  // Ombre
-  ctx.fillStyle = '#000000';
-  ctx.font = '40px Roboto';
-  ctx.fillText(title, width / 2 + 2, avatarY + avatarSize / 2 + 42);
+  if (type === 'welcome') {
+    // Titre "BIENVENUE DANS LA PRAIRIE"
+    ctx.fillStyle = '#000000';
+    ctx.font = '32px Roboto';
+    ctx.fillText('BIENVENUE DANS LA PRAIRIE', width / 2 + 2, avatarY + avatarSize / 2 + 35);
+    ctx.fillStyle = '#2ecc71';
+    ctx.fillText('BIENVENUE DANS LA PRAIRIE', width / 2, avatarY + avatarSize / 2 + 33);
 
-  // Texte
-  ctx.fillStyle = titleColor;
-  ctx.fillText(title, width / 2, avatarY + avatarSize / 2 + 40);
+    // Pseudo
+    ctx.fillStyle = '#000000';
+    ctx.font = '24px Roboto';
+    ctx.fillText(user.username.toUpperCase(), width / 2 + 2, avatarY + avatarSize / 2 + 65);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(user.username.toUpperCase(), width / 2, avatarY + avatarSize / 2 + 63);
 
-  // ── 5. Pseudo ───────────────────────────────────────────
-  ctx.fillStyle = '#000000';
-  ctx.font = '28px Roboto';
-  ctx.fillText(user.username.toUpperCase(), width / 2 + 2, avatarY + avatarSize / 2 + 77);
+  } else {
+    // Titre "À LA PROCHAINE..."
+    ctx.fillStyle = '#000000';
+    ctx.font = '32px Roboto';
+    ctx.fillText('À LA PROCHAINE...', width / 2 + 2, avatarY + avatarSize / 2 + 35);
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillText('À LA PROCHAINE...', width / 2, avatarY + avatarSize / 2 + 33);
 
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(user.username.toUpperCase(), width / 2, avatarY + avatarSize / 2 + 75);
+    // Pseudo
+    ctx.fillStyle = '#000000';
+    ctx.font = '24px Roboto';
+    ctx.fillText(user.username.toUpperCase(), width / 2 + 2, avatarY + avatarSize / 2 + 65);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(user.username.toUpperCase(), width / 2, avatarY + avatarSize / 2 + 63);
+  }
 
   return canvas.toBuffer('image/png');
 }
