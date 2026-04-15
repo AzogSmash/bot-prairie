@@ -97,7 +97,7 @@ module.exports = {
       return interaction.reply({ content: '❌ Tu n\'as pas la permission.', ephemeral: true });
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ ephemeral: false });
     const sub = interaction.options.getSubcommand();
     const guild = interaction.guild;
     const moderator = interaction.user;
