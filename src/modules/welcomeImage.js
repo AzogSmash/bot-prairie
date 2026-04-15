@@ -1,7 +1,10 @@
-const { createCanvas, loadImage } = require('canvas');
+const { createCanvas, loadImage, registerFont } = require('canvas');
 const path = require('path');
 
 const ASSETS_PATH = path.join(__dirname, '../assets');
+
+// Enregistre la police AVANT de créer le canvas
+registerFont(path.join(ASSETS_PATH, 'Roboto-Bold.ttf'), { family: 'Roboto' });
 
 async function generateWelcomeImage(user, type = 'welcome') {
   const width = 1024;
@@ -42,7 +45,7 @@ async function generateWelcomeImage(user, type = 'welcome') {
   ctx.drawImage(avatar, avatarX - avatarSize / 2, avatarY - avatarSize / 2, avatarSize, avatarSize);
   ctx.restore();
 
-  // ── 4. Texte principal (sans dépendance fontconfig) ─────
+  // ── 4. Texte principal ──────────────────────────────────
   const title = type === 'welcome' ? 'BIENVENUE' : 'AU REVOIR';
   const titleColor = type === 'welcome' ? '#2ecc71' : '#e74c3c';
 
@@ -51,7 +54,7 @@ async function generateWelcomeImage(user, type = 'welcome') {
 
   // Ombre
   ctx.fillStyle = '#000000';
-  ctx.font = 'bold 40px DejaVu Sans, Liberation Sans, FreeSans';
+  ctx.font = '40px Roboto';
   ctx.fillText(title, width / 2 + 2, avatarY + avatarSize / 2 + 42);
 
   // Texte
@@ -60,7 +63,7 @@ async function generateWelcomeImage(user, type = 'welcome') {
 
   // ── 5. Pseudo ───────────────────────────────────────────
   ctx.fillStyle = '#000000';
-  ctx.font = 'bold 28px DejaVu Sans, Liberation Sans, FreeSans';
+  ctx.font = '28px Roboto';
   ctx.fillText(user.username.toUpperCase(), width / 2 + 2, avatarY + avatarSize / 2 + 77);
 
   ctx.fillStyle = '#ffffff';
