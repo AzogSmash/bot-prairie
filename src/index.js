@@ -32,6 +32,7 @@ for (const file of commandFiles) {
 const eventsPath = path.join(__dirname, 'events');
 for (const file of fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'))) {
   const event = require(path.join(eventsPath, file));
+  console.log(`[Events] Chargé: ${event.name} (${file})`);
   client.on(event.name, (...args) => event.execute(...args));
 }
 
