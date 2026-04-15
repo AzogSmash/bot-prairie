@@ -9,15 +9,21 @@ async function welcome(member) {
   if (welcomeChannel) {
     const embed = new EmbedBuilder()
       .setColor('#2ecc71')
-      .setTitle('🌿 Bienvenue dans la Prairie !')
+      .setAuthor({ 
+        name: `${user.username} vient d'arriver !`, 
+        iconURL: user.displayAvatarURL({ dynamic: true }) 
+      })
       .setDescription(
-        `Hey ${user} ! Installe-toi, t'es chez toi maintenant 🏡\n\n` +
-        `💬 Viens te présenter dans <#1173550145955180618>\n\n` +
-        `🔗 Lie ton compte BS dans <#1173729682546495589> avec \`/lier #TAG\` pour profiter du bot Prairie\n\n` +
-        `🎙️ Passe nous voir en vocal, on sera ravis de discuter avec toi !`
+        `Bienvenue ${user} dans la famille Prairie 🌿\n\n` +
+        `Installe-toi et n'hésite pas à venir discuter avec nous !\n` +
+        `On espère que t'as bien choisi tes rôles 👀`
       )
-      .setThumbnail(user.displayAvatarURL({ dynamic: true }))
-      .setFooter({ text: 'Prairie Brawl Stars • Fais comme chez toi 🌿' })
+      .addFields(
+        { name: '💬 Général', value: `<#1173550145955180618>`, inline: true },
+        { name: '🔗 Lier ton compte', value: `<#1173729682546495589>`, inline: true },
+        { name: '🎙️ Vocal', value: `On t'attend !`, inline: true },
+      )
+      .setFooter({ text: 'Prairie Brawl Stars' })
       .setTimestamp();
 
     await welcomeChannel.send({ embeds: [embed] });
