@@ -42,29 +42,29 @@ async function generateWelcomeImage(user, type = 'welcome') {
   ctx.drawImage(avatar, avatarX - avatarSize / 2, avatarY - avatarSize / 2, avatarSize, avatarSize);
   ctx.restore();
 
-  // ── 4. Texte principal ──────────────────────────────────
+  // ── 4. Texte principal (sans dépendance fontconfig) ─────
   const title = type === 'welcome' ? 'BIENVENUE' : 'AU REVOIR';
   const titleColor = type === 'welcome' ? '#2ecc71' : '#e74c3c';
 
-  // Ombre du texte
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-  ctx.font = 'bold 40px sans-serif';
   ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Ombre
+  ctx.fillStyle = '#000000';
+  ctx.font = 'bold 40px DejaVu Sans, Liberation Sans, FreeSans';
   ctx.fillText(title, width / 2 + 2, avatarY + avatarSize / 2 + 42);
 
-  // Texte principal
+  // Texte
   ctx.fillStyle = titleColor;
   ctx.fillText(title, width / 2, avatarY + avatarSize / 2 + 40);
 
   // ── 5. Pseudo ───────────────────────────────────────────
-  // Ombre
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-  ctx.font = 'bold 28px sans-serif';
-  ctx.fillText(user.username.toUpperCase(), width / 2 + 2, avatarY + avatarSize / 2 + 75);
+  ctx.fillStyle = '#000000';
+  ctx.font = 'bold 28px DejaVu Sans, Liberation Sans, FreeSans';
+  ctx.fillText(user.username.toUpperCase(), width / 2 + 2, avatarY + avatarSize / 2 + 77);
 
-  // Texte
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(user.username.toUpperCase(), width / 2, avatarY + avatarSize / 2 + 73);
+  ctx.fillText(user.username.toUpperCase(), width / 2, avatarY + avatarSize / 2 + 75);
 
   return canvas.toBuffer('image/png');
 }
