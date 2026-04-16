@@ -1,9 +1,8 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { getPlayer, getBattleLog } = require('../lib/brawlapi');
 const { supabase } = require('../lib/supabase');
 const { getCache, isCacheValid } = require('../lib/cache');
 const { getClub } = require('../lib/brawlapi');
-const { generateProfileCard } = require('../modules/profileCard');
 
 const PRAIRIE_CLUBS = [
   { tag: '#29UPLG8QQ', emoji: '🌟' },
@@ -226,7 +225,7 @@ async function buildProfileEmbed(target, client) {
     .setFooter({ text: 'Prairie Brawl Stars • Stats en temps réel' })
     .setTimestamp();
 
-  return { embed, bsTag: data.brawlstars_tag };
+  return embed;
 }
 
 module.exports = {
@@ -244,15 +243,13 @@ module.exports = {
     const target = interaction.options.getUser('membre') || interaction.user;
 
     try {
-      const result = await buildProfileEmbed(target, interaction.client);
+      const embed = await buildProfileEmbed(target, interaction.client);
 
-      if (!result) {
+      if (!embed) {
         return interaction.editReply({
           content: `❌ **${target.username}** n'a pas encore lié son compte Brawl Stars.\nUtilise \`/lier #TAG\` pour commencer !`
         });
       }
-
-      const { embed, bsTag } = result;
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -265,19 +262,7 @@ module.exports = {
           .setStyle(ButtonStyle.Primary),
       );
 
-      // Générer la carte de profil
-      let files = [];
-      try {
-        const cardBuffer = await generateProfileCard(bsTag);
-        const attachment = new AttachmentBuilder(cardBuffer, { name: 'profil.png' });
-        files.push(attachment);
-        embed.setImage('attachment://profil.png');
-      } catch (cardErr) {
-        console.error('[Profil] Erreur génération carte:', cardErr.message);
-        // Continue sans la carte si erreur
-      }
-
-      await interaction.editReply({ embeds: [embed], components: [row], files });
+      await interaction.editReply({ embeds: [embed], components: [row] });
 
     } catch (err) {
       console.error('[Profil]', err);
