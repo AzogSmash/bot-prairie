@@ -31,7 +31,6 @@ module.exports = {
           discord_username: member.displayName,
           avatar_url: user.displayAvatarURL(),
           brawlstars_tag: player.tag,
-          brawlstars_name: player.name,
           brawlstars_trophies: player.trophies,
           club_name: player.club?.name || null,
           status: 'actif',
