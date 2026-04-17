@@ -124,33 +124,46 @@ function getTotalPrestigeFromRnt(rntData, bsPlayer) {
   }, 0);
 }
 
-function getBrawlerPrestigeTier(entry) {
-  const trophies = Number(entry?.trophies || 0);
+function getBsInfoTierFolderFromTrophies(trophies) {
+  const t = Number(trophies || 0);
 
-  // badge visuel basé sur les trophées ACTUELS
-  if (trophies < 1000) return 0;
+  if (t < 250) return '39000000';
+  if (t < 500) return '39000001';
+  if (t < 750) return '39000002';
+  if (t < 1000) return '39000003';
 
-  return Math.max(0, Math.min(6, Math.floor(trophies / 1000)));
+  // 1000-1999 => 39000004
+  // 2000-2999 => 39000005
+  // 3000-3999 => 39000006
+  const prestigeLevel = Math.floor(t / 1000);
+  return String(39000003 + prestigeLevel);
 }
 
-function getSortedBrawlerDisplayList(rntBrawlers, bsBrawlers) {
-  if (rntBrawlers?.length) {
+function getBsInfoTierUrl(brawlerId, trophies) {
+  const folder = getBsInfoTierFolderFromTrophies(trophies);
+  return `https://cdn.bsinfox.com/tier/${folder}/${brawlerId}.png`;
+}
+
+function getTop10Brawlers(rntBrawlers = [], bsBrawlers = []) {
+  if (rntBrawlers.length) {
     return [...rntBrawlers]
       .map(b => ({
         id: Number(b.brawler_id),
         trophies: Number(b.trophies || 0),
-        highest: Number(b.highest_trophies || 0),
+        highestTrophies: Number(b.highest_trophies || 0),
       }))
-      .sort((a, b) => b.trophies - a.trophies);
+      .sort((a, b) => b.trophies - a.trophies)
+      .slice(0, 10);
   }
 
-  return [...(bsBrawlers || [])]
+  return [...bsBrawlers]
     .map(b => ({
       id: Number(b.id),
       trophies: Number(b.trophies || 0),
-      highest: Number(b.highestTrophies || 0),
+      highestTrophies: Number(b.highestTrophies || 0),
     }))
-    .sort((a, b) => b.trophies - a.trophies);
+    .sort((a, b) => b.trophies - a.trophies)
+    .slice(0, 10);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -360,6 +373,7 @@ async function generateProfileCard(bsTag, bsPlayer) {
 
   // ── Données calculées ────────────────────────────────
   const bsBrawlers = bsPlayer?.brawlers || [];
+  const displayBrawlers = getTop10Brawlers(rntBrawlers, bsBrawlers);
   const heroBrawlerId = pickHeroBrawlerId(bsPlayer, rntData);
   const brawlerCount = ownedBrawlers || bsBrawlers.length;
   const trophies = bsPlayer?.trophies || getStatLoose(stats, 'Trophies') || 0;
@@ -769,21 +783,18 @@ async function generateProfileCard(bsTag, bsPlayer) {
   ctx.textAlign = 'right';
   ctx.fillText(`${brawlerCount} / ${brawlerCount} Collected`, RX + brawlW - 10, curY + 18);
 
-  // liste triée par trophées décroissants
-  const displayBrawlers = getSortedBrawlerDisplayList(rntBrawlers, bsBrawlers);
-
-  // grille
-  const cols = 9;
+  // seulement les 10 premiers
+  const cols = 5;
   const rows = 2;
-  const slotCount = cols * rows;
-  const iSz = 42;
-  const gapY = 10;
+  const slotCount = 10;
+  const iSz = 56;
+  const gapY = 12;
 
-  const startX = RX + 10;
-  const startY = curY + 30;
-  const usableW = brawlW - 20;
+  const startX = RX + 16;
+  const startY = curY + 34;
+  const usableW = brawlW - 32;
   const totalIconsW = cols * iSz;
-  const gapX = Math.max(6, Math.floor((usableW - totalIconsW) / (cols - 1)));
+  const gapX = Math.max(10, Math.floor((usableW - totalIconsW) / (cols - 1)));
 
   for (let i = 0; i < Math.min(displayBrawlers.length, slotCount); i++) {
     const b = displayBrawlers[i];
@@ -792,61 +803,52 @@ async function generateProfileCard(bsTag, bsPlayer) {
     const bx = startX + col * (iSz + gapX);
     const by = startY + row * (iSz + gapY);
 
-    const tier = getBrawlerPrestigeTier(b);
-
-    // badge prestige en fond
-    const badge = await tryImg(`https://cdn.brawlify.com/prestiges/regular/${tier}.png`);
-    if (badge) {
-      ctx.drawImage(badge, bx - 4, by - 4, iSz + 8, iSz + 8);
+    const img = await tryImg(getBsInfoTierUrl(b.id, b.trophies));
+    if (img) {
+      ctx.drawImage(img, bx, by, iSz, iSz);
+    } else {
+      // fallback si jamais BSInfo rate
+      const fallback = await tryImg(`https://cdn.brawlify.com/brawlers/borderless/${b.id}.png`);
+      if (fallback) ctx.drawImage(fallback, bx, by, iSz, iSz);
     }
 
-    // icône brawler au centre
-    const bImg = await tryImg(`https://cdn.brawlify.com/brawlers/borderless/${b.id}.png`);
-    if (bImg) {
-      const inner = Math.round(iSz * 0.72);
-      const ix = bx + (iSz - inner) / 2;
-      const iy = by + (iSz - inner) / 2;
-      ctx.drawImage(bImg, ix, iy, inner, inner);
-    }
-
-    // marqueurs
     if (b.id === favoriteBrawlerId) {
-      drawMarker(ctx, bx + iSz - 5, by + 5, 'star');
+      drawMarker(ctx, bx + iSz - 6, by + 6, 'star');
     } else if (b.id === winstreakBrawlerId) {
-      drawMarker(ctx, bx + iSz - 5, by + 5, 'flame');
+      drawMarker(ctx, bx + iSz - 6, by + 6, 'flame');
     }
   }
 
-  if (brawlerCount > slotCount) {
-    const moreX = startX + cols * iSz + (cols - 1) * gapX + 8;
+  if (brawlerCount > 10) {
+    const moreX = startX + cols * iSz + (cols - 1) * gapX + 12;
     ctx.font = 'bold 14px Roboto';
     ctx.fillStyle = PRAIRIE.cream;
     ctx.textAlign = 'left';
-    ctx.fillText(`+${brawlerCount - slotCount} more`, moreX, startY + 24);
+    ctx.fillText(`+${brawlerCount - 10} more`, moreX, startY + 28);
   }
 
-  // ── PRESTIGE ─────────────────────────────────────────
-  const presX = RX + brawlW + 6;
-  statBox(ctx, presX, curY, presW, R4H);
+// ── PRESTIGE ─────────────────────────────────────────
+const presX = RX + brawlW + 6;
+statBox(ctx, presX, curY, presW, R4H);
 
-  const presTierFile = Math.min(6, Math.max(0, Math.floor(prestige / 20)));
-  const pImg = await tryImg(`https://cdn.brawlify.com/prestiges/regular/${presTierFile}.png`);
-  const badgeSize = Math.min(90, presW - 18);
-  const badgeX = presX + (presW - badgeSize) / 2;
-  const badgeY = curY + 16;
+const presTierFile = Math.min(6, Math.max(0, Math.floor(prestige / 20)));
+const pImg = await tryImg(`https://cdn.brawlify.com/prestiges/regular/${presTierFile}.png`);
+const badgeSize = Math.min(90, presW - 18);
+const badgeX = presX + (presW - badgeSize) / 2;
+const badgeY = curY + 16;
 
-  if (pImg) ctx.drawImage(pImg, badgeX, badgeY, badgeSize, badgeSize);
+if (pImg) ctx.drawImage(pImg, badgeX, badgeY, badgeSize, badgeSize);
 
-  ctx.textAlign = 'center';
-  drawOutlineText(ctx, String(prestige), presX + presW / 2, badgeY + badgeSize * 0.60, '#ffffff', 30, 'Lilita', 5);
+ctx.textAlign = 'center';
+drawOutlineText(ctx, String(prestige), presX + presW / 2, badgeY + badgeSize * 0.60, '#ffffff', 30, 'Lilita', 5);
 
-  ctx.font = 'bold 11px Roboto';
-  ctx.fillStyle = PRAIRIE.muted;
-  ctx.fillText('TOTAL', presX + presW / 2, curY + R4H - 24);
+ctx.font = 'bold 11px Roboto';
+ctx.fillStyle = PRAIRIE.muted;
+ctx.fillText('TOTAL', presX + presW / 2, curY + R4H - 24);
 
-  ctx.font = 'bold 14px Roboto';
-  ctx.fillStyle = PRAIRIE.goldText;
-  ctx.fillText('PRESTIGE', presX + presW / 2, curY + R4H - 8);
+ctx.font = 'bold 14px Roboto';
+ctx.fillStyle = PRAIRIE.goldText;
+ctx.fillText('PRESTIGE', presX + presW / 2, curY + R4H - 8);
 
   // ── DATE ──────────────────────────────────────────────
   ctx.font = 'bold 12px Roboto';
