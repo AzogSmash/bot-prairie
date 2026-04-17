@@ -101,17 +101,10 @@ function pickHeroBrawlerId(bsPlayer, rntData) {
 }
 
 function getTotalPrestigeFromRnt(rntData, bsPlayer) {
-  const stats = rntData?.stats || [];
-
-  // 1) si RNT donne une vraie valeur non nulle, on la prend
-  const direct =
-    getStatLoose(stats, 'Prestige', 'TotalPrestige') ||
-    Number(rntData?.prestige || 0) ||
-    Number(rntData?.total_prestige || 0);
-
+  // On ne fait confiance qu'à un vrai champ explicite total_prestige s'il existe
+  const direct = Number(rntData?.total_prestige || 0);
   if (direct > 0) return direct;
 
-  // 2) sinon on recalcule depuis les brawlers
   const rntBrawlers = rntData?.brawlers || [];
   if (rntBrawlers.length) {
     return rntBrawlers.reduce((sum, b) => {
@@ -123,7 +116,6 @@ function getTotalPrestigeFromRnt(rntData, bsPlayer) {
     }, 0);
   }
 
-  // 3) fallback BS API si jamais RNT absent
   return (bsPlayer?.brawlers || []).reduce((sum, b) => {
     const trophies = Math.max(
       Number(b.highestTrophies || 0),
@@ -841,22 +833,9 @@ const startY = curY + 36;
 const presX = RX + brawlW + 6;
 statBox(ctx, presX, curY, presW, R4H);
 
-// badge visuel équipé sur la battle card
-const battleCardPrestigeId = Number(rntData?.battle_card?.prestige || 0);
-
 let pImg = null;
-
-// priorité au visuel RNT / BSInfo
-if (battleCardPrestigeId) {
-  // placeholder brawler id pour récupérer le badge visuel du tier
-  pImg = await tryImg(`https://cdn.bsinfox.com/tier/${battleCardPrestigeId}/16000000.png`);
-}
-
-// fallback si jamais le visuel BSInfo ne charge pas
-if (!pImg) {
-  const presTierFile = Math.min(6, Math.max(0, Math.floor(prestige / 20)));
-  pImg = await tryImg(`https://cdn.brawlify.com/prestiges/regular/${presTierFile}.png`);
-}
+const presTierFile = Math.min(6, Math.max(0, Math.floor(prestige / 20)));
+pImg = await tryImg(`https://cdn.brawlify.com/prestiges/regular/${presTierFile}.png`);
 
 const badgeSize = Math.min(90, presW - 18);
 const badgeX = presX + (presW - badgeSize) / 2;
