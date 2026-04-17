@@ -47,7 +47,7 @@ async function fetchRntProfile(tag) {
         try {
           const j = JSON.parse(d);
           if (j.ok && j.result) resolve(j.result);
-          else reject(new Error('RNT: profil non trouvé'));
+          else reject(new Error('RNT non trouvé'));
         } catch (e) { reject(e); }
       });
     }).on('error', reject);
@@ -70,6 +70,10 @@ async function fetchImage(url) {
   });
 }
 
+async function tryImg(url) {
+  try { return await fetchImage(url); } catch { return null; }
+}
+
 function getStat(stats, name) {
   return stats?.find(s => s.name === name)?.value || 0;
 }
@@ -79,7 +83,19 @@ function fmt(n) {
   return Number(n).toLocaleString('fr-FR');
 }
 
-function drawRR(ctx, x, y, w, h, r) {
+// Texte avec outline noir épais style BS
+function drawOutlineText(ctx, text, x, y, fillColor, fontSize, font, outlineWidth = 6) {
+  ctx.font = `${fontSize}px ${font}`;
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = outlineWidth;
+  ctx.lineJoin = 'round';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = fillColor;
+  ctx.fillText(text, x, y);
+}
+
+// Rectangle arrondi
+function rr(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.lineTo(x + w - r, y);
@@ -93,257 +109,302 @@ function drawRR(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function drawBox(ctx, x, y, w, h, border = '#444', radius = 12, alpha = 0.82) {
-  drawRR(ctx, x, y, w, h, radius);
-  ctx.fillStyle = `rgba(10, 8, 25, ${alpha})`;
+// Box style BS : fond coloré + bordure noire épaisse
+function bsBox(ctx, x, y, w, h, bgColor, borderColor = '#000', r = 10) {
+  rr(ctx, x, y, w, h, r);
+  ctx.fillStyle = bgColor;
   ctx.fill();
-  ctx.strokeStyle = border;
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = borderColor;
+  ctx.lineWidth = 3;
   ctx.stroke();
 }
 
-function drawDiamondBg(ctx, x, y, w, h, r = 16) {
+// Box stat sombre (les blocs CURRENT/HIGHEST etc.)
+function statBox(ctx, x, y, w, h) {
+  rr(ctx, x, y, w, h, 8);
+  ctx.fillStyle = '#1a0e35';
+  ctx.fill();
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+
+// Motif losanges violet style BS
+function drawBSPattern(ctx, x, y, w, h, baseColor, lineColor) {
   ctx.save();
-  drawRR(ctx, x, y, w, h, r);
+  rr(ctx, x, y, w, h, 0);
   ctx.clip();
-  const g = ctx.createLinearGradient(x, y, x + w, y + h);
-  g.addColorStop(0, '#2a0d5c');
-  g.addColorStop(0.5, '#180840');
-  g.addColorStop(1, '#0c0428');
-  ctx.fillStyle = g;
+  ctx.fillStyle = baseColor;
   ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle = 'rgba(130, 70, 220, 0.3)';
+
+  // Grille diagonale
+  ctx.strokeStyle = lineColor;
   ctx.lineWidth = 1;
-  const sz = 42;
-  for (let row = -1; row < h / sz + 2; row++) {
-    for (let col = -1; col < w / sz + 2; col++) {
+  const sz = 38;
+  for (let row = -1; row < (h / sz) + 2; row++) {
+    for (let col = -1; col < (w / sz) + 2; col++) {
       const cx = x + col * sz + (row % 2 === 0 ? 0 : sz / 2);
-      const cy = y + row * sz * 0.62;
+      const cy = y + row * sz * 0.6;
       ctx.beginPath();
-      ctx.moveTo(cx, cy - sz * 0.36);
-      ctx.lineTo(cx + sz * 0.46, cy);
-      ctx.lineTo(cx, cy + sz * 0.36);
-      ctx.lineTo(cx - sz * 0.46, cy);
+      ctx.moveTo(cx, cy - sz * 0.32);
+      ctx.lineTo(cx + sz * 0.44, cy);
+      ctx.lineTo(cx, cy + sz * 0.32);
+      ctx.lineTo(cx - sz * 0.44, cy);
       ctx.closePath();
       ctx.stroke();
     }
   }
-  ctx.strokeStyle = 'rgba(160, 100, 255, 0.12)';
-  ctx.lineWidth = 2;
-  for (let i = -h; i < w + h; i += 28) {
-    ctx.beginPath();
-    ctx.moveTo(x + i, y);
-    ctx.lineTo(x + i + h, y + h);
-    ctx.stroke();
-  }
   ctx.restore();
-}
-
-async function tryImg(url) {
-  try { return await fetchImage(url); } catch { return null; }
 }
 
 async function generateProfileCard(bsTag, bsPlayer) {
   let rnt = null;
-  try { rnt = await fetchRntProfile(bsTag); } catch (e) { console.error('[ProfileCard] RNT:', e.message); }
+  try { rnt = await fetchRntProfile(bsTag); } catch (e) { console.error('[Card] RNT:', e.message); }
 
   const stats = rnt?.stats || [];
   const W = 1400, H = 700;
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
 
-  // FOND
-  try {
-    const bg = await loadImage(path.join(__dirname, '../assets/fond_profil.png'));
-    ctx.drawImage(bg, 0, 0, W, H);
-  } catch {
-    ctx.fillStyle = '#0c0428';
-    ctx.fillRect(0, 0, W, H);
-  }
-  ctx.fillStyle = 'rgba(4, 2, 16, 0.5)';
+  // ═══════════════════════════════════════════════════
+  // FOND GLOBAL violet foncé avec pattern
+  // ═══════════════════════════════════════════════════
+  ctx.fillStyle = '#3d1a6e';
   ctx.fillRect(0, 0, W, H);
 
-  // ══ ZONE GAUCHE ══════════════════════════════════════════
-  const LW = 430, PAD = 18;
-  drawDiamondBg(ctx, PAD, PAD, LW, H - PAD * 2);
-  ctx.strokeStyle = 'rgba(160, 90, 255, 0.8)';
-  ctx.lineWidth = 3;
-  drawRR(ctx, PAD, PAD, LW, H - PAD * 2, 16);
-  ctx.stroke();
+  // Pattern subtil sur tout le fond
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < W + H; i += 40) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(0, i); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W - i, 0); ctx.lineTo(W, i); ctx.stroke();
+  }
 
-  // Portrait brawler
+  // ═══════════════════════════════════════════════════
+  // ZONE GAUCHE (37% de W)
+  // ═══════════════════════════════════════════════════
+  const LW = 520;
   const brawlers = bsPlayer?.brawlers || [];
   const topBrawler = [...brawlers].sort((a, b) => b.trophies - a.trophies)[0];
+
+  // Fond zone gauche : violet avec motif BS vert/bleu comme la référence
+  drawBSPattern(ctx, 0, 0, LW, H, '#2a1050', 'rgba(100, 200, 100, 0.15)');
+
+  // Bordure droite zone gauche
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(LW, 0);
+  ctx.lineTo(LW, H);
+  ctx.stroke();
+
+  // Ligne de séparation lumineuse
+  ctx.strokeStyle = 'rgba(200, 150, 255, 0.3)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(LW - 1, 0);
+  ctx.lineTo(LW - 1, H);
+  ctx.stroke();
+
+  // ── HEADER GAUCHE : tag + icône profil ──────────────
+  const iconId = bsPlayer?.icon?.id;
+  const iconSize = 90;
+
+  // Fond noir tag en haut
+  bsBox(ctx, 0, 0, LW, 130, '#1a0a30', '#000000', 0);
+
+  if (iconId) {
+    const iconImg = await tryImg(`https://cdn.brawlify.com/profile-icons/regular/${iconId}.png`);
+    if (iconImg) {
+      // Bordure verte style BS
+      bsBox(ctx, 8, 8, iconSize + 4, iconSize + 4, '#2d5a27', '#000', 6);
+      ctx.drawImage(iconImg, 10, 10, iconSize, iconSize);
+    }
+  }
+
+  // Tag
+  ctx.font = 'bold 22px Roboto';
+  ctx.fillStyle = '#cccccc';
+  ctx.textAlign = 'left';
+  ctx.fillText('#' + bsTag.replace('#', ''), 12, iconSize + 22);
+
+  // Nom dans une box style BS
+  bsBox(ctx, iconSize + 18, 18, LW - iconSize - 30, 54, '#1a1a3e', '#000', 8);
+  ctx.font = '36px Lilita';
+  ctx.textAlign = 'center';
+  drawOutlineText(ctx, bsPlayer?.name || 'Joueur', iconSize + 18 + (LW - iconSize - 30) / 2, 60, '#44ff44', 36, 'Lilita', 5);
+
+  // Badge niveau XP
+  const expLevel = bsPlayer?.expLevel || getStat(stats, 'ExpLevel') || 1;
+  bsBox(ctx, iconSize + 18, 78, 60, 36, '#3a6bc4', '#000', 6);
+  ctx.font = 'bold 20px Roboto';
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.fillText(String(expLevel), iconSize + 18 + 30, 102);
+
+  // ── GRAND PORTRAIT BRAWLER ──────────────────────────
   if (topBrawler) {
     const portrait = await tryImg(`https://cdn.brawlify.com/brawlers/portraits/${topBrawler.id}.png`);
     if (portrait) {
-      const ph = H - PAD * 2 - 150;
-      const pw = Math.round(ph * (portrait.width / portrait.height));
-      const px = PAD + (LW - pw) / 2;
+      const ph = 460;
+      const pw = Math.round(ph * portrait.width / portrait.height);
+      const px = (LW - pw) / 2;
+      const py = 130;
       ctx.save();
-      ctx.shadowColor = 'rgba(200, 120, 255, 0.5)';
-      ctx.shadowBlur = 45;
-      ctx.drawImage(portrait, px, PAD + 10, pw, ph);
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 30;
+      ctx.shadowOffsetY = 10;
+      ctx.drawImage(portrait, px, py, pw, ph);
       ctx.restore();
     }
   }
 
-  // Gradient bas
-  const ng = ctx.createLinearGradient(PAD, H - 210, PAD, H - PAD);
+  // ── NOM + SKIN en bas gauche ─────────────────────────
+  // Dégradé noir bas
+  const ng = ctx.createLinearGradient(0, H - 160, 0, H);
   ng.addColorStop(0, 'rgba(0,0,0,0)');
-  ng.addColorStop(0.4, 'rgba(0,0,0,0.8)');
+  ng.addColorStop(0.5, 'rgba(0,0,0,0.85)');
   ng.addColorStop(1, 'rgba(0,0,0,0.95)');
-  ctx.save();
-  drawRR(ctx, PAD, H - 210, LW, 192, 16);
-  ctx.clip();
   ctx.fillStyle = ng;
-  ctx.fillRect(PAD, H - 210, LW, 192);
-  ctx.restore();
+  ctx.fillRect(0, H - 160, LW, 160);
 
-  // Nom
-  ctx.shadowColor = 'rgba(0,0,0,0.9)';
-  ctx.shadowBlur = 10;
-  ctx.font = '54px Lilita';
-  ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'left';
-  ctx.fillText(bsPlayer?.name || rnt?.name || 'Joueur', PAD + 18, H - 108);
-  ctx.shadowBlur = 0;
+  drawOutlineText(ctx, bsPlayer?.name || 'Joueur', 14, H - 70, '#44ff44', 52, 'Lilita', 7);
 
   const skinName = topBrawler?.skin?.name || topBrawler?.name || '';
   if (skinName) {
-    ctx.font = 'bold 22px Roboto';
-    ctx.fillStyle = '#f39c12';
-    ctx.fillText(skinName, PAD + 18, H - 74);
+    drawOutlineText(ctx, skinName, 14, H - 26, '#ff9900', 26, 'Roboto', 5);
   }
 
-  ctx.font = 'bold 20px Roboto';
-  ctx.fillStyle = 'rgba(200,170,255,0.85)';
-  ctx.fillText(bsPlayer?.tag || ('#' + bsTag.replace('#', '')), PAD + 18, H - 46);
+  // ── Badge club brawler (bas gauche) ─────────────────
+  const clubBadgeId = bsPlayer?.club?.badgeId;
+  if (clubBadgeId) {
+    const cbImg = await tryImg(`https://cdn.brawlify.com/club-badges/regular/${clubBadgeId}.png`);
+    if (cbImg) ctx.drawImage(cbImg, LW - 80, H - 80, 70, 70);
+  }
 
-  // Séparateur
-  ctx.strokeStyle = 'rgba(160, 90, 255, 0.4)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(LW + PAD + 14, PAD + 20);
-  ctx.lineTo(LW + PAD + 14, H - PAD - 20);
-  ctx.stroke();
+  // ═══════════════════════════════════════════════════
+  // ZONE DROITE
+  // ═══════════════════════════════════════════════════
+  const RX = LW + 4;
+  const RW = W - RX;
 
-  // ══ ZONE DROITE ══════════════════════════════════════════
-  const RX = LW + PAD * 2 + 18;
-  const RW = W - RX - PAD;
-  let curY = PAD;
+  // Fond zone droite : violet plus clair avec grille
+  drawBSPattern(ctx, RX, 0, RW, H, '#4a1f80', 'rgba(100, 80, 160, 0.2)');
 
-  // ── ROW 1 : Icône profil + Trophy Road + Win Streak ──
-  const R1H = 118;
+  // ── ACCOUNT CREATED (haut droite) ───────────────────
+  const creationYear = getStat(stats, 'AccountCreationYear') || rnt?.account_creation_year;
+  if (creationYear) {
+    bsBox(ctx, W - 320, 10, 305, 50, '#ffffff', '#cccccc', 8);
+    ctx.font = 'bold 22px Roboto';
+    ctx.fillStyle = '#333333';
+    ctx.textAlign = 'center';
+    ctx.fillText(`ACCOUNT CREATED: ${creationYear}`, W - 320 + 152, 44);
+  }
 
-  // Icône profil
-  const iconId = bsPlayer?.icon?.id;
-  if (iconId) {
-    const iconImg = await tryImg(`https://cdn.brawlify.com/profile-icons/regular/${iconId}.png`);
-    if (iconImg) {
-      const ir = 50, ix = RX + ir + 4, iy = curY + R1H / 2;
+  // ── TROPHY ROAD + WIN STREAK ─────────────────────────
+  const trophies = bsPlayer?.trophies || getStat(stats, 'Trophies') || 0;
+  const maxWS = brawlers.reduce((m, b) => Math.max(m, b.maxWinStreak || 0), 0) || 0;
+
+  // Icône profil (cercle)
+  const pIconId = bsPlayer?.icon?.id;
+  if (pIconId) {
+    const pIcon = await tryImg(`https://cdn.brawlify.com/profile-icons/regular/${pIconId}.png`);
+    if (pIcon) {
+      const pr = 52, px = RX + 65, py = 75;
+      // Cercle avec bordure rouge style BS
       ctx.save();
       ctx.beginPath();
-      ctx.arc(ix, iy, ir, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(iconImg, ix - ir, iy - ir, ir * 2, ir * 2);
-      ctx.restore();
-      ctx.strokeStyle = 'rgba(200,170,255,0.6)';
+      ctx.arc(px, py, pr + 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#c0392b';
+      ctx.fill();
+      ctx.strokeStyle = '#000';
       ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(ix, iy, ir, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(px, py, pr, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(pIcon, px - pr, py - pr, pr * 2, pr * 2);
+      ctx.restore();
     }
   }
 
   // Trophy Road
-  const trophyX = RX + 114;
-  const wsW = 165;
-  const trophyW = RW - 114 - wsW - 12;
-  drawBox(ctx, trophyX, curY, trophyW, R1H, '#ffd700');
-  ctx.font = 'bold 17px Roboto';
-  ctx.fillStyle = '#ffd700';
+  const trX = RX + 132, trY = 18, trW = RW - 132 - 200, trH = 110;
+  statBox(ctx, trX, trY, trW, trH);
+  ctx.font = 'bold 18px Roboto';
+  ctx.fillStyle = '#aaaaaa';
   ctx.textAlign = 'left';
-  ctx.fillText('TROPHY ROAD', trophyX + 14, curY + 26);
-  const trophies = bsPlayer?.trophies || getStat(stats, 'Trophies') || 0;
-  ctx.font = '64px Lilita';
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(fmt(trophies), trophyX + 14, curY + 103);
+  ctx.fillText('TROPHY ROAD', trX + 14, trY + 28);
+  drawOutlineText(ctx, fmt(trophies), trX + 14, trY + 96, '#ffffff', 68, 'Lilita', 5);
 
   // Win Streak
-  const wsX = trophyX + trophyW + 8;
-  drawBox(ctx, wsX, curY, wsW, R1H, '#f39c12');
-  const maxWS = brawlers.reduce((m, b) => Math.max(m, b.maxWinStreak || 0), 0) || getStat(stats, 'MaxWinStreak') || 0;
-  ctx.font = 'bold 15px Roboto';
-  ctx.fillStyle = '#f39c12';
+  const wsX = trX + trW + 14, wsW = RW - (wsX - RX) - 8;
+  statBox(ctx, wsX, trY, wsW, trH);
+  const wsNum = String(maxWS);
+  ctx.font = 'bold 16px Roboto';
+  ctx.fillStyle = '#ffaa00';
   ctx.textAlign = 'center';
-  ctx.fillText('MAX', wsX + wsW / 2, curY + 22);
-  ctx.fillText('WIN STREAK', wsX + wsW / 2, curY + 40);
-  ctx.font = '52px Lilita';
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(String(maxWS), wsX + wsW / 2, curY + 100);
+  ctx.fillText('MAX', wsX + wsW / 2, trY + 26);
+  ctx.fillText('WIN STREAK', wsX + wsW / 2, trY + 46);
+  drawOutlineText(ctx, wsNum, wsX + wsW / 2, trY + 100, '#ffffff', 58, 'Lilita', 5);
 
-  // Account Created
-  const creationYear = getStat(stats, 'AccountCreationYear') || rnt?.account_creation_year;
-  if (creationYear) {
-    const acW = 290, acH = 36;
-    drawBox(ctx, W - acW - PAD, PAD, acW, acH, 'rgba(200,170,255,0.4)', 8, 0.65);
-    ctx.font = 'bold 16px Roboto';
-    ctx.fillStyle = '#ccbbff';
-    ctx.textAlign = 'center';
-    ctx.fillText(`COMPTE CRÉÉ EN ${creationYear}`, W - PAD - acW / 2, PAD + 24);
-  }
+  // ── Ligne séparatrice ────────────────────────────────
+  let curY = trY + trH + 8;
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(RX, curY, RW - 8, 4);
+  curY += 8;
 
-  curY += R1H + 10;
-
-  // ── ROW 2 : CURRENT / HIGHEST / RECORDS ──────────────
-  const R2H = 112;
-  const colW = Math.floor(RW / 3) - 5;
+  // ── CURRENT / HIGHEST / RECORDS ──────────────────────
+  const R2H = 120;
+  const colW = Math.floor((RW - 24) / 3);
 
   const currentElo = getStat(stats, 'CurrentRankedPoints') || rnt?.ranked_elo || 0;
   const highestElo = getStat(stats, 'HighestRankedPoints') || rnt?.highest_ranked_elo || 0;
-  const recordPoints = getStat(stats, 'RecordPoints') || rnt?.record_points || 0;
+  const recordPts = getStat(stats, 'RecordPoints') || rnt?.record_points || 0;
   const recordTier = getStat(stats, 'RecordTier') || rnt?.record_tier || 7;
   const curTier = getRankedTier(currentElo);
   const hiTier = getRankedTier(highestElo);
 
   const row2 = [
-    { label: 'CURRENT', val: currentElo, tier: curTier, badgeUrl: curTier.file ? `https://cdn.brawlify.com/ranked/regular/${curTier.file}.png` : null },
-    { label: 'HIGHEST', val: highestElo, tier: hiTier,  badgeUrl: hiTier.file  ? `https://cdn.brawlify.com/ranked/regular/${hiTier.file}.png`  : null },
-    { label: 'RECORDS', val: recordPoints, tier: null,  badgeUrl: `https://cdn.brawlify.com/records/regular/${recordTier}.png`, color: '#ffd700' },
+    { label: 'CURRENT', val: currentElo, sub: curTier.name + (curTier.sub ? ' ' + curTier.sub : ''), color: curTier.color, badgeUrl: curTier.file ? `https://cdn.brawlify.com/ranked/regular/${curTier.file}.png` : null },
+    { label: 'HIGHEST', val: highestElo, sub: hiTier.name + (hiTier.sub ? ' ' + hiTier.sub : ''),  color: hiTier.color,  badgeUrl: hiTier.file  ? `https://cdn.brawlify.com/ranked/regular/${hiTier.file}.png`  : null },
+    { label: 'RECORDS', val: recordPts,  sub: '',                                                    color: '#ffd700',     badgeUrl: `https://cdn.brawlify.com/records/regular/${recordTier}.png` },
   ];
 
   for (let i = 0; i < 3; i++) {
-    const col = row2[i];
-    const cx = RX + i * (colW + 8);
-    const bc = col.tier?.color || col.color || '#ffd700';
-    drawBox(ctx, cx, curY, colW, R2H, bc);
+    const c = row2[i];
+    const cx = RX + i * colW + (i > 0 ? 8 * i : 0);
+    statBox(ctx, cx, curY, colW - 4, R2H);
 
-    if (col.badgeUrl) {
-      const badge = await tryImg(col.badgeUrl);
-      if (badge) ctx.drawImage(badge, cx + 6, curY + 10, 82, 82);
+    if (c.badgeUrl) {
+      const badge = await tryImg(c.badgeUrl);
+      if (badge) ctx.drawImage(badge, cx + 6, curY + 10, 86, 86);
     }
 
-    const tx = cx + 96;
-    ctx.font = 'bold 14px Roboto';
-    ctx.fillStyle = bc;
+    const tx = cx + 100;
+    ctx.font = 'bold 15px Roboto';
+    ctx.fillStyle = '#aaaaaa';
     ctx.textAlign = 'left';
-    ctx.fillText(col.label, tx, curY + 22);
+    ctx.fillText(c.label, tx, curY + 24);
 
-    ctx.font = '46px Lilita';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(fmt(col.val), tx, curY + 76);
+    drawOutlineText(ctx, fmt(c.val), tx, curY + 82, '#ffffff', 48, 'Lilita', 4);
 
-    if (col.tier) {
-      ctx.font = 'bold 16px Roboto';
-      ctx.fillStyle = col.tier.color;
-      ctx.fillText(`${col.tier.name}${col.tier.sub ? ' ' + col.tier.sub : ''}`, tx, curY + 100);
+    if (c.sub) {
+      ctx.font = 'bold 18px Roboto';
+      ctx.fillStyle = c.color;
+      ctx.fillText(c.sub, tx, curY + 108);
     }
   }
 
-  curY += R2H + 10;
+  curY += R2H + 8;
 
-  // ── ROW 3 : 3v3 / SOLO / DUO ─────────────────────────
+  // ── Ligne séparatrice ────────────────────────────────
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(RX, curY, RW - 8, 4);
+  curY += 8;
+
+  // ── 3v3 / SOLO / DUO ─────────────────────────────────
   const R3H = 98;
   const wins3v3 = bsPlayer?.['3vs3Victories'] || getStat(stats, '3vs3Victories') || 0;
   const soloWins = bsPlayer?.soloVictories || getStat(stats, 'SoloVictories') || 0;
@@ -351,93 +412,129 @@ async function generateProfileCard(bsTag, bsPlayer) {
 
   const row3 = [
     { label: '3 VS 3 WINS', val: wins3v3, color: '#e74c3c', modeId: null },
-    { label: 'SOLO WINS',   val: soloWins, color: '#95a5a6', modeId: '48000006' },
+    { label: 'SOLO WINS',   val: soloWins, color: '#aaaaaa', modeId: '48000006' },
     { label: 'DUO WINS',    val: duoWins,  color: '#3498db', modeId: '48000009' },
   ];
 
   for (let i = 0; i < 3; i++) {
-    const col = row3[i];
-    const cx = RX + i * (colW + 8);
-    drawBox(ctx, cx, curY, colW, R3H, col.color);
+    const c = row3[i];
+    const cx = RX + i * colW + (i > 0 ? 8 * i : 0);
+    statBox(ctx, cx, curY, colW - 4, R3H);
 
-    if (col.modeId) {
-      const mImg = await tryImg(`https://cdn.brawlify.com/game-modes/regular/${col.modeId}.png`);
-      if (mImg) ctx.drawImage(mImg, cx + 8, curY + 8, 74, 74);
+    if (c.modeId) {
+      const mImg = await tryImg(`https://cdn.brawlify.com/game-modes/regular/${c.modeId}.png`);
+      if (mImg) ctx.drawImage(mImg, cx + 6, curY + 8, 76, 76);
     } else {
-      // 3v3 dessiné manuellement
-      const bx = cx + 10, by = curY + 16, sq = 20;
-      [[0,0,'#e74c3c'],[sq+3,0,'#e74c3c'],[0,sq+3,'#e74c3c'],
-       [sq+3,sq+3,'#3498db'],[(sq+3)*2,0,'#3498db'],[(sq+3)*2,sq+3,'#3498db']]
-        .forEach(([dx,dy,c]) => { ctx.fillStyle=c; ctx.fillRect(bx+dx, by+dy, sq, sq); });
+      // 3v3 : carrés rouge/bleu manuels
+      const bx = cx + 10, by = curY + 14, sq = 22, gap = 4;
+      const sq3 = [[0,0,'#e74c3c'],[sq+gap,0,'#e74c3c'],[0,sq+gap,'#e74c3c'],
+                   [sq+gap,sq+gap,'#3498db'],[(sq+gap)*2,0,'#3498db'],[(sq+gap)*2,sq+gap,'#3498db']];
+      sq3.forEach(([dx, dy, c]) => {
+        ctx.fillStyle = c;
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.fillRect(bx + dx, by + dy, sq, sq);
+        ctx.strokeRect(bx + dx, by + dy, sq, sq);
+      });
+      // VS
+      ctx.font = 'bold 14px Roboto';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.fillText('VS', bx + sq + gap / 2 + sq / 2, by + sq + gap / 2 + sq / 2 + 5);
     }
 
-    const tx = cx + 94;
-    ctx.font = 'bold 14px Roboto';
-    ctx.fillStyle = col.color;
+    const tx = cx + 92;
+    ctx.font = 'bold 15px Roboto';
+    ctx.fillStyle = c.color;
     ctx.textAlign = 'left';
-    ctx.fillText(col.label, tx, curY + 24);
-    ctx.font = '44px Lilita';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(fmt(col.val), tx, curY + 80);
+    ctx.fillText(c.label, tx, curY + 26);
+    drawOutlineText(ctx, fmt(c.val), tx, curY + 82, '#ffffff', 46, 'Lilita', 4);
   }
 
-  curY += R3H + 10;
+  curY += R3H + 8;
 
-  // ── ROW 4 : BRAWLERS + PRESTIGE ───────────────────────
-  const R4H = H - curY - PAD;
-  const presW = 155;
-  const brawlW = RW - presW - 8;
+  // ── Ligne séparatrice ────────────────────────────────
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(RX, curY, RW - 8, 4);
+  curY += 8;
 
-  drawBox(ctx, RX, curY, brawlW, R4H, 'rgba(150,80,255,0.6)');
-  const brawlerCount = brawlers.length || rnt?.brawler_count || 0;
-  ctx.font = 'bold 17px Roboto';
-  ctx.fillStyle = '#ccbbff';
+  // ── BRAWLERS + PRESTIGE ───────────────────────────────
+  const R4H = H - curY - 4;
+  const presW = 168;
+  const brawlW = RW - presW - 16;
+
+  // Box brawlers
+  statBox(ctx, RX, curY, brawlW, R4H);
+
+  ctx.font = 'bold 18px Roboto';
+  ctx.fillStyle = '#aaaaaa';
   ctx.textAlign = 'left';
-  ctx.fillText('BRAWLERS', RX + 12, curY + 24);
-  ctx.fillStyle = '#ffffff';
+  ctx.fillText('BRAWLERS', RX + 12, curY + 26);
+  const brawlerCount = brawlers.length || 0;
   ctx.textAlign = 'right';
-  ctx.fillText(`${brawlerCount} / ${brawlerCount} Collected`, RX + brawlW - 12, curY + 24);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(`${brawlerCount} / ${brawlerCount} Collected`, RX + brawlW - 12, curY + 26);
 
+  // Icônes brawlers (borderless dans hexagones violets)
   const topSix = [...brawlers].sort((a, b) => b.trophies - a.trophies).slice(0, 6);
-  const iSz = Math.min(66, Math.floor((brawlW - 24) / 7.2));
+  const iSz = Math.min(72, Math.floor((brawlW - 24) / 7.5));
   for (let i = 0; i < topSix.length; i++) {
-    const bx = RX + 12 + i * (iSz + 6);
-    const by = curY + 32;
-    drawRR(ctx, bx, by, iSz, iSz + 6, 9);
-    ctx.fillStyle = 'rgba(80, 40, 140, 0.7)';
+    const bx = RX + 12 + i * (iSz + 8);
+    const by = curY + 34;
+    // Fond hexagone violet
+    rr(ctx, bx, by, iSz, iSz + 10, 10);
+    ctx.fillStyle = '#3d1a6e';
     ctx.fill();
+    ctx.strokeStyle = '#6600cc';
+    ctx.lineWidth = 2;
+    ctx.stroke();
     const bImg = await tryImg(`https://cdn.brawlify.com/brawlers/borderless/${topSix[i].id}.png`);
     if (bImg) ctx.drawImage(bImg, bx, by, iSz, iSz);
+    // Chiffre 1 en bas
+    ctx.font = 'bold 13px Roboto';
+    ctx.fillStyle = '#aaaaaa';
+    ctx.textAlign = 'center';
+    ctx.fillText('1', bx + iSz / 2, by + iSz + 8);
   }
+
   if (brawlerCount > 6) {
-    ctx.font = 'bold 14px Roboto';
-    ctx.fillStyle = '#ccbbff';
+    ctx.font = 'bold 16px Roboto';
+    ctx.fillStyle = '#cccccc';
     ctx.textAlign = 'left';
-    ctx.fillText(`+${brawlerCount - 6} more`, RX + 12 + 6 * (iSz + 6) + 4, curY + 32 + iSz / 2 + 6);
+    const moreX = RX + 12 + 6 * (iSz + 8) + 4;
+    ctx.fillText(`+${brawlerCount - 6} more`, moreX, curY + 34 + iSz / 2 + 8);
   }
 
-  // Prestige
+  // Box Prestige
   const presX = RX + brawlW + 8;
-  drawBox(ctx, presX, curY, presW, R4H, '#9b59b6');
-  const prestige = getStat(stats, 'Prestige') || rnt?.prestige || 0;
-  ctx.font = 'bold 13px Roboto';
-  ctx.fillStyle = '#9b59b6';
-  ctx.textAlign = 'center';
-  ctx.fillText('TOTAL', presX + presW / 2, curY + 20);
-  ctx.fillText('PRESTIGE', presX + presW / 2, curY + 35);
-  ctx.font = '42px Lilita';
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(String(prestige), presX + presW / 2, curY + 76);
-  const pImg = await tryImg(`https://cdn.brawlify.com/prestiges/regular/${Math.min(Math.max(prestige, 0), 6)}.png`);
-  if (pImg) ctx.drawImage(pImg, presX + presW / 2 - 30, curY + 82, 60, 60);
+  statBox(ctx, presX, curY, presW, R4H);
 
-  // FOOTER
-  ctx.font = 'bold 13px Roboto';
-  ctx.fillStyle = 'rgba(200,170,255,0.4)';
+  const prestige = getStat(stats, 'Prestige') || rnt?.prestige || 0;
+
+  // Badge prestige (grand, centré)
+  const presFile = Math.min(Math.max(prestige, 0), 6);
+  const pImg = await tryImg(`https://cdn.brawlify.com/prestiges/regular/${presFile}.png`);
+  if (pImg) {
+    const ps = 90;
+    ctx.drawImage(pImg, presX + (presW - ps) / 2, curY + 4, ps, ps);
+  }
+
+  // Chiffre prestige sur le badge
+  drawOutlineText(ctx, String(prestige), presX + presW / 2, curY + 72, '#ffffff', 46, 'Lilita', 6);
+  ctx.textAlign = 'center';
+
+  ctx.font = 'bold 14px Roboto';
+  ctx.fillStyle = '#aaaaaa';
+  ctx.fillText('TOTAL', presX + presW / 2, curY + R4H - 30);
+  ctx.font = 'bold 16px Roboto';
+  ctx.fillStyle = '#9b59b6';
+  ctx.fillText('PRESTIGE', presX + presW / 2, curY + R4H - 12);
+
+  // ── DATE ──────────────────────────────────────────────
+  ctx.font = 'bold 14px Roboto';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
   ctx.textAlign = 'right';
-  ctx.fillText(new Date().toLocaleDateString('fr-FR'), W - PAD - 4, H - 5);
-  ctx.textAlign = 'left';
-  ctx.fillText('Prairie Bot', PAD + 4, H - 5);
+  ctx.fillText(new Date().toLocaleDateString('fr-FR'), W - 8, H - 5);
 
   return canvas.toBuffer('image/png');
 }
