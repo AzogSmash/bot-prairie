@@ -93,7 +93,9 @@ async function deployCommands() {
       if (action === 'classement' && parts[1] === 'profil') {
         await interaction.deferUpdate();
         try {
-          const embed = await buildProfileEmbed(interaction.user, interaction.client);
+          const targetId = parts[parts.length - 1]; // dernier segment = userId
+          const target = await interaction.client.users.fetch(targetId);
+          const embed = await buildProfileEmbed(target, interaction.client);
           if (!embed) {
             await interaction.followUp({ content: '❌ Tu n\'as pas encore lié ton compte BS.', ephemeral: true });
           } else {

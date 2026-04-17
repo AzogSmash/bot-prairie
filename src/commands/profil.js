@@ -257,7 +257,7 @@ module.exports = {
           .setLabel('🔄 Actualiser')
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
-          .setCustomId(`classement_goto_0_tous_fromprofil`)
+          .setCustomId(`classement_goto_0_tous_fromprofil_${target.id}`)
           .setLabel('🏆 Classement Prairie')
           .setStyle(ButtonStyle.Primary),
       );
