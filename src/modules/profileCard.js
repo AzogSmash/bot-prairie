@@ -769,8 +769,8 @@ async function generateProfileCard(bsTag, bsPlayer) {
   curY += 6;
 
   // ── BRAWLERS + PRESTIGE ──────────────────────────────
-  const R4H = 184;
-  const presW = 128;
+  const R4H = 188;
+  const presW = 115;
   const brawlW = RW - presW - 12;
 
   statBox(ctx, RX, curY, brawlW, R4H, true);
@@ -784,14 +784,18 @@ async function generateProfileCard(bsTag, bsPlayer) {
   ctx.fillText(`${brawlerCount} / ${brawlerCount} Collected`, RX + brawlW - 10, curY + 18);
 
   // seulement les 10 premiers
-    const cols = 5;
-    const rows = 2;
-    const slotCount = 10;
-    const iSz = 66;
-    const gapX = 10;
-    const gapY = 6;
-    const startX = RX + 20;
-    const startY = curY + 30;
+const cols = 5;
+const rows = 2;
+const slotCount = 10;
+const iSz = 64;
+const gapX = 18;
+const gapY = 8;
+
+const gridW = cols * iSz + (cols - 1) * gapX;
+const gridH = rows * iSz + (rows - 1) * gapY;
+
+const startX = RX + Math.floor((brawlW - gridW) / 2) - 18;
+const startY = curY + 36;
 
   for (let i = 0; i < Math.min(displayBrawlers.length, slotCount); i++) {
     const b = displayBrawlers[i];
@@ -817,11 +821,11 @@ async function generateProfileCard(bsTag, bsPlayer) {
   }
 
   if (brawlerCount > 10) {
-    const moreX = startX + cols * iSz + (cols - 1) * gapX + 18;
+    const moreX = startX + gridW + 22;
     ctx.font = 'bold 14px Roboto';
     ctx.fillStyle = PRAIRIE.cream;
     ctx.textAlign = 'left';
-    ctx.fillText(`+${brawlerCount - 10} more`, moreX, startY + 28);
+    ctx.fillText(`+${brawlerCount - 10} more`, moreX, startY + 34);
   }
 
 // ── PRESTIGE ─────────────────────────────────────────
