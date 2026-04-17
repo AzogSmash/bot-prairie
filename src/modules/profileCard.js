@@ -2,6 +2,7 @@ const { createCanvas, loadImage, registerFont } = require('canvas');
 const path = require('path');
 const https = require('https');
 const http = require('http');
+const imageCache = new Map();
 
 registerFont(path.join(__dirname, '../assets/LilitaOne-Regular.ttf'), { family: 'Lilita' });
 registerFont(path.join(__dirname, '../assets/Roboto-Bold.ttf'), { family: 'Roboto', weight: 'bold' });
@@ -204,7 +205,18 @@ async function fetchImage(url) {
     go(url);
   });
 }
-async function tryImg(url) { try { return await fetchImage(url); } catch { return null; } }
+async function tryImg(url) {
+  if (!url) return null;
+  if (imageCache.has(url)) return imageCache.get(url);
+
+  try {
+    const img = await fetchImage(url);
+    imageCache.set(url, img);
+    return img;
+  } catch {
+    return null;
+  }
+}
 
 // ═══════════════════════════════════════════════════════
 // HELPERS CANVAS
@@ -352,12 +364,20 @@ function drawMarker(ctx, x, y, type) {
 // ═══════════════════════════════════════════════════════
 // GÉNÉRATION CARTE
 // ═══════════════════════════════════════════════════════
-async function generateProfileCard(bsTag, bsPlayer) {
-  let rnt = null;
-  try { rnt = await fetchRntProfile(bsTag); } catch (e) { console.error('[Card] RNT:', e.message); }
+async function generateProfileCard(bsTag, bsPlayer, rntDataFromCaller = null) {
+  let rntData = rntDataFromCaller || null;
+
+  if (!rntData) {
+    try {
+      const rnt = await fetchRntProfile(bsTag);
+      rntData = rnt?.result || rnt || {};
+    } catch (e) {
+      console.error('[Card] RNT:', e.message);
+      rntData = {};
+    }
+  }
 
   // ── Normalisation RNT ────────────────────────────────
-  const rntData = rnt?.result || rnt || {};
   const stats = rntData?.stats || [];
   const rntBrawlers = rntData?.brawlers || [];
   const favoriteBrawlerId = Number(rntData?.favorite_brawler?.id || rntData?.favorite_brawler || 0);

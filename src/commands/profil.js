@@ -4,6 +4,8 @@ const { supabase } = require('../lib/supabase');
 const { getCache, isCacheValid } = require('../lib/cache');
 const { getClub } = require('../lib/brawlapi');
 const { generateProfileCard } = require('../modules/profileCard');
+const { generateProfileCard, fetchRntProfile } = require('../lib/profileCard');
+
 
 const PRAIRIE_CLUBS = [
   { tag: '#29UPLG8QQ', emoji: '🌟' },
@@ -85,12 +87,14 @@ async function buildProfileEmbed(target, client) {
 
   if (error || !data || !data.brawlstars_tag) return null;
 
-  const [player, battleLogData, allClubMembers] = await Promise.all([
+  const [player, battleLogData, allClubMembers, rnt] = await Promise.all([
     getPlayer(data.brawlstars_tag),
     getBattleLog(data.brawlstars_tag).catch(() => null),
     getAllClubMembers(),
+    fetchRntProfile(data.brawlstars_tag).catch(() => null),
   ]);
 
+  const rntData = rnt?.result || rnt || {};
   const sortedMembers = [...allClubMembers].sort((a, b) => b.trophies - a.trophies);
   const rankInFamily = sortedMembers.findIndex(m => m.bsTag === player.tag) + 1;
   const totalInFamily = sortedMembers.length;
@@ -226,10 +230,11 @@ async function buildProfileEmbed(target, client) {
     .setFooter({ text: 'Prairie Brawl Stars • Stats en temps réel' })
     .setTimestamp();
 
-    return {
+  return {
     embed,
     player,
     bsTag: data.brawlstars_tag,
+    rntData,
   };
 }
 
@@ -256,11 +261,11 @@ module.exports = {
         });
       }
 
-      const { embed, player, bsTag } = profileData;
+      const { embed, player, bsTag, rntData } = profileData;
 
       let attachment = null;
       try {
-        const buffer = await generateProfileCard(bsTag, player);
+        const buffer = await generateProfileCard(bsTag, player, rntData);
         attachment = new AttachmentBuilder(buffer, { name: 'profile-card.png' });
         embed.setImage('attachment://profile-card.png');
       } catch (cardErr) {
