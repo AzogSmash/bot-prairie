@@ -125,11 +125,12 @@ function getTotalPrestigeFromRnt(rntData, bsPlayer) {
 }
 
 function getBrawlerPrestigeTier(entry) {
-  const t = Math.max(
-    Number(entry?.highest || entry?.highest_trophies || 0),
-    Number(entry?.trophies || 0)
-  );
-  return Math.max(0, Math.min(6, Math.floor(t / 1000)));
+  const trophies = Number(entry?.trophies || 0);
+
+  // badge visuel basé sur les trophées ACTUELS
+  if (trophies < 1000) return 0;
+
+  return Math.max(0, Math.min(6, Math.floor(trophies / 1000)));
 }
 
 function getSortedBrawlerDisplayList(rntBrawlers, bsBrawlers) {
