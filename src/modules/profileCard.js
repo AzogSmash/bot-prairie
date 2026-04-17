@@ -472,17 +472,30 @@ async function generateProfileCard(bsTag, bsPlayer) {
 
   // ── GRAND PORTRAIT BRAWLER ───────────────────────────
   if (heroBrawlerId) {
-    const portrait = await tryImg(`https://cdn.brawlify.com/brawlers/portraits/${heroBrawlerId}.png`);
+  const portrait = await tryImg(`https://cdn.brawlify.com/brawlers/portraits/${heroBrawlerId}.png`);
     if (portrait) {
-      const ph = 410;
-      const pw = Math.round(ph * portrait.width / portrait.height);
-      const px = (LW - pw) / 2;
+      const frameX = 8;
+      const frameY = 116;
+      const frameW = LW - 16;
+      const frameH = 408; // ajuste si besoin
+
+      const scale = Math.min(frameW / portrait.width, frameH / portrait.height);
+      const drawW = portrait.width * scale;
+      const drawH = portrait.height * scale;
+      const drawX = frameX + (frameW - drawW) / 2;
+      const drawY = frameY + (frameH - drawH) / 2;
 
       ctx.save();
+
+      // clip pour empêcher tout dépassement
+      rr(ctx, frameX, frameY, frameW, frameH, 0);
+      ctx.clip();
+
       ctx.shadowColor = 'rgba(0,0,0,0.70)';
       ctx.shadowBlur = 28;
       ctx.shadowOffsetY = 10;
-      ctx.drawImage(portrait, px, 110, pw, ph);
+     ctx.drawImage(portrait, drawX, drawY, drawW, drawH);
+
       ctx.restore();
     }
   }
@@ -713,7 +726,7 @@ async function generateProfileCard(bsTag, bsPlayer) {
 
   // ── BRAWLERS + PRESTIGE ──────────────────────────────
   const R4H = 168;
-  const presW = 146;
+  const presW = 128;
   const brawlW = RW - presW - 12;
 
   statBox(ctx, RX, curY, brawlW, R4H, true);
@@ -726,7 +739,7 @@ async function generateProfileCard(bsTag, bsPlayer) {
   ctx.fillText(`${brawlerCount} / ${brawlerCount} Collected`, RX + brawlW - 10, curY + 18);
 
   // priorité : favorite → winstreak → top trophées
-  const cols = 6;
+  const cols = 10;
   const rows = 2;
   const slotCount = cols * rows;
   const iSz = 48;
@@ -785,7 +798,7 @@ async function generateProfileCard(bsTag, bsPlayer) {
   }
 
   if (brawlerCount > slotCount) {
-    const moreX = startX + cols * (iSz + gapX) + 6;
+    const moreX = startX + cols * iSz + (cols - 1) * gapX + 10;
     ctx.font = 'bold 14px Roboto';
     ctx.fillStyle = PRAIRIE.cream;
     ctx.textAlign = 'left';
