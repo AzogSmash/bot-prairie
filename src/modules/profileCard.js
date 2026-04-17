@@ -33,21 +33,21 @@ const RANKED_TIERS = [
   { min: 0,     name: 'Bronze',    file: 'Bronze',    color: '#cd7f32' },
   { min: 750,   name: 'Silver',    file: 'Silver',    color: '#c0c0c0' },
   { min: 1500,  name: 'Gold',      file: 'Gold',      color: '#ffd700' },
-  { min: 2250,  name: 'Diamond',   file: 'Diamond',   color: '#00bfff' },
-  { min: 3750,  name: 'Mythic',    file: 'Mythic',    color: '#e84393' },
-  { min: 5250,  name: 'Legendary', file: 'Legendary', color: '#e74c3c' },
-  { min: 7500,  name: 'Masters',   file: 'Masters',   color: '#ff6b35' },
-  { min: 10500, name: 'Pro',       file: 'Pro',       color: '#f1c40f' },
+  { min: 3000,  name: 'Diamond',   file: 'Diamond',   color: '#00bfff' },
+  { min: 4500,  name: 'Mythic',    file: 'Mythic',    color: '#e84393' },
+  { min: 6000,  name: 'Legendary', file: 'Legendary', color: '#e74c3c' },
+  { min: 8250,  name: 'Masters',   file: 'Masters',   color: '#ff6b35' },
+  { min: 11250, name: 'Pro',       file: 'Pro',       color: '#f1c40f' },
 ];
 const RANKED_SUBTIERS = [
   { min: 0,     sub: 'I' },   { min: 250,  sub: 'II' },  { min: 500,  sub: 'III' },
   { min: 750,   sub: 'I' },   { min: 1000, sub: 'II' },  { min: 1250, sub: 'III' },
-  { min: 1500,  sub: 'I' },   { min: 1750, sub: 'II' },  { min: 2000, sub: 'III' },
-  { min: 2250,  sub: 'I' },   { min: 2750, sub: 'II' },  { min: 3250, sub: 'III' },
-  { min: 3750,  sub: 'I' },   { min: 4250, sub: 'II' },  { min: 4750, sub: 'III' },
-  { min: 5250,  sub: 'I' },   { min: 6000, sub: 'II' },  { min: 6750, sub: 'III' },
-  { min: 7500,  sub: 'I' },   { min: 8500, sub: 'II' },  { min: 9500, sub: 'III' },
-  { min: 10500, sub: '' },
+  { min: 1500,  sub: 'I' },   { min: 2000, sub: 'II' },  { min: 2500, sub: 'III' },
+  { min: 3000,  sub: 'I' },   { min: 3500, sub: 'II' },  { min: 4000, sub: 'III' },
+  { min: 4500,  sub: 'I' },   { min: 5000, sub: 'II' },  { min: 5500, sub: 'III' },
+  { min: 6000,  sub: 'I' },   { min: 6750, sub: 'II' },  { min: 7500, sub: 'III' },
+  { min: 8250,  sub: 'I' },   { min: 9250, sub: 'II' },  { min: 10250, sub: 'III' },
+  { min: 11250, sub: '' },
 ];
 function getRankedTier(elo) {
   if (!elo || elo <= 0) return { name: 'Unranked', file: null, color: '#95a5a6', sub: '' };
