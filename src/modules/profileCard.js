@@ -124,6 +124,34 @@ function getTotalPrestigeFromRnt(rntData, bsPlayer) {
   }, 0);
 }
 
+function getBrawlerPrestigeTier(entry) {
+  const t = Math.max(
+    Number(entry?.highest || entry?.highest_trophies || 0),
+    Number(entry?.trophies || 0)
+  );
+  return Math.max(0, Math.min(6, Math.floor(t / 1000)));
+}
+
+function getSortedBrawlerDisplayList(rntBrawlers, bsBrawlers) {
+  if (rntBrawlers?.length) {
+    return [...rntBrawlers]
+      .map(b => ({
+        id: Number(b.brawler_id),
+        trophies: Number(b.trophies || 0),
+        highest: Number(b.highest_trophies || 0),
+      }))
+      .sort((a, b) => b.trophies - a.trophies);
+  }
+
+  return [...(bsBrawlers || [])]
+    .map(b => ({
+      id: Number(b.id),
+      trophies: Number(b.trophies || 0),
+      highest: Number(b.highestTrophies || 0),
+    }))
+    .sort((a, b) => b.trophies - a.trophies);
+}
+
 // ═══════════════════════════════════════════════════════
 // FETCH
 // ═══════════════════════════════════════════════════════
@@ -470,31 +498,32 @@ async function generateProfileCard(bsTag, bsPlayer) {
   ctx.textAlign = 'right';
   ctx.fillText(`${xpProgress}/${xpPerLevel}`, barX + barW - 3, barY + 12);
 
-  // ── GRAND PORTRAIT BRAWLER ───────────────────────────
+  // ── GRAND MODEL BRAWLER ──────────────────────────────
   if (heroBrawlerId) {
-  const portrait = await tryImg(`https://cdn.brawlify.com/brawlers/portraits/${heroBrawlerId}.png`);
-    if (portrait) {
+    const model = await tryImg(`https://cdn.brawlify.com/brawlers/model/${heroBrawlerId}.png`);
+    if (model) {
       const frameX = 8;
       const frameY = 116;
       const frameW = LW - 16;
-      const frameH = 408; // ajuste si besoin
+     const frameH = 400;
 
-      const scale = Math.min(frameW / portrait.width, frameH / portrait.height);
-      const drawW = portrait.width * scale;
-      const drawH = portrait.height * scale;
+      // contain + bottom align
+      const scale = Math.min(frameW / model.width, frameH / model.height);
+      const drawW = model.width * scale;
+      const drawH = model.height * scale;
       const drawX = frameX + (frameW - drawW) / 2;
-      const drawY = frameY + (frameH - drawH) / 2;
+      const drawY = frameY + (frameH - drawH);
 
       ctx.save();
 
-      // clip pour empêcher tout dépassement
+      // clip pour éviter tout débordement
       rr(ctx, frameX, frameY, frameW, frameH, 0);
       ctx.clip();
 
       ctx.shadowColor = 'rgba(0,0,0,0.70)';
-      ctx.shadowBlur = 28;
+      ctx.shadowBlur = 24;
       ctx.shadowOffsetY = 10;
-     ctx.drawImage(portrait, drawX, drawY, drawW, drawH);
+      ctx.drawImage(model, drawX, drawY, drawW, drawH);
 
       ctx.restore();
     }
@@ -734,75 +763,65 @@ async function generateProfileCard(bsTag, bsPlayer) {
   ctx.fillStyle = PRAIRIE.muted;
   ctx.textAlign = 'left';
   ctx.fillText('BRAWLERS', RX + 10, curY + 18);
+
   ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'right';
   ctx.fillText(`${brawlerCount} / ${brawlerCount} Collected`, RX + brawlW - 10, curY + 18);
 
-  // priorité : favorite → winstreak → top trophées
-  const cols = 10;
+  // liste triée par trophées décroissants
+  const displayBrawlers = getSortedBrawlerDisplayList(rntBrawlers, bsBrawlers);
+
+  // grille
+  const cols = 9;
   const rows = 2;
   const slotCount = cols * rows;
-  const iSz = 48;
-  const gapX = 8;
+  const iSz = 42;
   const gapY = 10;
 
-  const orderedIds = [];
-  const usedIds = new Set();
-
-  if (favoriteBrawlerId) {
-    orderedIds.push({ id: favoriteBrawlerId, marker: 'star' });
-    usedIds.add(favoriteBrawlerId);
-  }
-
-  if (winstreakBrawlerId && !usedIds.has(winstreakBrawlerId)) {
-    orderedIds.push({ id: winstreakBrawlerId, marker: 'flame' });
-    usedIds.add(winstreakBrawlerId);
-  }
-
-  const sortedRnt = [...rntBrawlers].sort((a, b) => Number(b.trophies || 0) - Number(a.trophies || 0));
-  const sortedBs = [...bsBrawlers].sort((a, b) => b.trophies - a.trophies);
-  const sortedList = sortedRnt.length
-    ? sortedRnt.map(b => ({ id: Number(b.brawler_id) }))
-    : sortedBs.map(b => ({ id: b.id }));
-
-  for (const b of sortedList) {
-    if (orderedIds.length >= slotCount) break;
-    if (!usedIds.has(b.id)) {
-      orderedIds.push({ id: b.id, marker: null });
-      usedIds.add(b.id);
-    }
-  }
-
   const startX = RX + 10;
-  const startY = curY + 28;
+  const startY = curY + 30;
+  const usableW = brawlW - 20;
+  const totalIconsW = cols * iSz;
+  const gapX = Math.max(6, Math.floor((usableW - totalIconsW) / (cols - 1)));
 
-  for (let i = 0; i < orderedIds.length; i++) {
-    const { id: bId, marker } = orderedIds[i];
+  for (let i = 0; i < Math.min(displayBrawlers.length, slotCount); i++) {
+    const b = displayBrawlers[i];
     const col = i % cols;
     const row = Math.floor(i / cols);
     const bx = startX + col * (iSz + gapX);
     const by = startY + row * (iSz + gapY);
 
-    rr(ctx, bx - 2, by - 2, iSz + 4, iSz + 4, 8);
-    ctx.fillStyle = 'rgba(26, 30, 22, 0.92)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(222, 190, 112, 0.35)';
-    ctx.lineWidth = 1.4;
-    ctx.stroke();
+    const tier = getBrawlerPrestigeTier(b);
 
-    const bImg = await tryImg(`https://cdn.brawlify.com/brawlers/borderless/${bId}.png`);
-    if (bImg) ctx.drawImage(bImg, bx, by, iSz, iSz);
+    // badge prestige en fond
+    const badge = await tryImg(`https://cdn.brawlify.com/prestiges/regular/${tier}.png`);
+    if (badge) {
+      ctx.drawImage(badge, bx - 4, by - 4, iSz + 8, iSz + 8);
+    }
 
-    if (marker) drawMarker(ctx, bx + iSz - 7, by + 7, marker);
-    else if (i >= 2 && row === 0) drawMarker(ctx, bx + iSz - 6, by + 6, 'trophy');
+    // icône brawler au centre
+    const bImg = await tryImg(`https://cdn.brawlify.com/brawlers/borderless/${b.id}.png`);
+    if (bImg) {
+      const inner = Math.round(iSz * 0.72);
+      const ix = bx + (iSz - inner) / 2;
+      const iy = by + (iSz - inner) / 2;
+      ctx.drawImage(bImg, ix, iy, inner, inner);
+    }
+
+    // marqueurs
+    if (b.id === favoriteBrawlerId) {
+      drawMarker(ctx, bx + iSz - 5, by + 5, 'star');
+    } else if (b.id === winstreakBrawlerId) {
+      drawMarker(ctx, bx + iSz - 5, by + 5, 'flame');
+    }
   }
 
   if (brawlerCount > slotCount) {
-    const moreX = startX + cols * iSz + (cols - 1) * gapX + 10;
+    const moreX = startX + cols * iSz + (cols - 1) * gapX + 8;
     ctx.font = 'bold 14px Roboto';
     ctx.fillStyle = PRAIRIE.cream;
     ctx.textAlign = 'left';
-    ctx.fillText(`+${brawlerCount - slotCount} more`, moreX, startY + 26);
+    ctx.fillText(`+${brawlerCount - slotCount} more`, moreX, startY + 24);
   }
 
   // ── PRESTIGE ─────────────────────────────────────────
