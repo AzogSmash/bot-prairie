@@ -56,9 +56,7 @@ function getStat(stats, name) {
 }
 
 function getStatLoose(stats, ...names) {
-  const map = new Map(
-    (stats || []).map(s => [normalizeStr(s.name), Number(s.value) || 0])
-  );
+  const map = new Map((stats || []).map(s => [normalizeStr(s.name), Number(s.value) || 0]));
   for (const name of names) {
     const key = normalizeStr(name);
     if (map.has(key)) return map.get(key);
@@ -66,76 +64,62 @@ function getStatLoose(stats, ...names) {
   return 0;
 }
 
-function findBrawlerByIdOrName(brawlers, id, name) {
-  if (!brawlers?.length) return null;
-  if (id) {
-    const foundById = brawlers.find(b => String(b.id) === String(id));
-    if (foundById) return foundById;
+// Sélectionne l'ID du brawler héros — accepte favorite_brawler comme nombre OU objet
+function pickHeroBrawlerId(bsPlayer, rntData) {
+  const favoriteId = Number(
+    rntData?.favorite_brawler?.id ||
+    rntData?.favorite_brawler ||
+    0
+  );
+  if (favoriteId) return favoriteId;
+
+  // Fallback sur les brawlers RNT (clés snake_case)
+  const rntBrawlers = rntData?.brawlers || [];
+  if (rntBrawlers.length) {
+    const best = [...rntBrawlers].sort((a, b) => {
+      const ah = Number(a.highest_trophies || 0), bh = Number(b.highest_trophies || 0);
+      if (bh !== ah) return bh - ah;
+      const at = Number(a.trophies || 0), bt = Number(b.trophies || 0);
+      if (bt !== at) return bt - at;
+      return Number(b.power_level || 0) - Number(a.power_level || 0);
+    })[0];
+    if (best?.brawler_id) return Number(best.brawler_id);
   }
-  if (name) {
-    const target = normalizeStr(name);
-    const foundByName = brawlers.find(b => normalizeStr(b.name) === target);
-    if (foundByName) return foundByName;
-  }
-  return null;
-}
 
-function pickHeroBrawler(bsPlayer, rnt) {
-  const brawlers = bsPlayer?.brawlers || [];
-  if (!brawlers.length) return null;
-
-  const byId = [
-    rnt?.favorite_brawler?.id,
-    rnt?.favoriteBrawler?.id,
-    rnt?.most_played_brawler?.id,
-    rnt?.mostPlayedBrawler?.id,
-    rnt?.most_played?.id,
-    rnt?.profile?.favorite_brawler_id,
-    rnt?.profile?.favoriteBrawlerId,
-  ].find(Boolean);
-
-  const byName = [
-    rnt?.favorite_brawler?.name,
-    rnt?.favoriteBrawler?.name,
-    rnt?.most_played_brawler?.name,
-    rnt?.mostPlayedBrawler?.name,
-    rnt?.most_played?.name,
-    rnt?.profile?.favorite_brawler_name,
-    rnt?.profile?.favoriteBrawlerName,
-  ].find(Boolean);
-
-  const found = findBrawlerByIdOrName(brawlers, byId, byName);
-  if (found) return found;
-
-  return [...brawlers].sort((a, b) => {
-    const ah = Number(a.highestTrophies || 0);
-    const bh = Number(b.highestTrophies || 0);
+  // Fallback sur brawlers BS (clés camelCase)
+  const bsBrawlers = bsPlayer?.brawlers || [];
+  const best = [...bsBrawlers].sort((a, b) => {
+    const ah = Number(a.highestTrophies || 0), bh = Number(b.highestTrophies || 0);
     if (bh !== ah) return bh - ah;
-    const at = Number(a.trophies || 0);
-    const bt = Number(b.trophies || 0);
+    const at = Number(a.trophies || 0), bt = Number(b.trophies || 0);
     if (bt !== at) return bt - at;
     return Number(b.power || 0) - Number(a.power || 0);
   })[0];
+  return best?.id || 0;
 }
 
-function getBrawlerPrestigeValue(brawler) {
-  const t = Math.max(
-    Number(brawler?.highestTrophies || 0),
-    Number(brawler?.trophies || 0)
-  );
-  return Math.max(0, Math.floor(t / 1000));
-}
-
-function getTotalPrestige(bsPlayer, rnt) {
-  const stats = rnt?.stats || [];
+// Prestige total — gère clés snake_case RNT + fallback calcul
+function getTotalPrestigeFromRnt(rntData, bsPlayer) {
+  const stats = rntData?.stats || [];
   const direct =
     getStatLoose(stats, 'Prestige', 'TotalPrestige') ||
-    Number(rnt?.prestige || 0) ||
-    Number(rnt?.total_prestige || 0) ||
+    Number(rntData?.prestige || 0) ||
+    Number(rntData?.total_prestige || 0) ||
     Number(bsPlayer?.totalPrestigeLevel || 0);
   if (direct > 0) return direct;
-  const brawlers = bsPlayer?.brawlers || [];
-  return brawlers.reduce((sum, b) => sum + getBrawlerPrestigeValue(b), 0);
+
+  const rntBrawlers = rntData?.brawlers || [];
+  if (rntBrawlers.length) {
+    return rntBrawlers.reduce((sum, b) => {
+      const t = Math.max(Number(b.highest_trophies || 0), Number(b.trophies || 0));
+      return sum + Math.floor(t / 1000);
+    }, 0);
+  }
+
+  return (bsPlayer?.brawlers || []).reduce((sum, b) => {
+    const t = Math.max(Number(b.highestTrophies || 0), Number(b.trophies || 0));
+    return sum + Math.floor(t / 1000);
+  }, 0);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -270,12 +254,48 @@ async function generateProfileCard(bsTag, bsPlayer) {
   let rnt = null;
   try { rnt = await fetchRntProfile(bsTag); } catch (e) { console.error('[Card] RNT:', e.message); }
 
-  const stats = rnt?.stats || [];
+  // ── Normalisation des données RNT ────────────────────
+  const rntData = rnt?.result || rnt || {};
+  const stats = rntData?.stats || [];
+  const rntBrawlers = rntData?.brawlers || [];
+  const favoriteBrawlerId = Number(rntData?.favorite_brawler?.id || rntData?.favorite_brawler || 0);
+  const maxWS = Number(rntData?.max_winstreak || 0);
+  const ownedBrawlers = Number(rntData?.brawler_count || 0);
+  const allianceName = rntData?.alliance?.name || '';
+  const firstBattleCardAvatar = Number(rntData?.battle_card?.first_profile_avatar || 0);
+  const profileAvatar = Number(rntData?.profile_avatar || 0);
+  const creationYear =
+    getStatLoose(stats, 'AccountCreationYear', 'account_creation_year', 'createdYear') ||
+    rntData?.account_creation_year;
+
+  // ── Données calculées ────────────────────────────────
+  const bsBrawlers = bsPlayer?.brawlers || [];
+  const heroBrawlerId = pickHeroBrawlerId(bsPlayer, rntData);
+  const brawlerCount = ownedBrawlers || bsBrawlers.length;
+  const trophies = bsPlayer?.trophies || getStatLoose(stats, 'Trophies') || 0;
+  const prestige = getTotalPrestigeFromRnt(rntData, bsPlayer);
+
+  const currentElo = getStatLoose(stats, 'CurrentRankedPoints', 'current_ranked_points') || rntData?.ranked_elo || 0;
+  const highestElo = getStatLoose(stats, 'HighestRankedPoints', 'highest_ranked_points') || rntData?.highest_ranked_elo || 0;
+  const recordPts  = getStatLoose(stats, 'RecordPoints', 'record_points') || rntData?.record_points || 0;
+  const recordLevel = getStatLoose(stats, 'RecordLevel', 'RecordTier') || Number(rntData?.record_level || rntData?.record_tier || 7);
+
+  const wins3v3 = bsPlayer?.['3vs3Victories'] || getStatLoose(stats, '3vs3Victories', '3v3victories') || 0;
+  const soloWins = bsPlayer?.soloVictories    || getStatLoose(stats, 'SoloVictories', 'solo_victories') || 0;
+  const duoWins  = bsPlayer?.duoVictories     || getStatLoose(stats, 'DuoVictories',  'duo_victories')  || 0;
+
+  const expLevel  = bsPlayer?.expLevel  || getStatLoose(stats, 'ExpLevel',  'exp_level')  || 1;
+  const expPoints = bsPlayer?.expPoints || getStatLoose(stats, 'ExpPoints', 'exp_points') || 0;
+
+  const curTier = getRankedTier(currentElo);
+  const hiTier  = getRankedTier(highestElo);
+
+  // ── Canvas ───────────────────────────────────────────
   const W = 1400, H = 700;
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
 
-  // ── FOND GLOBAL ──────────────────────────────────────
+  // FOND GLOBAL
   ctx.fillStyle = '#3d1a6e';
   ctx.fillRect(0, 0, W, H);
   ctx.strokeStyle = 'rgba(255,255,255,0.04)';
@@ -286,12 +306,8 @@ async function generateProfileCard(bsTag, bsPlayer) {
   }
 
   // ══ ZONE GAUCHE ══════════════════════════════════════
-  const LW = 520;
-  const brawlers = bsPlayer?.brawlers || [];
-  const heroBrawler = pickHeroBrawler(bsPlayer, rnt);
-
+  const LW = 470;
   drawBSPattern(ctx, 0, 0, LW, H, '#2a1050', 'rgba(100, 200, 100, 0.15)');
-
   ctx.strokeStyle = '#000000';
   ctx.lineWidth = 4;
   ctx.beginPath(); ctx.moveTo(LW, 0); ctx.lineTo(LW, H); ctx.stroke();
@@ -300,12 +316,13 @@ async function generateProfileCard(bsTag, bsPlayer) {
   ctx.beginPath(); ctx.moveTo(LW - 1, 0); ctx.lineTo(LW - 1, H); ctx.stroke();
 
   // ── HEADER GAUCHE ────────────────────────────────────
-  const iconId = bsPlayer?.icon?.id;
-  const iconSize = 90;
-  bsBox(ctx, 0, 0, LW, 130, '#1a0a30', '#000000', 0);
+  const iconSize = 88;
+  bsBox(ctx, 0, 0, LW, 118, '#1a0a30', '#000000', 0);
 
-  if (iconId) {
-    const iconImg = await tryImg(`https://cdn.brawlify.com/profile-icons/regular/${iconId}.png`);
+  // Icône profil principal (profile_avatar RNT ou BS)
+  const avatarId = profileAvatar || bsPlayer?.icon?.id;
+  if (avatarId) {
+    const iconImg = await tryImg(`https://cdn.brawlify.com/profile-icons/regular/${avatarId}.png`);
     if (iconImg) {
       bsBox(ctx, 8, 8, iconSize + 4, iconSize + 4, '#2d5a27', '#000', 6);
       ctx.drawImage(iconImg, 10, 10, iconSize, iconSize);
@@ -314,112 +331,105 @@ async function generateProfileCard(bsTag, bsPlayer) {
 
   // Tag centré sous l'avatar
   const tagText = '#' + bsTag.replace('#', '').toUpperCase();
-  const tagFontSize = fitTextSize(ctx, tagText, iconSize + 10, 18, 11, 'Roboto', 'bold');
+  const tagFontSize = fitTextSize(ctx, tagText, iconSize + 10, 17, 10, 'Roboto', 'bold');
   ctx.font = `bold ${tagFontSize}px Roboto`;
   ctx.fillStyle = '#f0f0f0';
   ctx.textAlign = 'center';
-  ctx.fillText(tagText, 10 + iconSize / 2, 10 + iconSize + 22);
+  ctx.fillText(tagText, 10 + iconSize / 2, 10 + iconSize + 20);
 
   // Nom auto-fit dans sa box
   const playerName = bsPlayer?.name || 'Joueur';
-  const nameBoxX = iconSize + 22;
-  const nameBoxY = 18;
-  const nameBoxW = LW - nameBoxX - 14;
-  const nameBoxH = 54;
+  const nameBoxX = iconSize + 20;
+  const nameBoxY = 14;
+  const nameBoxW = LW - nameBoxX - 12;
+  const nameBoxH = 50;
   bsBox(ctx, nameBoxX, nameBoxY, nameBoxW, nameBoxH, '#1a1a3e', '#000', 8);
-  const nameFontSize = fitTextSize(ctx, playerName, nameBoxW - 24, 36, 22, 'Lilita');
+  const nameFontSize = fitTextSize(ctx, playerName, nameBoxW - 20, 34, 20, 'Lilita');
   ctx.textAlign = 'center';
-  drawOutlineText(ctx, playerName, nameBoxX + nameBoxW / 2, nameBoxY + 42, '#44ff44', nameFontSize, 'Lilita', 5);
+  drawOutlineText(ctx, playerName, nameBoxX + nameBoxW / 2, nameBoxY + 38, '#44ff44', nameFontSize, 'Lilita', 5);
 
   // Badge niveau + barre XP
-  const expLevel = bsPlayer?.expLevel || getStatLoose(stats, 'ExpLevel', 'exp_level') || 1;
-  const expPoints = bsPlayer?.expPoints || getStatLoose(stats, 'ExpPoints', 'exp_points') || 0;
   const xpPerLevel = 1000;
   const xpProgress = Math.max(0, expPoints % xpPerLevel);
   const xpRatio = Math.min(xpProgress / xpPerLevel, 1);
 
-  bsBox(ctx, nameBoxX, 78, 52, 34, '#3a6bc4', '#000', 6);
-  ctx.font = 'bold 19px Roboto';
+  bsBox(ctx, nameBoxX, 70, 50, 32, '#3a6bc4', '#000', 6);
+  ctx.font = 'bold 17px Roboto';
   ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'center';
-  ctx.fillText(String(expLevel), nameBoxX + 26, 101);
+  ctx.fillText(String(expLevel), nameBoxX + 25, 92);
 
-  const barX = nameBoxX + 58;
-  const barY = 84;
-  const barW = nameBoxW - 58;
-  const barH = 20;
+  const barX = nameBoxX + 56, barY = 76, barW = nameBoxW - 56, barH = 18;
   rr(ctx, barX, barY, barW, barH, 5);
-  ctx.fillStyle = '#141424';
-  ctx.fill();
-  ctx.strokeStyle = '#000000';
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  ctx.fillStyle = '#141424'; ctx.fill();
+  ctx.strokeStyle = '#000000'; ctx.lineWidth = 2; ctx.stroke();
   if (xpRatio > 0) {
     const fillInnerW = Math.max(8, Math.round((barW - 4) * xpRatio));
     rr(ctx, barX + 2, barY + 2, fillInnerW, barH - 4, 4);
     const g = ctx.createLinearGradient(barX, barY, barX + barW, barY);
-    g.addColorStop(0, '#6ad6ff');
-    g.addColorStop(1, '#1d8fff');
-    ctx.fillStyle = g;
-    ctx.fill();
+    g.addColorStop(0, '#6ad6ff'); g.addColorStop(1, '#1d8fff');
+    ctx.fillStyle = g; ctx.fill();
   }
-  ctx.font = 'bold 13px Roboto';
+  ctx.font = 'bold 12px Roboto';
   ctx.fillStyle = '#d8d8d8';
   ctx.textAlign = 'right';
-  ctx.fillText(`${xpProgress}/${xpPerLevel}`, barX + barW - 4, barY + 15);
+  ctx.fillText(`${xpProgress}/${xpPerLevel}`, barX + barW - 3, barY + 13);
 
   // ── GRAND PORTRAIT BRAWLER ───────────────────────────
-  if (heroBrawler) {
-    const portrait = await tryImg(`https://cdn.brawlify.com/brawlers/portraits/${heroBrawler.id}.png`);
+  if (heroBrawlerId) {
+    const portrait = await tryImg(`https://cdn.brawlify.com/brawlers/portraits/${heroBrawlerId}.png`);
     if (portrait) {
-      const ph = 460;
+      const ph = 400;
       const pw = Math.round(ph * portrait.width / portrait.height);
       const px = (LW - pw) / 2;
       ctx.save();
       ctx.shadowColor = 'rgba(0,0,0,0.8)';
       ctx.shadowBlur = 30;
       ctx.shadowOffsetY = 10;
-      ctx.drawImage(portrait, px, 130, pw, ph);
+      ctx.drawImage(portrait, px, 118, pw, ph);
       ctx.restore();
     }
   }
 
-  // ── NOM + SKIN en bas gauche ─────────────────────────
-  const ng = ctx.createLinearGradient(0, H - 160, 0, H);
+  // ── NOM + CLUB en bas gauche ─────────────────────────
+  const ng = ctx.createLinearGradient(0, H - 150, 0, H);
   ng.addColorStop(0, 'rgba(0,0,0,0)');
-  ng.addColorStop(0.5, 'rgba(0,0,0,0.85)');
-  ng.addColorStop(1, 'rgba(0,0,0,0.95)');
+  ng.addColorStop(0.4, 'rgba(0,0,0,0.82)');
+  ng.addColorStop(1, 'rgba(0,0,0,0.96)');
   ctx.fillStyle = ng;
-  ctx.fillRect(0, H - 160, LW, 160);
+  ctx.fillRect(0, H - 150, LW, 150);
 
   ctx.textAlign = 'left';
-  drawOutlineText(ctx, playerName, 14, H - 70, '#44ff44', 52, 'Lilita', 7);
+  drawOutlineText(ctx, playerName, 12, H - 62, '#44ff44', 48, 'Lilita', 7);
 
-  const skinName = heroBrawler?.skin?.name || heroBrawler?.name || '';
-  if (skinName) {
-    drawOutlineText(ctx, skinName, 14, H - 26, '#ff9900', 26, 'Roboto', 5);
+  // Texte orange = nom du club/alliance (plus le nom du brawler)
+  const subText = allianceName || bsPlayer?.club?.name || '';
+  if (subText) {
+    drawOutlineText(ctx, subText, 12, H - 24, '#ff9900', 24, 'Roboto', 5);
   }
 
+  // Badge club
   const clubBadgeId = bsPlayer?.club?.badgeId;
   if (clubBadgeId) {
     const cbImg = await tryImg(`https://cdn.brawlify.com/club-badges/regular/${clubBadgeId}.png`);
-    if (cbImg) ctx.drawImage(cbImg, LW - 80, H - 80, 70, 70);
+    if (cbImg) ctx.drawImage(cbImg, LW - 74, H - 74, 64, 64);
   }
 
   // ══ ZONE DROITE ══════════════════════════════════════
   const RX = LW + 4;
   const RW = W - RX;
-  const trY = 68;
-  const trH = 92;
+  const trY = 62;
+  const trH = 84;
 
   drawBSPattern(ctx, RX, 0, RW, H, '#4a1f80', 'rgba(100, 80, 160, 0.2)');
 
-  // ── ICÔNE PROFIL (cercle) ────────────────────────────
-  const pIconId = bsPlayer?.icon?.id;
-  if (pIconId) {
-    const pIcon = await tryImg(`https://cdn.brawlify.com/profile-icons/regular/${pIconId}.png`);
+  // ── ICÔNE PROFIL (cercle Trophy Road) ────────────────
+  // Utilise battle_card.first_profile_avatar en priorité
+  const trophyIconId = firstBattleCardAvatar || profileAvatar || bsPlayer?.icon?.id;
+  if (trophyIconId) {
+    const pIcon = await tryImg(`https://cdn.brawlify.com/profile-icons/regular/${trophyIconId}.png`);
     if (pIcon) {
-      const pr = 52, px = RX + 65, py = trY + trH / 2;
+      const pr = 46, px = RX + 58, py = trY + trH / 2;
       ctx.save();
       ctx.beginPath();
       ctx.arc(px, py, pr + 4, 0, Math.PI * 2);
@@ -437,35 +447,29 @@ async function generateProfileCard(bsTag, bsPlayer) {
   }
 
   // ── TROPHY ROAD ──────────────────────────────────────
-  const trophies = bsPlayer?.trophies || getStatLoose(stats, 'Trophies') || 0;
-  const maxWS = brawlers.reduce((m, b) => Math.max(m, b.maxWinStreak || 0), 0) || 0;
-
-  const trX = RX + 132;
-  const wsW = 164;
-  const trW = RW - 132 - wsW - 18;
+  const trX = RX + 120;
+  const wsW = 148;
+  const trW = RW - 120 - wsW - 16;
   statBox(ctx, trX, trY, trW, trH);
-  ctx.font = 'bold 17px Roboto';
+  ctx.font = 'bold 15px Roboto';
   ctx.fillStyle = '#aaaaaa';
   ctx.textAlign = 'left';
-  ctx.fillText('TROPHY ROAD', trX + 14, trY + 24);
-  drawOutlineText(ctx, fmt(trophies), trX + 14, trY + 82, '#ffffff', 60, 'Lilita', 5);
+  ctx.fillText('TROPHY ROAD', trX + 12, trY + 22);
+  drawOutlineText(ctx, fmt(trophies), trX + 12, trY + 74, '#ffffff', 58, 'Lilita', 5);
 
   // ── WIN STREAK ───────────────────────────────────────
-  const wsX = trX + trW + 12;
+  const wsX = trX + trW + 10;
   statBox(ctx, wsX, trY, wsW, trH);
-  ctx.font = 'bold 15px Roboto';
+  ctx.font = 'bold 13px Roboto';
   ctx.fillStyle = '#ffaa00';
   ctx.textAlign = 'center';
-  ctx.fillText('MAX', wsX + wsW / 2, trY + 22);
-  ctx.fillText('WIN STREAK', wsX + wsW / 2, trY + 40);
-  drawOutlineText(ctx, String(maxWS), wsX + wsW / 2, trY + 84, '#ffffff', 52, 'Lilita', 5);
+  ctx.fillText('MAX', wsX + wsW / 2, trY + 20);
+  ctx.fillText('WIN STREAK', wsX + wsW / 2, trY + 36);
+  drawOutlineText(ctx, String(maxWS), wsX + wsW / 2, trY + 76, '#ffffff', 48, 'Lilita', 5);
 
   // ── ACCOUNT CREATED ───────────────────────────────────
-  const creationYear =
-    getStatLoose(stats, 'AccountCreationYear', 'account_creation_year', 'createdYear') ||
-    rnt?.account_creation_year;
   if (creationYear) {
-    const acW = 340, acH = 46, acX = W - acW - 18, acY = 14;
+    const acW = 340, acH = 44, acX = W - acW - 16, acY = 12;
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.55)';
     ctx.shadowBlur = 10;
@@ -473,72 +477,62 @@ async function generateProfileCard(bsTag, bsPlayer) {
     ctx.shadowOffsetY = 3;
     bsBox(ctx, acX, acY, acW, acH, '#ffffff', '#222222', 8);
     ctx.restore();
-    ctx.font = 'bold 20px Roboto';
+    ctx.font = 'bold 19px Roboto';
     ctx.fillStyle = '#222222';
     ctx.textAlign = 'center';
-    ctx.fillText(`ACCOUNT CREATED: ${creationYear}`, acX + acW / 2, acY + 31);
+    ctx.fillText(`ACCOUNT CREATED: ${creationYear}`, acX + acW / 2, acY + 29);
   }
 
   // ── Ligne séparatrice ────────────────────────────────
-  let curY = trY + trH + 8;
+  let curY = trY + trH + 7;
   ctx.fillStyle = '#000000';
   ctx.fillRect(RX, curY, RW - 8, 4);
-  curY += 8;
+  curY += 7;
 
   // ── CURRENT / HIGHEST / RECORDS ──────────────────────
-  const R2H = 88;
-  const colW = Math.floor((RW - 24) / 3);
-
-  const currentElo = getStatLoose(stats, 'CurrentRankedPoints', 'current_ranked_points') || rnt?.ranked_elo || 0;
-  const highestElo = getStatLoose(stats, 'HighestRankedPoints', 'highest_ranked_points') || rnt?.highest_ranked_elo || 0;
-  const recordPts  = getStatLoose(stats, 'RecordPoints', 'record_points') || rnt?.record_points || 0;
-  const recordTier = getStatLoose(stats, 'RecordTier', 'record_tier') || rnt?.record_tier || 7;
-  const curTier = getRankedTier(currentElo);
-  const hiTier  = getRankedTier(highestElo);
+  const R2H = 78;
+  const colW = Math.floor((RW - 20) / 3);
 
   const row2 = [
     { label: 'CURRENT', val: currentElo, sub: curTier.name + (curTier.sub ? ' ' + curTier.sub : ''), color: curTier.color, badgeUrl: curTier.file ? `https://cdn.brawlify.com/ranked/regular/${curTier.file}.png` : null },
     { label: 'HIGHEST', val: highestElo, sub: hiTier.name  + (hiTier.sub  ? ' ' + hiTier.sub  : ''), color: hiTier.color,  badgeUrl: hiTier.file  ? `https://cdn.brawlify.com/ranked/regular/${hiTier.file}.png`  : null },
-    { label: 'RECORDS', val: recordPts,  sub: '',                                                      color: '#ffd700',    badgeUrl: `https://cdn.brawlify.com/records/regular/${recordTier}.png` },
+    { label: 'RECORDS', val: recordPts,  sub: '',                                                      color: '#ffd700',    badgeUrl: `https://cdn.brawlify.com/records/regular/${recordLevel}.png` },
   ];
 
   for (let i = 0; i < 3; i++) {
     const c = row2[i];
-    const cx = RX + i * colW + (i > 0 ? 8 * i : 0);
-    statBox(ctx, cx, curY, colW - 4, R2H);
+    const cx = RX + i * (colW + 6);
+    statBox(ctx, cx, curY, colW - 2, R2H);
 
     if (c.badgeUrl) {
       const badge = await tryImg(c.badgeUrl);
-      if (badge) ctx.drawImage(badge, cx + 6, curY + 8, 72, 72);
+      if (badge) ctx.drawImage(badge, cx + 5, curY + 6, 64, 64);
     }
 
-    const tx = cx + 86;
-    ctx.font = 'bold 13px Roboto';
+    const tx = cx + 76;
+    ctx.font = 'bold 12px Roboto';
     ctx.fillStyle = '#aaaaaa';
     ctx.textAlign = 'left';
-    ctx.fillText(c.label, tx, curY + 18);
+    ctx.fillText(c.label, tx, curY + 16);
 
-    drawOutlineText(ctx, fmt(c.val), tx, curY + 62, '#ffffff', 40, 'Lilita', 4);
+    drawOutlineText(ctx, fmt(c.val), tx, curY + 56, '#ffffff', 36, 'Lilita', 4);
 
     if (c.sub) {
-      ctx.font = 'bold 15px Roboto';
+      ctx.font = 'bold 13px Roboto';
       ctx.fillStyle = c.color;
-      ctx.fillText(c.sub, tx, curY + 80);
+      ctx.fillText(c.sub, tx, curY + 72);
     }
   }
 
-  curY += R2H + 8;
+  curY += R2H + 7;
 
   // ── Ligne séparatrice ────────────────────────────────
   ctx.fillStyle = '#000000';
   ctx.fillRect(RX, curY, RW - 8, 4);
-  curY += 8;
+  curY += 7;
 
   // ── 3v3 / SOLO / DUO ─────────────────────────────────
-  const R3H = 74;
-  const wins3v3 = bsPlayer?.['3vs3Victories'] || getStatLoose(stats, '3vs3Victories', '3v3victories') || 0;
-  const soloWins = bsPlayer?.soloVictories    || getStatLoose(stats, 'SoloVictories', 'solo_victories') || 0;
-  const duoWins  = bsPlayer?.duoVictories     || getStatLoose(stats, 'DuoVictories',  'duo_victories')  || 0;
+  const R3H = 66;
 
   const row3 = [
     { label: '3 VS 3 WINS', val: wins3v3, color: '#e74c3c', modeId: null },
@@ -548,70 +542,73 @@ async function generateProfileCard(bsTag, bsPlayer) {
 
   for (let i = 0; i < 3; i++) {
     const c = row3[i];
-    const cx = RX + i * colW + (i > 0 ? 8 * i : 0);
-    statBox(ctx, cx, curY, colW - 4, R3H);
+    const cx = RX + i * (colW + 6);
+    statBox(ctx, cx, curY, colW - 2, R3H);
 
     if (c.modeId) {
       const mImg = await tryImg(`https://cdn.brawlify.com/game-modes/regular/${c.modeId}.png`);
-      if (mImg) ctx.drawImage(mImg, cx + 6, curY + 4, 60, 60);
+      if (mImg) ctx.drawImage(mImg, cx + 5, curY + 3, 56, 56);
     } else {
-      const bx = cx + 10, by = curY + 8, sq = 19, gap = 3;
+      const bx = cx + 8, by = curY + 6, sq = 18, gap = 3;
       [[0,0,'#e74c3c'],[sq+gap,0,'#e74c3c'],[0,sq+gap,'#e74c3c'],
        [sq+gap,sq+gap,'#3498db'],[(sq+gap)*2,0,'#3498db'],[(sq+gap)*2,sq+gap,'#3498db']]
         .forEach(([dx, dy, col]) => {
-          ctx.fillStyle = col; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+          ctx.fillStyle = col; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
           ctx.fillRect(bx+dx, by+dy, sq, sq); ctx.strokeRect(bx+dx, by+dy, sq, sq);
         });
-      ctx.font = 'bold 12px Roboto';
+      ctx.font = 'bold 11px Roboto';
       ctx.fillStyle = '#fff';
       ctx.textAlign = 'center';
-      ctx.fillText('VS', bx + sq + gap / 2 + sq / 2, by + sq + gap / 2 + sq / 2 + 4);
+      ctx.fillText('VS', bx + sq + gap/2 + sq/2, by + sq + gap/2 + sq/2 + 3);
     }
 
-    const tx = cx + 78;
-    ctx.font = 'bold 13px Roboto';
+    const tx = cx + 72;
+    ctx.font = 'bold 12px Roboto';
     ctx.fillStyle = c.color;
     ctx.textAlign = 'left';
-    ctx.fillText(c.label, tx, curY + 20);
-    drawOutlineText(ctx, fmt(c.val), tx, curY + 62, '#ffffff', 40, 'Lilita', 4);
+    ctx.fillText(c.label, tx, curY + 18);
+    drawOutlineText(ctx, fmt(c.val), tx, curY + 56, '#ffffff', 36, 'Lilita', 4);
   }
 
-  curY += R3H + 8;
+  curY += R3H + 7;
 
   // ── Ligne séparatrice ────────────────────────────────
   ctx.fillStyle = '#000000';
   ctx.fillRect(RX, curY, RW - 8, 4);
-  curY += 8;
+  curY += 7;
 
-  // ── BRAWLERS + PRESTIGE ───────────────────────────────
-  const R4H = H - curY - 4;
-  const presW = 168;
-  const brawlW = RW - presW - 16;
+  // ── BRAWLERS + PRESTIGE (hauteur fixe) ───────────────
+  const R4H = 124;
+  const presW = 150;
+  const brawlW = RW - presW - 14;
 
   statBox(ctx, RX, curY, brawlW, R4H);
-
-  ctx.font = 'bold 17px Roboto';
+  ctx.font = 'bold 15px Roboto';
   ctx.fillStyle = '#aaaaaa';
   ctx.textAlign = 'left';
-  ctx.fillText('BRAWLERS', RX + 12, curY + 22);
-  const brawlerCount = brawlers.length || 0;
+  ctx.fillText('BRAWLERS', RX + 10, curY + 20);
   ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'right';
-  ctx.fillText(`${brawlerCount} / ${brawlerCount} Collected`, RX + brawlW - 12, curY + 22);
+  ctx.fillText(`${brawlerCount} / ${brawlerCount} Collected`, RX + brawlW - 10, curY + 20);
 
-  // Icônes top 6 brawlers
-  const topSix = [...brawlers].sort((a, b) => b.trophies - a.trophies).slice(0, 6);
-  const iSz = 52;
+  // Top 6 depuis RNT brawlers (brawler_id) sinon BS
+  const topSixRnt = [...rntBrawlers]
+    .sort((a, b) => Number(b.trophies || 0) - Number(a.trophies || 0))
+    .slice(0, 6);
+  const topSixBs = [...bsBrawlers]
+    .sort((a, b) => b.trophies - a.trophies)
+    .slice(0, 6);
+  const topSix = topSixRnt.length ? topSixRnt : topSixBs;
+
+  const iSz = 48;
   for (let i = 0; i < topSix.length; i++) {
-    const bx = RX + 12 + i * (iSz + 6);
+    const bId = topSixRnt.length ? topSix[i].brawler_id : topSix[i].id;
+    const bx = RX + 10 + i * (iSz + 6);
     const by = curY + 28;
     rr(ctx, bx - 2, by - 2, iSz + 4, iSz + 4, 7);
-    ctx.fillStyle = '#2a1050';
-    ctx.fill();
-    ctx.strokeStyle = '#5500aa';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    const bImg = await tryImg(`https://cdn.brawlify.com/brawlers/borderless/${topSix[i].id}.png`);
+    ctx.fillStyle = '#2a1050'; ctx.fill();
+    ctx.strokeStyle = '#5500aa'; ctx.lineWidth = 1.5; ctx.stroke();
+    const bImg = await tryImg(`https://cdn.brawlify.com/brawlers/borderless/${bId}.png`);
     if (bImg) ctx.drawImage(bImg, bx, by, iSz, iSz);
   }
 
@@ -619,34 +616,33 @@ async function generateProfileCard(bsTag, bsPlayer) {
     ctx.font = 'bold 14px Roboto';
     ctx.fillStyle = '#d8d8d8';
     ctx.textAlign = 'left';
-    ctx.fillText(`+${brawlerCount - 6} more`, RX + 12 + 6 * (iSz + 6) + 2, curY + 30 + 33);
+    ctx.fillText(`+${brawlerCount - 6} more`, RX + 10 + 6 * (iSz + 6) + 2, curY + 28 + iSz / 2 + 8);
   }
 
   // ── PRESTIGE ─────────────────────────────────────────
-  const prestige = getTotalPrestige(bsPlayer, rnt);
-  const presX = RX + brawlW + 8;
+  const presX = RX + brawlW + 6;
   statBox(ctx, presX, curY, presW, R4H);
 
   const presTierFile = Math.min(6, Math.max(0, Math.floor(prestige / 20)));
   const pImg = await tryImg(`https://cdn.brawlify.com/prestiges/regular/${presTierFile}.png`);
-  const badgeSize = Math.min(112, presW - 22);
+  const badgeSize = Math.min(96, presW - 20);
   const badgeX = presX + (presW - badgeSize) / 2;
-  const badgeY = curY + 26;
+  const badgeY = curY + 14;
 
   if (pImg) ctx.drawImage(pImg, badgeX, badgeY, badgeSize, badgeSize);
 
   ctx.textAlign = 'center';
-  drawOutlineText(ctx, String(prestige), presX + presW / 2, badgeY + badgeSize * 0.62, '#ffffff', 34, 'Lilita', 5);
+  drawOutlineText(ctx, String(prestige), presX + presW / 2, badgeY + badgeSize * 0.6, '#ffffff', 30, 'Lilita', 5);
 
-  ctx.font = 'bold 13px Roboto';
+  ctx.font = 'bold 12px Roboto';
   ctx.fillStyle = '#aaaaaa';
-  ctx.fillText('TOTAL', presX + presW / 2, curY + R4H - 28);
-  ctx.font = 'bold 15px Roboto';
+  ctx.fillText('TOTAL', presX + presW / 2, curY + R4H - 22);
+  ctx.font = 'bold 14px Roboto';
   ctx.fillStyle = '#9b59b6';
-  ctx.fillText('PRESTIGE', presX + presW / 2, curY + R4H - 10);
+  ctx.fillText('PRESTIGE', presX + presW / 2, curY + R4H - 8);
 
   // ── DATE ──────────────────────────────────────────────
-  ctx.font = 'bold 14px Roboto';
+  ctx.font = 'bold 13px Roboto';
   ctx.fillStyle = 'rgba(255,255,255,0.4)';
   ctx.textAlign = 'right';
   ctx.fillText(new Date().toLocaleDateString('fr-FR'), W - 8, H - 5);
