@@ -213,6 +213,18 @@ module.exports = {
 
   async execute(interaction) {
     await interaction.deferReply();
+      // Vérifie que le compte BS est lié
+    const { data } = await supabase
+      .from('members')
+      .select('brawlstars_tag')
+      .eq('discord_id', interaction.user.id)
+      .maybeSingle();
+
+    if (!data?.brawlstars_tag) {
+      return interaction.editReply({
+        content: '❌ Tu dois d\'abord lier ton compte Brawl Stars avec `/lier #TAG` pour accéder au classement !'
+      });
+    }
     const { allMembers, discordMap } = await buildClassement('tous');
     const requesterBsTag = await getRequesterBsTag(interaction.user.id);
     const totalPages = Math.ceil(allMembers.length / 30);

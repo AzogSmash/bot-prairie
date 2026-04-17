@@ -229,6 +229,17 @@ module.exports = {
 
   async execute(interaction) {
     await interaction.deferReply();
+        const { data } = await supabase
+      .from('members')
+      .select('brawlstars_tag')
+      .eq('discord_id', interaction.user.id)
+      .maybeSingle();
+
+    if (!data?.brawlstars_tag) {
+      return interaction.editReply({
+        content: '❌ Tu dois d\'abord lier ton compte Brawl Stars avec `/lier #TAG` pour accéder au classement des rusheurs !'
+      });
+    }
     const rusheurs = await getRusheurs('tous', 'season');
     const embed = buildEmbed(rusheurs, 'tous', 'season');
     const components = buildComponents('tous', 'season');
