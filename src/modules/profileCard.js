@@ -338,7 +338,7 @@ function buildFavoriteCardData(rntData, bsPlayer, allBrawlersMeta = []) {
     powerLevel: Number(favoriteEntry?.power_level || 0),
     mastery: Number(favoriteEntry?.mastery || 0),
 
-    battleCardFrameId: Number(rntData?.battle_card?.frame || 0),
+    battleCardFrameId: Number(rntData?.battle_card?.frame?.id ?? rntData?.battle_card?.frame ?? 0),
     battleCardEmoteId: Number(rntData?.battle_card?.battle_card_emote || 0),
     battleCardTitleId: Number(rntData?.battle_card?.title || 0),
     battleCardPrestigeId: Number(rntData?.battle_card?.prestige || 0),
@@ -610,18 +610,35 @@ function drawTopBattleBadge(ctx, cx, cy, value) {
   ctx.restore();
 }
 
-let battleCardBgMap = {};
+let battleCardFrames = [];
 
 try {
-  battleCardBgMap = require('../assets/bgs/battlecard_bg_map.json');
+  battleCardFrames = require('../assets/battlecard-bgs/frames.json');
 } catch (err) {
-  console.error('[BATTLECARD MAP FAIL]', err.message);
+  console.error('[BATTLECARD FRAMES FAIL]', err.message);
+}
+
+const battleCardFrameById = new Map(
+  (battleCardFrames || []).map(frame => [Number(frame.id), frame])
+);
+
+function getBattleCardFrameMeta(frameId) {
+  const n = Number(frameId || 0);
+  if (!n) return null;
+
+  return (
+    battleCardFrameById.get(n) ||
+    battleCardFrameById.get(85000000 + n) ||
+    battleCardFrameById.get(n - 85000000) ||
+    null
+  );
 }
 
 function getBattleCardBgPath(frameId) {
-  const fileName = battleCardBgMap[String(frameId)] || null;
-  if (!fileName) return null;
-  return path.join(__dirname, '../assets/battlecard-bg', fileName);
+  const frameMeta = getBattleCardFrameMeta(frameId);
+  if (!frameMeta?.bg) return null;
+
+  return path.join(__dirname, '../assets/battlecard-bgs', `${frameMeta.bg}.png`);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -830,7 +847,18 @@ ctx.save();
 rr(ctx, cardX + 5, cardY + 5, cardW - 10, cardH - 10, 14);
 ctx.clip();
 
+const frameMeta = getBattleCardFrameMeta(favoriteCard?.battleCardFrameId);
 const bgPath = getBattleCardBgPath(favoriteCard?.battleCardFrameId);
+
+console.log('[BATTLECARD BG DEBUG]', {
+  rawFrameId: favoriteCard?.battleCardFrameId,
+  resolvedFrame: frameMeta?.id ?? null,
+  bg: frameMeta?.bg ?? null,
+  icon: frameMeta?.icon ?? null,
+  text: frameMeta?.text ?? null,
+  bgPath
+});
+
 const officialBg = bgPath ? await tryLocalImg(bgPath) : null;
 
 if (officialBg) {
