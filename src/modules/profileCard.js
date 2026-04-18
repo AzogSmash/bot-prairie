@@ -262,24 +262,49 @@ async function fetchRntProfile(tag) {
 async function fetchImage(url) {
   return new Promise((resolve, reject) => {
     const go = (u) => {
+      if (!u || typeof u !== 'string') {
+        return reject(new Error(`Invalid image url: ${u}`));
+      }
+
       const lib = u.startsWith('https') ? https : http;
 
-      const req = lib.get(u, (res) => {
-        if (res.statusCode === 301 || res.statusCode === 302) {
-          return go(res.headers.location);
-        }
+      let req;
+      try {
+        req = lib.get(u, (res) => {
+          if (res.statusCode === 301 || res.statusCode === 302) {
+            const location = res.headers.location;
 
-        if (res.statusCode !== 200) {
-          res.resume();
-          return reject(new Error(`HTTP ${res.statusCode} for ${u}`));
-        }
+            if (!location) {
+              res.resume();
+              return reject(new Error(`Redirect without location for ${u}`));
+            }
 
-        const chunks = [];
-        res.on('data', c => chunks.push(c));
-        res.on('end', () => {
-          loadImage(Buffer.concat(chunks)).then(resolve).catch(reject);
+            let nextUrl;
+            try {
+              nextUrl = new URL(location, u).toString();
+            } catch (err) {
+              res.resume();
+              return reject(new Error(`Invalid redirect URL: ${location} from ${u}`));
+            }
+
+            res.resume();
+            return go(nextUrl);
+          }
+
+          if (res.statusCode !== 200) {
+            res.resume();
+            return reject(new Error(`HTTP ${res.statusCode} for ${u}`));
+          }
+
+          const chunks = [];
+          res.on('data', c => chunks.push(c));
+          res.on('end', () => {
+            loadImage(Buffer.concat(chunks)).then(resolve).catch(reject);
+          });
         });
-      });
+      } catch (err) {
+        return reject(err);
+      }
 
       req.setTimeout(4000, () => {
         req.destroy(new Error(`Timeout image: ${u}`));
@@ -293,7 +318,12 @@ async function fetchImage(url) {
 }
 
 async function tryImg(url) {
-  if (!url) return null;
+  if (!url || typeof url !== 'string') return null;
+  if (!/^https?:\/\//i.test(url)) {
+    console.error('[IMG FAIL] Non-absolute URL:', url);
+    return null;
+  }
+
   if (imageCache.has(url)) return imageCache.get(url);
 
   try {
@@ -752,8 +782,8 @@ async function generateProfileCard(bsTag, bsPlayer, rntDataFromCaller = null) {
   const iconSize = 84;
   bsBox(ctx, 0, 0, LW, 116, 'rgba(18, 15, 11, 0.86)', '#000000', 0);
 
-  const avatarId = profileAvatar || bsPlayer?.icon?.id;
-  if (avatarId) {
+    const avatarId = profileAvatar || bsPlayer?.icon?.id;
+    if (avatarId && avatarId !== 'Unknown') {
     const iconImg = await tryImg(`https://cdn.brawlify.com/profile-icons/regular/${avatarId}.png`);
     if (iconImg) {
       bsBox(ctx, 7, 7, iconSize + 4, iconSize + 4, '#324d25', '#000', 6);
