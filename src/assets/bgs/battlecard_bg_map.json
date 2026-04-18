@@ -1,0 +1,57 @@
+{
+  "direct": {
+    "0": "0.png",
+    "1": "1.png"
+  },
+  "named": {
+    "alien": "alien.png",
+    "global": "global.png",
+    "lunar": "lunar.png",
+    "martian": "martian.png",
+    "meteoric": "meteoric.png",
+    "saturnal": "saturnal.png",
+    "solar": "solar.png",
+    "starrforce": "starrforce.png",
+
+    "bronze2025": "bronze2025.png",
+    "silver2025": "silver2025.png",
+    "gold2025": "gold2025.png",
+    "diamond2025": "diamond2025.png",
+    "mythic2025": "mythic2025.png",
+    "legendary2025": "legendary2025.png",
+    "masters2025": "masters2025.png",
+    "pro2025": "pro2025.png",
+
+    "legendary-old": "legendary-old.png",
+    "masters-old": "masters-old.png"
+  },
+  "ranked_old": {
+    "1": "ranked-old1.png",
+    "2": "ranked-old2.png",
+    "3": "ranked-old3.png",
+    "4": "ranked-old4.png",
+    "5": "ranked-old5.png",
+    "6": "ranked-old6.png",
+    "7": "ranked-old7.png"
+  },
+  "prestige": {
+    "1": "prestige1.png",
+    "2": "prestige2.png",
+    "3": "prestige3.png"
+  },
+  "record": {
+    "0": "record0.png",
+    "1": "record1.png",
+    "2": "record2.png",
+    "3": "record3.png",
+    "4": "record4.png",
+    "5": "record5.png",
+    "6": "record6.png",
+    "7": "record7.png",
+    "8": "record8.png",
+    "9": "record9.png",
+    "10": "record10.png",
+    "11": "record11.png",
+    "12": "record12.png"
+  }
+}

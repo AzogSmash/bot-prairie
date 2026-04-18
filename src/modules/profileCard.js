@@ -291,6 +291,7 @@ async function fetchImage(url) {
     go(url);
   });
 }
+
 async function tryImg(url) {
   if (!url) return null;
   if (imageCache.has(url)) return imageCache.get(url);
@@ -301,6 +302,25 @@ async function tryImg(url) {
     return img;
   } catch (err) {
     console.error('[IMG FAIL]', url, err.message);
+    return null;
+  }
+}
+
+async function tryLocalImg(filePath) {
+  try {
+    return await loadImage(filePath);
+  } catch {
+    return null;
+  }
+}
+
+async function tryLocalImg(filePath) {
+  if (!filePath) return null;
+
+  try {
+    return await loadImage(filePath);
+  } catch (err) {
+    console.error('[LOCAL IMG FAIL]', filePath, err.message);
     return null;
   }
 }
@@ -598,6 +618,19 @@ function drawTopBattleBadge(ctx, cx, cy, value) {
   ctx.restore();
 }
 
+const battleCardBgMap = require('../assets/battlecard-bgs/battlecard_bg_map.json');
+
+function getBattleCardBgPath(frameId, fallbackKey = null) {
+  let fileName = battleCardBgMap.direct[String(frameId)] || null;
+
+  if (!fileName && fallbackKey && battleCardBgMap.named[fallbackKey]) {
+    fileName = battleCardBgMap.named[fallbackKey];
+  }
+
+  if (!fileName) return null;
+  return path.join(__dirname, '../assets/battlecard-bgs', fileName);
+}
+
 // ═══════════════════════════════════════════════════════
 // GÉNÉRATION CARTE
 // ═══════════════════════════════════════════════════════
@@ -799,69 +832,53 @@ ctx.strokeStyle = 'rgba(255,255,255,0.12)';
 ctx.lineWidth = 1.2;
 ctx.stroke();
 
-// fond intérieur
-const inner = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + cardH);
-inner.addColorStop(0, 'rgba(63, 48, 27, 0.72)');
-inner.addColorStop(0.5, 'rgba(33, 38, 58, 0.50)');
-inner.addColorStop(1, 'rgba(22, 26, 35, 0.68)');
-
+// fond intérieur : background officiel si dispo, sinon fallback maison
 ctx.save();
 rr(ctx, cardX + 5, cardY + 5, cardW - 10, cardH - 10, 14);
 ctx.clip();
-ctx.fillStyle = inner;
-ctx.fillRect(cardX + 5, cardY + 5, cardW - 10, cardH - 10);
 
-// motif losanges
-ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-ctx.lineWidth = 1;
-const ds = 28;
-for (let yy = cardY - 10; yy < cardY + cardH; yy += ds) {
-  for (let xx = cardX - 10; xx < cardX + cardW; xx += ds) {
-    ctx.beginPath();
-    ctx.moveTo(xx, yy - ds / 2);
-    ctx.lineTo(xx + ds / 2, yy);
-    ctx.lineTo(xx, yy + ds / 2);
-    ctx.lineTo(xx - ds / 2, yy);
-    ctx.closePath();
-    ctx.stroke();
+const bgPath = getBattleCardBgPath(favoriteCard?.battleCardFrameId);
+const officialBg = bgPath ? await tryLocalImg(bgPath) : null;
+
+if (officialBg) {
+  const bgX = cardX + 5;
+  const bgY = cardY + 5;
+  const bgW = cardW - 10;
+  const bgH = cardH - 10;
+
+  const scale = Math.max(bgW / officialBg.width, bgH / officialBg.height);
+  const drawW = officialBg.width * scale;
+  const drawH = officialBg.height * scale;
+  const drawX = bgX + (bgW - drawW) / 2;
+  const drawY = bgY + (bgH - drawH) / 2;
+
+  ctx.drawImage(officialBg, drawX, drawY, drawW, drawH);
+
+  // léger voile pour harmoniser avec ton thème
+  ctx.fillStyle = 'rgba(8, 10, 14, 0.18)';
+  ctx.fillRect(bgX, bgY, bgW, bgH);
+} else {
+  const inner = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + cardH);
+  inner.addColorStop(0, 'rgba(63, 48, 27, 0.72)');
+  inner.addColorStop(0.5, 'rgba(33, 38, 58, 0.50)');
+  inner.addColorStop(1, 'rgba(22, 26, 35, 0.68)');
+  ctx.fillStyle = inner;
+  ctx.fillRect(cardX + 5, cardY + 5, cardW - 10, cardH - 10);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 1;
+  const ds = 28;
+  for (let yy = cardY - 10; yy < cardY + cardH; yy += ds) {
+    for (let xx = cardX - 10; xx < cardX + cardW; xx += ds) {
+      ctx.beginPath();
+      ctx.moveTo(xx, yy - ds / 2);
+      ctx.lineTo(xx + ds / 2, yy);
+      ctx.lineTo(xx, yy + ds / 2);
+      ctx.lineTo(xx - ds / 2, yy);
+      ctx.closePath();
+      ctx.stroke();
+    }
   }
-}
-
-// diagonales colorées mieux réparties
-const decoLines = [
-  {
-    color: 'rgba(96, 238, 255, 0.82)',
-    width: 7,
-    x1: cardX + cardW * 0.78,
-    y1: cardY + 34,
-    x2: cardX + cardW - 26,
-    y2: cardY + cardH * 0.50,
-  },
-  {
-    color: 'rgba(124, 104, 255, 0.72)',
-    width: 6,
-    x1: cardX + 34,
-    y1: cardY + cardH * 0.23,
-    x2: cardX + cardW * 0.50,
-    y2: cardY + 42,
-  },
-  {
-    color: 'rgba(98, 222, 255, 0.28)',
-    width: 4,
-    x1: cardX + cardW * 0.73,
-    y1: cardY + 74,
-    x2: cardX + cardW - 44,
-    y2: cardY + cardH * 0.58,
-  }
-];
-
-for (const line of decoLines) {
-  ctx.strokeStyle = line.color;
-  ctx.lineWidth = line.width;
-  ctx.beginPath();
-  ctx.moveTo(line.x1, line.y1);
-  ctx.lineTo(line.x2, line.y2);
-  ctx.stroke();
 }
 
 // bordure blanche inclinée intérieure

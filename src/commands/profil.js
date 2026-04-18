@@ -262,13 +262,29 @@ module.exports = {
 
       const { embed, player, bsTag, rntData } = profileData;
 
-      let attachment = null;
+      let cardAttachment = null;
+      let cardFailed = false;
+
       try {
-        const buffer = await generateProfileCard(bsTag, player, rntData);
-        attachment = new AttachmentBuilder(buffer, { name: 'profile-card.png' });
+        const cardBuffer = await Promise.race([
+          generateProfileCard(bsTag, player, rntData),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Profile card timeout')), 10000)
+          )
+        ]);
+
+        const { AttachmentBuilder } = require('discord.js');
+        cardAttachment = new AttachmentBuilder(cardBuffer, { name: 'profile-card.png' });
         embed.setImage('attachment://profile-card.png');
-      } catch (cardErr) {
-        console.error('[Profil Card]', cardErr);
+      } catch (err) {
+        cardFailed = true;
+        console.error('[PROFILE CARD FAIL]', bsTag, err.message);
+      }
+
+      if (cardFailed) {
+        embed.setFooter({
+          text: 'Prairie Brawl Stars • Certaines images n’ont pas pu être chargées'
+        });
       }
 
       const row = new ActionRowBuilder().addComponents(
@@ -285,7 +301,7 @@ module.exports = {
       await interaction.editReply({
         embeds: [embed],
         components: [row],
-        files: attachment ? [attachment] : [],
+        files: cardAttachment ? [cardAttachment] : [],
       });
 
     } catch (err) {
