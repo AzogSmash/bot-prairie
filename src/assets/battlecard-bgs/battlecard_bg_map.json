@@ -1,57 +1,47 @@
 {
-  "direct": {
-    "0": "0.png",
-    "1": "1.png"
-  },
-  "named": {
-    "alien": "alien.png",
-    "global": "global.png",
-    "lunar": "lunar.png",
-    "martian": "martian.png",
-    "meteoric": "meteoric.png",
-    "saturnal": "saturnal.png",
-    "solar": "solar.png",
-    "starrforce": "starrforce.png",
+  "0": "0.png",
 
-    "bronze2025": "bronze2025.png",
-    "silver2025": "silver2025.png",
-    "gold2025": "gold2025.png",
-    "diamond2025": "diamond2025.png",
-    "mythic2025": "mythic2025.png",
-    "legendary2025": "legendary2025.png",
-    "masters2025": "masters2025.png",
-    "pro2025": "pro2025.png",
+  "85000000": "ranked-old1.png",
+  "85000001": "ranked-old2.png",
+  "85000002": "ranked-old3.png",
+  "85000003": "ranked-old4.png",
+  "85000004": "ranked-old5.png",
+  "85000005": "ranked-old6.png",
+  "85000006": "ranked-old7.png",
 
-    "legendary-old": "legendary-old.png",
-    "masters-old": "masters-old.png"
-  },
-  "ranked_old": {
-    "1": "ranked-old1.png",
-    "2": "ranked-old2.png",
-    "3": "ranked-old3.png",
-    "4": "ranked-old4.png",
-    "5": "ranked-old5.png",
-    "6": "ranked-old6.png",
-    "7": "ranked-old7.png"
-  },
-  "prestige": {
-    "1": "prestige1.png",
-    "2": "prestige2.png",
-    "3": "prestige3.png"
-  },
-  "record": {
-    "0": "record0.png",
-    "1": "record1.png",
-    "2": "record2.png",
-    "3": "record3.png",
-    "4": "record4.png",
-    "5": "record5.png",
-    "6": "record6.png",
-    "7": "record7.png",
-    "8": "record8.png",
-    "9": "record9.png",
-    "10": "record10.png",
-    "11": "record11.png",
-    "12": "record12.png"
-  }
+  "85000007": "global.png",
+  "85000008": "lunar.png",
+  "85000009": "martian.png",
+  "85000010": "saturnal.png",
+  "85000011": "solar.png",
+  "85000012": "meteoric.png",
+  "85000013": "alien.png",
+
+  "85000014": "bronze2025.png",
+  "85000015": "silver2025.png",
+  "85000016": "gold2025.png",
+  "85000017": "diamond2025.png",
+  "85000018": "mythic2025.png",
+  "85000019": "legendary2025.png",
+  "85000020": "masters2025.png",
+  "85000021": "pro2025.png",
+
+  "85000022": "record1.png",
+  "85000023": "record2.png",
+  "85000024": "record3.png",
+  "85000025": "record4.png",
+  "85000026": "record5.png",
+  "85000027": "record6.png",
+  "85000028": "record7.png",
+  "85000029": "record8.png",
+  "85000030": "record9.png",
+  "85000031": "record10.png",
+  "85000032": "record11.png",
+  "85000033": "record12.png",
+
+  "85000034": "starrforce.png",
+
+  "85000035": "prestige1.png",
+  "85000036": "prestige2.png",
+  "85000037": "prestige3.png"
 }

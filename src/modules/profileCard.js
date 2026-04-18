@@ -307,14 +307,6 @@ async function tryImg(url) {
 }
 
 async function tryLocalImg(filePath) {
-  try {
-    return await loadImage(filePath);
-  } catch {
-    return null;
-  }
-}
-
-async function tryLocalImg(filePath) {
   if (!filePath) return null;
 
   try {
@@ -618,17 +610,18 @@ function drawTopBattleBadge(ctx, cx, cy, value) {
   ctx.restore();
 }
 
-const battleCardBgMap = require('../assets/battlecard-bgs/battlecard_bg_map.json');
+let battleCardBgMap = {};
 
-function getBattleCardBgPath(frameId, fallbackKey = null) {
-  let fileName = battleCardBgMap.direct[String(frameId)] || null;
+try {
+  battleCardBgMap = require('../assets/bgs/battlecard_bg_map.json');
+} catch (err) {
+  console.error('[BATTLECARD MAP FAIL]', err.message);
+}
 
-  if (!fileName && fallbackKey && battleCardBgMap.named[fallbackKey]) {
-    fileName = battleCardBgMap.named[fallbackKey];
-  }
-
+function getBattleCardBgPath(frameId) {
+  const fileName = battleCardBgMap[String(frameId)] || null;
   if (!fileName) return null;
-  return path.join(__dirname, '../assets/battlecard-bgs', fileName);
+  return path.join(__dirname, '../assets/battlecard-bg', fileName);
 }
 
 // ═══════════════════════════════════════════════════════
