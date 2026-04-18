@@ -932,17 +932,24 @@ if (officialBg) {
   }
 }
 
-// bordure blanche inclinée intérieure mieux alignée au bg
-ctx.strokeStyle = 'rgba(255,255,255,0.88)';
+// bordure blanche inclinée intérieure alignée au bg
+const whiteFrame = {
+  tl: { x: cardX + 30, y: cardY + 30 },
+  tr: { x: cardX + cardW - 38, y: cardY + 20 },
+  br: { x: cardX + cardW - 26, y: cardY + cardH - footerH - 6 },
+  bl: { x: cardX + 18, y: cardY + cardH - footerH + 2 }
+};
+
+ctx.strokeStyle = 'rgba(255,255,255,0.90)';
 ctx.lineWidth = 3;
 
 ctx.beginPath();
-ctx.moveTo(cardX + 24, cardY + 30);
-ctx.lineTo(cardX + cardW - 34, cardY + 18);
-ctx.lineTo(cardX + cardW - 24, cardY + cardH - footerH - 10);
-ctx.lineTo(cardX + 18, cardY + cardH - footerH - 2);
+ctx.moveTo(whiteFrame.tl.x, whiteFrame.tl.y);
+ctx.lineTo(whiteFrame.tr.x, whiteFrame.tr.y);
+ctx.lineTo(whiteFrame.br.x, whiteFrame.br.y);
+ctx.lineTo(whiteFrame.bl.x, whiteFrame.bl.y);
 ctx.closePath();
-ctx.stroke();;
+ctx.stroke();
 
 ctx.restore();
 
@@ -1011,15 +1018,20 @@ if (mainBrawlerId) {
 }
 
 // ── BADGE PRESTIGE OFFICIEL EN HAUT DE LA CARTE ──────
-const topPrestigeImg = await tryLocalImg(
-  path.join(__dirname, '../assets/icon_total_prestige.png')
-);
+const topPrestigePath = path.join(__dirname, '../assets/icon_total_prestige.png');
+const topPrestigeImg = await tryLocalImg(topPrestigePath);
+
+console.log('[TOP PRESTIGE DEBUG]', {
+  topPrestigePath,
+  loaded: !!topPrestigeImg,
+  prestige
+});
 
 if (topPrestigeImg) {
-  const badgeW = 150;
-  const badgeH = 120;
+  const badgeW = 122;
+  const badgeH = Math.round(badgeW * (topPrestigeImg.height / topPrestigeImg.width));
   const badgeX = cardX + cardW / 2 - badgeW / 2;
-  const badgeY = cardY - 38;
+  const badgeY = cardY - 18;
 
   ctx.drawImage(topPrestigeImg, badgeX, badgeY, badgeW, badgeH);
 
@@ -1028,11 +1040,18 @@ if (topPrestigeImg) {
     ctx,
     String(prestige),
     badgeX + badgeW / 2,
-    badgeY + 66,
+    badgeY + Math.round(badgeH * 0.54),
     '#ffffff',
-    30,
+    22,
     'Lilita',
-    5
+    4
+  );
+} else {
+  drawTopBattleBadge(
+    ctx,
+    cardX + cardW / 2,
+    cardY - 2,
+    prestige
   );
 }
 
@@ -1431,22 +1450,21 @@ const prestigePanelImg = await tryLocalImg(
 );
 
 if (prestigePanelImg) {
-  const panelW = Math.min(104, presW - 6);
+  const panelW = Math.min(102, presW - 8);
   const panelH = Math.round(panelW * (prestigePanelImg.height / prestigePanelImg.width));
   const panelX = presX + (presW - panelW) / 2;
-  const panelY = curY + 8;
+  const panelY = curY + 12;
 
   ctx.drawImage(prestigePanelImg, panelX, panelY, panelW, panelH);
 
-  // nombre dans l’écusson bleu du haut
   ctx.textAlign = 'center';
   drawOutlineText(
     ctx,
     String(prestige),
     panelX + panelW / 2,
-    panelY + 38,
+    panelY + 46,
     '#ffffff',
-    24,
+    21,
     'Lilita',
     4
   );
