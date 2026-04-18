@@ -263,14 +263,31 @@ async function fetchImage(url) {
   return new Promise((resolve, reject) => {
     const go = (u) => {
       const lib = u.startsWith('https') ? https : http;
-      lib.get(u, (res) => {
-        if (res.statusCode === 301 || res.statusCode === 302) return go(res.headers.location);
-        if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode}`));
+
+      const req = lib.get(u, (res) => {
+        if (res.statusCode === 301 || res.statusCode === 302) {
+          return go(res.headers.location);
+        }
+
+        if (res.statusCode !== 200) {
+          res.resume();
+          return reject(new Error(`HTTP ${res.statusCode} for ${u}`));
+        }
+
         const chunks = [];
         res.on('data', c => chunks.push(c));
-        res.on('end', () => loadImage(Buffer.concat(chunks)).then(resolve).catch(reject));
-      }).on('error', reject);
+        res.on('end', () => {
+          loadImage(Buffer.concat(chunks)).then(resolve).catch(reject);
+        });
+      });
+
+      req.setTimeout(4000, () => {
+        req.destroy(new Error(`Timeout image: ${u}`));
+      });
+
+      req.on('error', reject);
     };
+
     go(url);
   });
 }
@@ -282,7 +299,8 @@ async function tryImg(url) {
     const img = await fetchImage(url);
     imageCache.set(url, img);
     return img;
-  } catch {
+  } catch (err) {
+    console.error('[IMG FAIL]', url, err.message);
     return null;
   }
 }
