@@ -1,0 +1,37 @@
+[1mdiff --git a/src/modules/profileCard.js b/src/modules/profileCard.js[m
+[1mindex 570a09f..75b4f07 100644[m
+[1m--- a/src/modules/profileCard.js[m
+[1m+++ b/src/modules/profileCard.js[m
+[36m@@ -33,21 +33,21 @@[m [mconst RANKED_TIERS = [[m
+   { min: 0,     name: 'Bronze',    file: 'Bronze',    color: '#cd7f32' },[m
+   { min: 750,   name: 'Silver',    file: 'Silver',    color: '#c0c0c0' },[m
+   { min: 1500,  name: 'Gold',      file: 'Gold',      color: '#ffd700' },[m
+[31m-  { min: 2250,  name: 'Diamond',   file: 'Diamond',   color: '#00bfff' },[m
+[31m-  { min: 3750,  name: 'Mythic',    file: 'Mythic',    color: '#e84393' },[m
+[31m-  { min: 5250,  name: 'Legendary', file: 'Legendary', color: '#e74c3c' },[m
+[31m-  { min: 7500,  name: 'Masters',   file: 'Masters',   color: '#ff6b35' },[m
+[31m-  { min: 10500, name: 'Pro',       file: 'Pro',       color: '#f1c40f' },[m
+[32m+[m[32m  { min: 3000,  name: 'Diamond',   file: 'Diamond',   color: '#00bfff' },[m
+[32m+[m[32m  { min: 4500,  name: 'Mythic',    file: 'Mythic',    color: '#e84393' },[m
+[32m+[m[32m  { min: 6000,  name: 'Legendary', file: 'Legendary', color: '#e74c3c' },[m
+[32m+[m[32m  { min: 8250,  name: 'Masters',   file: 'Masters',   color: '#ff6b35' },[m
+[32m+[m[32m  { min: 11250, name: 'Pro',       file: 'Pro',       color: '#f1c40f' },[m
+ ];[m
+ const RANKED_SUBTIERS = [[m
+   { min: 0,     sub: 'I' },   { min: 250,  sub: 'II' },  { min: 500,  sub: 'III' },[m
+   { min: 750,   sub: 'I' },   { min: 1000, sub: 'II' },  { min: 1250, sub: 'III' },[m
+[31m-  { min: 1500,  sub: 'I' },   { min: 1750, sub: 'II' },  { min: 2000, sub: 'III' },[m
+[31m-  { min: 2250,  sub: 'I' },   { min: 2750, sub: 'II' },  { min: 3250, sub: 'III' },[m
+[31m-  { min: 3750,  sub: 'I' },   { min: 4250, sub: 'II' },  { min: 4750, sub: 'III' },[m
+[31m-  { min: 5250,  sub: 'I' },   { min: 6000, sub: 'II' },  { min: 6750, sub: 'III' },[m
+[31m-  { min: 7500,  sub: 'I' },   { min: 8500, sub: 'II' },  { min: 9500, sub: 'III' },[m
+[31m-  { min: 10500, sub: '' },[m
+[32m+[m[32m  { min: 1500,  sub: 'I' },   { min: 2000, sub: 'II' },  { min: 2500, sub: 'III' },[m
+[32m+[m[32m  { min: 3000,  sub: 'I' },   { min: 3500, sub: 'II' },  { min: 4000, sub: 'III' },[m
+[32m+[m[32m  { min: 4500,  sub: 'I' },   { min: 5000, sub: 'II' },  { min: 5500, sub: 'III' },[m
+[32m+[m[32m  { min: 6000,  sub: 'I' },   { min: 6750, sub: 'II' },  { min: 7500, sub: 'III' },[m
+[32m+[m[32m  { min: 8250,  sub: 'I' },   { min: 9250, sub: 'II' },  { min: 10250, sub: 'III' },[m
+[32m+[m[32m  { min: 11250, sub: '' },[m
+ ];[m
+ function getRankedTier(elo) {[m
+   if (!elo || elo <= 0) return { name: 'Unranked', file: null, color: '#95a5a6', sub: '' };[m

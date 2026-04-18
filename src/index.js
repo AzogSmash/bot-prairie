@@ -95,14 +95,16 @@ async function deployCommands() {
         try {
           const targetId = parts[parts.length - 1]; // dernier segment = userId
           const target = await interaction.client.users.fetch(targetId);
-          const embed = await buildProfileEmbed(target, interaction.client);
-          if (!embed) {
+          const profilePayload = await buildProfileEmbed(target, interaction.client);
+
+          if (!profilePayload) {
             await interaction.followUp({ content: '❌ Tu n\'as pas encore lié ton compte BS.', ephemeral: true });
           } else {
             const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
             const row = new ActionRowBuilder().addComponents(
               new ButtonBuilder()
-                .setCustomId(`refresh_${interaction.user.id}`)
+                .setCustomId(`refresh_${target.id}`)
                 .setLabel('🔄 Actualiser')
                 .setStyle(ButtonStyle.Secondary),
               new ButtonBuilder()
@@ -110,7 +112,11 @@ async function deployCommands() {
                 .setLabel('🏆 Classement Prairie')
                 .setStyle(ButtonStyle.Primary),
             );
-            await interaction.editReply({ embeds: [embed], components: [row] });
+
+            await interaction.editReply({
+              ...profilePayload,
+              components: [row],
+            });
           }
         } catch (err) {
           console.error(err);
@@ -130,8 +136,10 @@ async function deployCommands() {
       await interaction.deferUpdate();
       const target = await interaction.client.users.fetch(parts[1]);
       try {
-        const embed = await buildProfileEmbed(target, interaction.client);
-        if (embed) await interaction.editReply({ embeds: [embed] });
+        const profilePayload = await buildProfileEmbed(target, interaction.client);
+        if (profilePayload) {
+          await interaction.editReply(profilePayload);
+        }
       } catch (err) {
         console.error(err);
       }
