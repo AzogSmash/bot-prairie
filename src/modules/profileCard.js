@@ -902,16 +902,17 @@ if (officialBg) {
   }
 }
 
-// bordure blanche inclinée intérieure
-ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+// bordure blanche inclinée intérieure mieux alignée au bg
+ctx.strokeStyle = 'rgba(255,255,255,0.88)';
 ctx.lineWidth = 3;
+
 ctx.beginPath();
-ctx.moveTo(cardX + 18, cardY + 22);
-ctx.lineTo(cardX + cardW - 22, cardY + 10);
-ctx.lineTo(cardX + cardW - 16, cardY + cardH - footerH - 14);
-ctx.lineTo(cardX + 20, cardY + cardH - footerH - 6);
+ctx.moveTo(cardX + 24, cardY + 30);
+ctx.lineTo(cardX + cardW - 34, cardY + 18);
+ctx.lineTo(cardX + cardW - 24, cardY + cardH - footerH - 10);
+ctx.lineTo(cardX + 18, cardY + cardH - footerH - 2);
 ctx.closePath();
-ctx.stroke();
+ctx.stroke();;
 
 ctx.restore();
 
@@ -979,13 +980,31 @@ if (mainBrawlerId) {
   }
 }
 
-// ── BADGE FLASHY EN HAUT DE LA CARTE ─────────────────
-drawTopBattleBadge(
-  ctx,
-  cardX + cardW / 2,
-  cardY - 2,
-  prestige
+// ── BADGE PRESTIGE OFFICIEL EN HAUT DE LA CARTE ──────
+const topPrestigeImg = await tryLocalImg(
+  path.join(__dirname, '../assets/icon_total_prestige.png')
 );
+
+if (topPrestigeImg) {
+  const badgeW = 150;
+  const badgeH = 120;
+  const badgeX = cardX + cardW / 2 - badgeW / 2;
+  const badgeY = cardY - 38;
+
+  ctx.drawImage(topPrestigeImg, badgeX, badgeY, badgeW, badgeH);
+
+  ctx.textAlign = 'center';
+  drawOutlineText(
+    ctx,
+    String(prestige),
+    badgeX + badgeW / 2,
+    badgeY + 66,
+    '#ffffff',
+    30,
+    'Lilita',
+    5
+  );
+}
 
 // ── EMOTE EN HAUT DROITE ──────────────────────────────
 if (favoriteCard?.battleCardEmoteId) {
@@ -1377,37 +1396,31 @@ const startY = curY + 36;
 const presX = RX + brawlW + 6;
 statBox(ctx, presX, curY, presW, R4H);
 
-let pImg = null;
-const presTierFile = Math.min(6, Math.max(0, Math.floor(prestige / 20)));
-pImg = await tryImg(`https://cdn.brawlify.com/prestiges/regular/${presTierFile}.png`);
-
-const badgeSize = Math.min(90, presW - 18);
-const badgeX = presX + (presW - badgeSize) / 2;
-const badgeY = curY + 16;
-
-if (pImg) {
-  ctx.drawImage(pImg, badgeX, badgeY, badgeSize, badgeSize);
-}
-
-ctx.textAlign = 'center';
-drawOutlineText(
-  ctx,
-  String(prestige),
-  presX + presW / 2,
-  badgeY + badgeSize * 0.60,
-  '#ffffff',
-  30,
-  'Lilita',
-  5
+const prestigePanelImg = await tryLocalImg(
+  path.join(__dirname, '../assets/prestige.png')
 );
 
-ctx.font = 'bold 11px Roboto';
-ctx.fillStyle = PRAIRIE.muted;
-ctx.fillText('TOTAL', presX + presW / 2, curY + R4H - 24);
+if (prestigePanelImg) {
+  const panelW = Math.min(104, presW - 6);
+  const panelH = Math.round(panelW * (prestigePanelImg.height / prestigePanelImg.width));
+  const panelX = presX + (presW - panelW) / 2;
+  const panelY = curY + 8;
 
-ctx.font = 'bold 14px Roboto';
-ctx.fillStyle = PRAIRIE.goldText;
-ctx.fillText('PRESTIGE', presX + presW / 2, curY + R4H - 8);
+  ctx.drawImage(prestigePanelImg, panelX, panelY, panelW, panelH);
+
+  // nombre dans l’écusson bleu du haut
+  ctx.textAlign = 'center';
+  drawOutlineText(
+    ctx,
+    String(prestige),
+    panelX + panelW / 2,
+    panelY + 38,
+    '#ffffff',
+    24,
+    'Lilita',
+    4
+  );
+}
 
   // ── DATE ──────────────────────────────────────────────
   ctx.font = 'bold 12px Roboto';
