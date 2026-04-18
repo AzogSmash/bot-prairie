@@ -74,6 +74,75 @@ function getStatLoose(stats, ...names) {
   return 0;
 }
 
+function getFavoriteBrawlerEntry(rntData) {
+  const favoriteBrawlerId = Number(rntData?.favorite_brawler || 0);
+  if (!favoriteBrawlerId) return null;
+
+  return (rntData?.brawlers || []).find(
+    b => Number(b.brawler_id) === favoriteBrawlerId
+  ) || null;
+}
+
+function getFavoriteSkinId(rntData) {
+  const favoriteEntry = getFavoriteBrawlerEntry(rntData);
+
+  return (
+    Number(favoriteEntry?.skin_equipped || 0) ||
+    Number(rntData?.battle_card?.favorite_skin || 0) ||
+    0
+  );
+}
+
+function getFamePoints(rntData) {
+  return getStatLoose(rntData?.stats || [], 'FamePoints', 'fame_points') || 0;
+}
+
+function getFameTierFromPoints(points) {
+  const p = Number(points || 0);
+
+  if (p >= 449100) return 24;
+  if (p >= 374100) return 23;
+  if (p >= 299100) return 22;
+
+  if (p >= 249100) return 21;
+  if (p >= 199100) return 20;
+  if (p >= 149100) return 19;
+
+  if (p >= 129100) return 18;
+  if (p >= 109100) return 17;
+  if (p >= 89100)  return 16;
+
+  if (p >= 77100) return 15;
+  if (p >= 65100) return 14;
+  if (p >= 53100) return 13;
+
+  if (p >= 45100) return 12;
+  if (p >= 37100) return 11;
+  if (p >= 29100) return 10;
+
+  if (p >= 24600) return 9;
+  if (p >= 20100) return 8;
+  if (p >= 15600) return 7;
+
+  if (p >= 12400) return 6;
+  if (p >= 9200)  return 5;
+  if (p >= 6000)  return 4;
+
+  if (p >= 4000) return 3;
+  if (p >= 2000) return 2;
+  return 1;
+}
+
+function getFameCdnUrl(points) {
+  const tier = getFameTierFromPoints(points);
+  return `https://cdn.bsinfox.com/fame/tier/${tier}.png`;
+}
+
+function getBattleCardEmoteCdnUrl(emoteId) {
+  if (!emoteId) return null;
+  return `https://cdn.bsinfox.com/emote/${emoteId}.png`;
+}
+
 function pickHeroBrawlerId(bsPlayer, rntData) {
   const favoriteId = Number(rntData?.favorite_brawler?.id || rntData?.favorite_brawler || 0);
   if (favoriteId) return favoriteId;
@@ -216,6 +285,51 @@ async function tryImg(url) {
   } catch {
     return null;
   }
+}
+
+function buildFavoriteCardData(rntData, bsPlayer, allBrawlersMeta = []) {
+  const favoriteBrawlerId = Number(rntData?.favorite_brawler || 0);
+
+  const favoriteEntry = (rntData?.brawlers || []).find(
+    b => Number(b.brawler_id) === favoriteBrawlerId
+  ) || null;
+
+  const meta = allBrawlersMeta.find(
+    b => Number(b.id) === favoriteBrawlerId
+  ) || null;
+
+  return {
+    brawlerId: favoriteBrawlerId,
+    skinEquippedId: Number(favoriteEntry?.skin_equipped || 0),
+    fallbackFavoriteSkinId: Number(rntData?.battle_card?.favorite_skin || 0),
+
+    trophies: Number(favoriteEntry?.trophies || 0),
+    highestTrophies: Number(favoriteEntry?.highest_trophies || 0),
+    powerLevel: Number(favoriteEntry?.power_level || 0),
+    mastery: Number(favoriteEntry?.mastery || 0),
+
+    battleCardFrameId: Number(rntData?.battle_card?.frame || 0),
+    battleCardEmoteId: Number(rntData?.battle_card?.battle_card_emote || 0),
+    battleCardTitleId: Number(rntData?.battle_card?.title || 0),
+    battleCardPrestigeId: Number(rntData?.battle_card?.prestige || 0),
+    firstProfileAvatarId: Number(rntData?.battle_card?.first_profile_avatar || 0),
+    secondProfileAvatarId: Number(rntData?.battle_card?.second_profile_avatar || 0),
+
+    profileAvatarId: Number(rntData?.profile_avatar || bsPlayer?.icon?.id || 0),
+    playerNameColor: rntData?.name_color || null,
+
+    famePoints: getFamePoints(rntData),
+    allianceName: rntData?.alliance?.name || bsPlayer?.club?.name || '',
+
+    brawlerName: meta?.name || null,
+    rarityName: meta?.rarity?.name || null,
+    rarityColor: meta?.rarity?.color || '#ffffff',
+    className: meta?.class?.name || null,
+
+    imageUrl: meta?.imageUrl || null,
+    imageUrl2: meta?.imageUrl2 || null,
+    imageUrl3: meta?.imageUrl3 || null,
+  };
 }
 
 // ═══════════════════════════════════════════════════════
@@ -361,6 +475,111 @@ function drawMarker(ctx, x, y, type) {
   ctx.restore();
 }
 
+function drawTopBattleBadge(ctx, cx, cy, value) {
+  ctx.save();
+
+  // glow léger
+  ctx.shadowColor = 'rgba(88, 180, 255, 0.35)';
+  ctx.shadowBlur = 12;
+
+  // chevrons gauche
+  const leftChevrons = [
+    { x: cx - 74, y: cy - 2, color: '#72c8ff' },
+    { x: cx - 92, y: cy + 2, color: '#8a7dff' },
+    { x: cx - 110, y: cy + 6, color: '#98ff8f' },
+  ];
+
+  for (const c of leftChevrons) {
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y);
+    ctx.lineTo(c.x - 12, c.y - 10);
+    ctx.lineTo(c.x - 20, c.y - 6);
+    ctx.lineTo(c.x - 8, c.y + 4);
+    ctx.closePath();
+    ctx.fillStyle = c.color;
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // chevrons droite
+  const rightChevrons = [
+    { x: cx + 74, y: cy - 2, color: '#72c8ff' },
+    { x: cx + 92, y: cy + 2, color: '#8a7dff' },
+    { x: cx + 110, y: cy + 6, color: '#98ff8f' },
+  ];
+
+  for (const c of rightChevrons) {
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y);
+    ctx.lineTo(c.x + 12, c.y - 10);
+    ctx.lineTo(c.x + 20, c.y - 6);
+    ctx.lineTo(c.x + 8, c.y + 4);
+    ctx.closePath();
+    ctx.fillStyle = c.color;
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // hexagone central
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 34);
+  ctx.lineTo(cx + 30, cy - 18);
+  ctx.lineTo(cx + 30, cy + 18);
+  ctx.lineTo(cx, cy + 34);
+  ctx.lineTo(cx - 30, cy + 18);
+  ctx.lineTo(cx - 30, cy - 18);
+  ctx.closePath();
+
+  const g = ctx.createLinearGradient(cx, cy - 34, cx, cy + 34);
+  g.addColorStop(0, '#184dff');
+  g.addColorStop(1, '#1f2f9f');
+  ctx.fillStyle = g;
+  ctx.fill();
+
+  ctx.strokeStyle = '#ff7de8';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // liseré interne
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 28);
+  ctx.lineTo(cx + 24, cy - 14);
+  ctx.lineTo(cx + 24, cy + 14);
+  ctx.lineTo(cx, cy + 28);
+  ctx.lineTo(cx - 24, cy + 14);
+  ctx.lineTo(cx - 24, cy - 14);
+  ctx.closePath();
+  ctx.strokeStyle = '#72deff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // petite étoile en haut
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 44);
+  ctx.lineTo(cx + 4, cy - 38);
+  ctx.lineTo(cx + 10, cy - 38);
+  ctx.lineTo(cx + 5, cy - 32);
+  ctx.lineTo(cx + 7, cy - 25);
+  ctx.lineTo(cx, cy - 29);
+  ctx.lineTo(cx - 7, cy - 25);
+  ctx.lineTo(cx - 5, cy - 32);
+  ctx.lineTo(cx - 10, cy - 38);
+  ctx.lineTo(cx - 4, cy - 38);
+  ctx.closePath();
+  ctx.fillStyle = '#ffe88a';
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+  ctx.textAlign = 'center';
+  drawOutlineText(ctx, String(value), cx, cy + 12, '#ffffff', 30, 'Lilita', 5);
+
+  ctx.restore();
+}
+
 // ═══════════════════════════════════════════════════════
 // GÉNÉRATION CARTE
 // ═══════════════════════════════════════════════════════
@@ -395,6 +614,7 @@ async function generateProfileCard(bsTag, bsPlayer, rntDataFromCaller = null) {
   // ── Données calculées ────────────────────────────────
   const bsBrawlers = bsPlayer?.brawlers || [];
   const displayBrawlers = getTop10Brawlers(rntBrawlers, bsBrawlers);
+  const favoriteCard = buildFavoriteCardData(rntData, bsPlayer, []);
   const heroBrawlerId = pickHeroBrawlerId(bsPlayer, rntData);
   const brawlerCount = ownedBrawlers || bsBrawlers.length;
   const trophies = bsPlayer?.trophies || getStatLoose(stats, 'Trophies') || 0;
@@ -534,58 +754,311 @@ async function generateProfileCard(bsTag, bsPlayer, rntDataFromCaller = null) {
   ctx.textAlign = 'right';
   ctx.fillText(`${xpProgress}/${xpPerLevel}`, barX + barW - 3, barY + 12);
 
-  // ── GRAND MODEL BRAWLER ──────────────────────────────
-  if (heroBrawlerId) {
-    const model = await tryImg(`https://cdn.brawlify.com/brawlers/model/${heroBrawlerId}.png`);
-    if (model) {
-      const frameX = 8;
-      const frameY = 116;
-      const frameW = LW - 16;
-     const frameH = 400;
+// ── CARTE FAVORITE BRAWLER ───────────────────────────
+const cardX = 22;
+const cardY = 138;
+const cardW = LW - 44;
+const cardH = 438;
+const footerH = 82;
 
-      // contain + bottom align
-      const scale = Math.min(frameW / model.width, frameH / model.height);
-      const drawW = model.width * scale;
-      const drawH = model.height * scale;
-      const drawX = frameX + (frameW - drawW) / 2;
-      const drawY = frameY + (frameH - drawH);
+// ── FRAME GLOBAL DE LA BATTLE CARD ───────────────────
+ctx.save();
+ctx.shadowColor = 'rgba(0,0,0,0.45)';
+ctx.shadowBlur = 18;
+ctx.shadowOffsetY = 8;
+rr(ctx, cardX, cardY, cardW, cardH, 18);
+ctx.fillStyle = '#0f0f14';
+ctx.fill();
+ctx.restore();
 
-      ctx.save();
+rr(ctx, cardX, cardY, cardW, cardH, 18);
+ctx.strokeStyle = '#000000';
+ctx.lineWidth = 5;
+ctx.stroke();
 
-      // clip pour éviter tout débordement
-      rr(ctx, frameX, frameY, frameW, frameH, 0);
-      ctx.clip();
+rr(ctx, cardX + 3, cardY + 3, cardW - 6, cardH - 6, 15);
+ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+ctx.lineWidth = 1.2;
+ctx.stroke();
 
-      ctx.shadowColor = 'rgba(0,0,0,0.70)';
-      ctx.shadowBlur = 24;
-      ctx.shadowOffsetY = 10;
-      ctx.drawImage(model, drawX, drawY, drawW, drawH);
+// fond intérieur
+const inner = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + cardH);
+inner.addColorStop(0, 'rgba(63, 48, 27, 0.72)');
+inner.addColorStop(0.5, 'rgba(33, 38, 58, 0.50)');
+inner.addColorStop(1, 'rgba(22, 26, 35, 0.68)');
 
-      ctx.restore();
+ctx.save();
+rr(ctx, cardX + 5, cardY + 5, cardW - 10, cardH - 10, 14);
+ctx.clip();
+ctx.fillStyle = inner;
+ctx.fillRect(cardX + 5, cardY + 5, cardW - 10, cardH - 10);
+
+// motif losanges
+ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+ctx.lineWidth = 1;
+const ds = 28;
+for (let yy = cardY - 10; yy < cardY + cardH; yy += ds) {
+  for (let xx = cardX - 10; xx < cardX + cardW; xx += ds) {
+    ctx.beginPath();
+    ctx.moveTo(xx, yy - ds / 2);
+    ctx.lineTo(xx + ds / 2, yy);
+    ctx.lineTo(xx, yy + ds / 2);
+    ctx.lineTo(xx - ds / 2, yy);
+    ctx.closePath();
+    ctx.stroke();
+  }
+}
+
+// diagonales colorées mieux réparties
+const decoLines = [
+  {
+    color: 'rgba(96, 238, 255, 0.82)',
+    width: 7,
+    x1: cardX + cardW * 0.78,
+    y1: cardY + 34,
+    x2: cardX + cardW - 26,
+    y2: cardY + cardH * 0.50,
+  },
+  {
+    color: 'rgba(124, 104, 255, 0.72)',
+    width: 6,
+    x1: cardX + 34,
+    y1: cardY + cardH * 0.23,
+    x2: cardX + cardW * 0.50,
+    y2: cardY + 42,
+  },
+  {
+    color: 'rgba(98, 222, 255, 0.28)',
+    width: 4,
+    x1: cardX + cardW * 0.73,
+    y1: cardY + 74,
+    x2: cardX + cardW - 44,
+    y2: cardY + cardH * 0.58,
+  }
+];
+
+for (const line of decoLines) {
+  ctx.strokeStyle = line.color;
+  ctx.lineWidth = line.width;
+  ctx.beginPath();
+  ctx.moveTo(line.x1, line.y1);
+  ctx.lineTo(line.x2, line.y2);
+  ctx.stroke();
+}
+
+// bordure blanche inclinée intérieure
+ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+ctx.lineWidth = 3;
+ctx.beginPath();
+ctx.moveTo(cardX + 18, cardY + 22);
+ctx.lineTo(cardX + cardW - 22, cardY + 10);
+ctx.lineTo(cardX + cardW - 16, cardY + cardH - footerH - 14);
+ctx.lineTo(cardX + 20, cardY + cardH - footerH - 6);
+ctx.closePath();
+ctx.stroke();
+
+ctx.restore();
+
+// barre noire du bas intégrée à la carte
+rr(ctx, cardX + 4, cardY + cardH - footerH - 4, cardW - 8, footerH, 0);
+ctx.fillStyle = '#050505';
+ctx.fill();
+
+// petite ligne de séparation au-dessus de la barre noire
+ctx.fillStyle = 'rgba(255,255,255,0.06)';
+ctx.fillRect(cardX + 8, cardY + cardH - footerH - 5, cardW - 16, 2);
+
+// visuel principal du brawler préféré : skin équipée d'abord, modèle sinon
+const mainBrawlerId = favoriteCard?.brawlerId || heroBrawlerId;
+const mainSkinId =
+  favoriteCard?.skinEquippedId ||
+  favoriteCard?.fallbackFavoriteSkinId ||
+  0;
+
+if (mainBrawlerId) {
+  let mainVisual = null;
+  let usingSkinVisual = false;
+
+  // 1) priorité à la skin équipée
+  if (mainSkinId) {
+    mainVisual = await tryImg(`https://cdn.bsinfox.com/brawlers/skins/${mainSkinId}.png`);
+    if (mainVisual) usingSkinVisual = true;
+  }
+
+  // 2) fallback sur le modèle du brawler
+  if (!mainVisual) {
+    mainVisual = await tryImg(`https://cdn.brawlify.com/brawlers/model/${mainBrawlerId}.png`);
+  }
+
+  if (mainVisual) {
+    const frameX = cardX + 10;
+    const frameY = cardY + 14;
+    const frameW = cardW - 20;
+    const frameH = cardH - footerH - 24;
+
+    const baseScale = Math.min(frameW / mainVisual.width, frameH / mainVisual.height);
+    const scale = usingSkinVisual ? baseScale * 1.12 : baseScale * 1.26;
+
+    const drawW = mainVisual.width * scale;
+    const drawH = mainVisual.height * scale;
+    const drawX = frameX + (frameW - drawW) / 2;
+    const drawY = frameY + frameH - drawH + 12;
+
+    ctx.save();
+    rr(ctx, frameX, frameY, frameW, frameH, 10);
+    ctx.clip();
+    ctx.shadowColor = 'rgba(0,0,0,0.70)';
+    ctx.shadowBlur = 24;
+    ctx.shadowOffsetY = 10;
+
+    const prevSmoothing = ctx.imageSmoothingEnabled;
+    if (usingSkinVisual) {
+      ctx.imageSmoothingEnabled = false;
     }
+
+    ctx.drawImage(mainVisual, drawX, drawY, drawW, drawH);
+
+    ctx.imageSmoothingEnabled = prevSmoothing;
+    ctx.restore();
   }
+}
 
-  // ── NOM + CLUB en bas gauche ─────────────────────────
-  const ng = ctx.createLinearGradient(0, H - 160, 0, H);
-  ng.addColorStop(0, 'rgba(0,0,0,0)');
-  ng.addColorStop(0.35, 'rgba(0,0,0,0.55)');
-  ng.addColorStop(1, 'rgba(0,0,0,0.88)');
-  ctx.fillStyle = ng;
-  ctx.fillRect(0, H - 160, LW, 160);
+// ── BADGE FLASHY EN HAUT DE LA CARTE ─────────────────
+drawTopBattleBadge(
+  ctx,
+  cardX + cardW / 2,
+  cardY - 2,
+  prestige
+);
 
-  ctx.textAlign = 'left';
-  drawOutlineText(ctx, playerName, 12, H - 56, PRAIRIE.greenText, 48, 'Lilita', 7);
+// ── EMOTE EN HAUT DROITE ──────────────────────────────
+if (favoriteCard?.battleCardEmoteId) {
+  const emoteImg = await tryImg(getBattleCardEmoteCdnUrl(favoriteCard.battleCardEmoteId));
 
-  const subText = allianceName || bsPlayer?.club?.name || '';
-  if (subText) {
-    drawOutlineText(ctx, subText, 12, H - 20, PRAIRIE.goldText, 22, 'Roboto', 5);
+  if (emoteImg) {
+    const bubbleX = cardX + cardW - 100;
+    const bubbleY = cardY + 18;
+    const bubbleW = 78;
+    const bubbleH = 74;
+
+    rr(ctx, bubbleX, bubbleY, bubbleW, bubbleH, 16);
+    ctx.fillStyle = 'rgba(255,255,255,0.96)';
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(bubbleX + 16, bubbleY + bubbleH - 4);
+    ctx.lineTo(bubbleX + 8, bubbleY + bubbleH + 12);
+    ctx.lineTo(bubbleX + 26, bubbleY + bubbleH - 2);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,255,255,0.96)';
+    ctx.fill();
+    ctx.stroke();
+
+    const pad = 8;
+    ctx.drawImage(
+      emoteImg,
+      bubbleX + pad,
+      bubbleY + pad,
+      bubbleW - pad * 2,
+      bubbleH - pad * 2
+    );
   }
+}
 
-  const badgeId = allianceBadge || bsPlayer?.club?.badgeId;
-  if (badgeId) {
-    const cbImg = await tryImg(`https://cdn.brawlify.com/club-badges/regular/${badgeId}.png`);
-    if (cbImg) ctx.drawImage(cbImg, LW - 68, H - 68, 58, 58);
+// ── FAME EN BAS GAUCHE ────────────────────────────────
+if ((favoriteCard?.famePoints || 0) >= 0) {
+  const fameImg = await tryImg(getFameCdnUrl(favoriteCard.famePoints));
+
+  if (fameImg) {
+    const boxX = cardX + 4;
+    const boxY = cardY + cardH - footerH - 68;
+    const boxW = 76;
+    const boxH = 76;
+
+    const scale = Math.min(boxW / fameImg.width, boxH / fameImg.height);
+    const drawW = fameImg.width * scale;
+    const drawH = fameImg.height * scale;
+    const drawX = boxX + (boxW - drawW) / 2;
+    const drawY = boxY + (boxH - drawH) / 2;
+
+    ctx.drawImage(fameImg, drawX, drawY, drawW, drawH);
   }
+}
+
+// ── DEUX AVATARS EN BAS DROITE ───────────────────────
+const miniAvatars = [
+  favoriteCard?.firstProfileAvatarId,
+  favoriteCard?.secondProfileAvatarId,
+].filter(Boolean);
+
+for (let i = 0; i < miniAvatars.length; i++) {
+  const avatar = await tryImg(`https://cdn.brawlify.com/profile-icons/regular/${miniAvatars[i]}.png`);
+  if (!avatar) continue;
+
+  const ax = cardX + cardW - 126 + i * 54;
+  const ay = cardY + cardH - 62;
+
+  rr(ctx, ax, ay, 46, 46, 12);
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.fill();
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.save();
+  rr(ctx, ax + 2, ay + 2, 42, 42, 10);
+  ctx.clip();
+  ctx.drawImage(avatar, ax + 2, ay + 2, 42, 42);
+  ctx.restore();
+}
+
+// ── NOM + TITLE / CLUB ───────────────────────────────
+ctx.textAlign = 'left';
+drawOutlineText(
+  ctx,
+  playerName,
+  cardX + 12,
+  cardY + cardH - 30,
+  PRAIRIE.greenText,
+  28,
+  'Lilita',
+  6
+);
+
+const titleText = favoriteCard?.allianceName || allianceName || bsPlayer?.club?.name || '';
+if (titleText) {
+  drawOutlineText(
+    ctx,
+    titleText,
+    cardX + 12,
+    cardY + cardH - 6,
+    PRAIRIE.goldText,
+    16,
+    'Roboto',
+    4
+  );
+}
+
+// ── BADGE DU BRAWLER FAVORI À DROITE ─────────────────
+if (favoriteCard?.brawlerId) {
+  const favTierImg = await tryImg(
+    getBsInfoTierUrl(
+      favoriteCard.brawlerId,
+      favoriteCard?.trophies || favoriteCard?.highestTrophies || 0
+    )
+  );
+
+  if (favTierImg) {
+    const badgeW = 72;
+    const badgeH = 72;
+    const bx = cardX + cardW - badgeW - 14;
+    const by = cardY + Math.floor((cardH - footerH) * 0.58);
+    ctx.drawImage(favTierImg, bx, by, badgeW, badgeH);
+  }
+}
 
   // ══ ZONE DROITE ══════════════════════════════════════
   const RX = LW + 4;
@@ -834,11 +1307,6 @@ const startY = curY + 36;
       if (fallback) ctx.drawImage(fallback, bx, by, iSz, iSz);
     }
 
-    if (b.id === favoriteBrawlerId) {
-      drawMarker(ctx, bx + iSz - 6, by + 6, 'star');
-    } else if (b.id === winstreakBrawlerId) {
-      drawMarker(ctx, bx + iSz - 6, by + 6, 'flame');
-    }
   }
 
   if (brawlerCount > 10) {
