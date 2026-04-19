@@ -1,6 +1,14 @@
+
+
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+
+const { registerFont } = require('canvas');
+
+const ASSETS = path.resolve(__dirname, '../assets');
+registerFont(path.join(ASSETS, 'LilitaOne-Regular.ttf'), { family: 'Lilita One' });
+registerFont(path.join(ASSETS, 'Roboto-Bold.ttf'), { family: 'Roboto', weight: 'bold' });
 
 const { getPlayer } = require('../lib/brawlapi');
 const { fetchRntProfile, generateProfileCard } = require('../modules/profileCard');
