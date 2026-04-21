@@ -268,7 +268,7 @@ module.exports = {
 
       try {
         const cardBuffer = await Promise.race([
-          generateProfileCard(bsTag, player, rntData),
+          renderProfileCard({ player, extra: rntData, playerTag: bsTag }),
           new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Profile card timeout')), 10000)
           )
