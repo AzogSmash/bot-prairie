@@ -5,7 +5,7 @@ const path = require('path');
 const { buildProfileEmbed } = require('./commands/profil');
 const { updateClubsPanel } = require('./modules/clubsPanel');
 const { updateSnapshots } = require('./jobs/snapshots');
-const { registerFonts } = require('./services/fonts');
+const { registerFonts } = require('./services/registerFonts');
 
 const client = new Client({
   intents: [
