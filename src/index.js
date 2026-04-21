@@ -5,6 +5,7 @@ const path = require('path');
 const { buildProfileEmbed } = require('./commands/profil');
 const { updateClubsPanel } = require('./modules/clubsPanel');
 const { updateSnapshots } = require('./jobs/snapshots');
+const { registerFonts } = require('./services/fonts');
 
 const client = new Client({
   intents: [
@@ -180,5 +181,7 @@ client.once('clientReady', async () => {
     setInterval(() => updateSnapshots(client), 60 * 60 * 1000);
   }, 33000);
 });
+
+registerFonts();
 
 client.login(process.env.DISCORD_TOKEN);

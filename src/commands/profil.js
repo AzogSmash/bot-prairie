@@ -3,7 +3,8 @@ const { getPlayer, getBattleLog } = require('../lib/brawlapi');
 const { supabase } = require('../lib/supabase');
 const { getCache, isCacheValid } = require('../lib/cache');
 const { getClub } = require('../lib/brawlapi');
-const { generateProfileCard, fetchRntProfile } = require('../modules/profileCard');
+const { renderProfileCard } = require('../modules/profileCardExact');
+const { fetchRntProfile } = require('../lib/rntapi');
 
 
 const PRAIRIE_CLUBS = [

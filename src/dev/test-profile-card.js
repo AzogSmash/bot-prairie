@@ -1,35 +1,41 @@
-
-
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 
-const { registerFont } = require('canvas');
-
-const ASSETS = path.resolve(__dirname, '../assets');
-registerFont(path.join(ASSETS, 'LilitaOne-Regular.ttf'), { family: 'Lilita One' });
-registerFont(path.join(ASSETS, 'Roboto-Bold.ttf'), { family: 'Roboto', weight: 'bold' });
-
 const { getPlayer } = require('../lib/brawlapi');
-const { fetchRntProfile, generateProfileCard } = require('../modules/profileCard');
+const { fetchRntProfile } = require('../modules/profileCard');
+const { renderProfileCard } = require('../modules/profileCardExact');
 
 async function main() {
   const inputTag = process.argv[2] || 'P80YQJRL';
   const tag = inputTag.startsWith('#') ? inputTag : `#${inputTag}`;
 
   try {
-    console.log(`[TEST] Récupération joueur ${tag}...`);
-    const player = await getPlayer(tag);
+    console.log(`[TEST] Récupération joueur BS ${tag}...`);
+    const bsPlayer = await getPlayer(tag);
 
-    console.log(`[TEST] Récupération RNT ${tag}...`);
+    console.log(`[TEST] Récupération joueur RNT ${tag}...`);
     const rnt = await fetchRntProfile(tag).catch(() => null);
     const rntData = rnt?.result || rnt || {};
 
-    console.log('[TEST] Génération image...');
-    const buffer = await generateProfileCard(tag, player, rntData);
+    console.log('[TEST] Génération image exacte...');
+    const buffer = await renderProfileCard({
+      player: rntData,
+      club: bsPlayer?.club || null,
+      rankedScore:
+        rntData?.ranked_elo ||
+        (rntData?.stats || []).find(s => s.name === 'CurrentRankedPoints')?.value ||
+        0,
+      extra: {
+        expLevel: bsPlayer?.expLevel || 1,
+        expPoints: bsPlayer?.expPoints || 0,
+        clubName: bsPlayer?.club?.name || '',
+      },
+      playerTag: tag,
+    });
 
     const outDir = path.join(__dirname, '../../tmp');
-    const outFile = path.join(outDir, 'profile-card-test.png');
+    const outFile = path.join(outDir, 'profile-card-exact-test.png');
 
     fs.mkdirSync(outDir, { recursive: true });
     fs.writeFileSync(outFile, buffer);

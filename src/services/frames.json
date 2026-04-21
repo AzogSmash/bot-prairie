@@ -1,0 +1,545 @@
+[
+    {
+        "id": 0,
+        "name": "default",
+        "TID": "DEFAULT",
+        "icon": "",
+        "bg": "0",
+        "disabled": false,
+        "devOnly": false
+    },
+    {
+        "id": 85000000,
+        "name": "ranked-bronze-2024",
+        "TID": "TID_BATTLE_CARD_NAME_BRONZE_2024",
+        "icon": "bronze2024",
+        "bg": "ranked-old1",
+        "stars": [
+            "bronze-0/0",
+            "bronze-0/1",
+            "bronze-0/2",
+            "bronze-0/3",
+            "bronze-0/4",
+            "bronze-0/5",
+            "bronze-0/6"
+        ],
+        "disabled": false,
+        "devOnly": false
+    },
+    {
+        "id": 85000001,
+        "name": "ranked-silver-2024",
+        "TID": "TID_BATTLE_CARD_NAME_SILVER_2024",
+        "icon": "silver2024",
+        "bg": "ranked-old2",
+        "stars": [
+            "silver-0/0",
+            "silver-0/1",
+            "silver-0/2",
+            "silver-0/3",
+            "silver-0/4",
+            "silver-0/5",
+            "silver-0/6"
+        ],
+        "disabled": false,
+        "devOnly": false
+    },
+    {
+        "id": 85000002,
+        "name": "ranked-gold-2024",
+        "TID": "TID_BATTLE_CARD_NAME_GOLD_2024",
+        "icon": "gold2024",
+        "bg": "ranked-old3",
+        "stars": [
+            "gold-0/0",
+            "gold-0/1",
+            "gold-0/2",
+            "gold-0/3",
+            "gold-0/4",
+            "gold-0/5",
+            "gold-0/6"
+        ],
+        "disabled": false,
+        "devOnly": false
+    },
+    {
+        "id": 85000003,
+        "name": "ranked-diamond-2024",
+        "TID": "TID_BATTLE_CARD_NAME_DIAMOND_2024",
+        "icon": "diamond2024",
+        "bg": "ranked-old4",
+        "stars": [
+            "diamond-0/0",
+            "diamond-0/1",
+            "diamond-0/2",
+            "diamond-0/3",
+            "diamond-0/4",
+            "diamond-0/5",
+            "diamond-0/6"
+        ],
+        "disabled": false,
+        "devOnly": false
+    },
+    {
+        "id": 85000004,
+        "name": "ranked-mythic-2024",
+        "TID": "TID_BATTLE_CARD_NAME_MYTHIC_2024",
+        "icon": "mythic2024",
+        "bg": "ranked-old5",
+        "stars": [
+            "mythic-0/0",
+            "mythic-0/1",
+            "mythic-0/2",
+            "mythic-0/3",
+            "mythic-0/4",
+            "mythic-0/5",
+            "mythic-0/6"
+        ],
+        "disabled": false,
+        "devOnly": false
+    },
+    {
+        "id": 85000005,
+        "name": "ranked-legendary-2024",
+        "TID": "TID_BATTLE_CARD_NAME_LEGENDARY_2024",
+        "icon": "legendary2024",
+        "bg": "ranked-old6",
+        "stars": [
+            "legendary-0/0",
+            "legendary-0/1",
+            "legendary-0/2",
+            "legendary-0/3",
+            "legendary-0/4",
+            "legendary-0/5",
+            "legendary-0/6"
+        ],
+        "disabled": false,
+        "devOnly": false
+    },
+    {
+        "id": 85000006,
+        "name": "ranked-masters-2024",
+        "TID": "TID_BATTLE_CARD_NAME_MASTERS_2024",
+        "icon": "masters2024",
+        "bg": "ranked-old7",
+        "stars": [
+            "masters-0/0",
+            "masters-0/1",
+            "masters-0/2",
+            "masters-0/3",
+            "masters-0/4",
+            "masters-0/5",
+            "masters-0/6"
+        ],
+        "disabled": false,
+        "devOnly": false
+    },
+    {
+        "id": 85000007,
+        "name": "fame-global",
+        "TID": "TID_BATTLE_CARD_NAME_GLOBAL_FAME",
+        "icon": "global",
+        "bg": "global",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:earth:1445145242394165329>"
+    },
+    {
+        "id": 85000008,
+        "name": "fame-lunar",
+        "TID": "TID_BATTLE_CARD_NAME_LUNAR_FAME",
+        "icon": "lunar",
+        "bg": "lunar",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:lunar:1445145244617277460>"
+    },
+    {
+        "id": 85000009,
+        "name": "fame-martian",
+        "TID": "TID_BATTLE_CARD_NAME_MARTIAN_FAME",
+        "icon": "martian",
+        "bg": "martian",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:martian:1445145246957830185>"
+    },
+    {
+        "id": 85000010,
+        "name": "fame-saturnal",
+        "TID": "TID_BATTLE_CARD_NAME_SATURNAL_FAME",
+        "icon": "saturnal",
+        "bg": "saturnal",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:saturnal:1445145249390395494>"
+    },
+    {
+        "id": 85000011,
+        "name": "fame-solar",
+        "TID": "TID_BATTLE_CARD_NAME_SOLAR_FAME",
+        "icon": "solar",
+        "bg": "solar",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:solar:1445145251269574838>"
+    },
+    {
+        "id": 85000012,
+        "name": "fame-meteoric",
+        "TID": "TID_BATTLE_CARD_NAME_METEORIC_FAME",
+        "icon": "meteoric",
+        "bg": "meteoric",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:meteoric:1445145253202890862>"
+    },
+    {
+        "id": 85000013,
+        "name": "fame-alien",
+        "TID": "TID_BATTLE_CARD_NAME_ALIEN_FAME",
+        "icon": "alien",
+        "bg": "alien",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:alien:1445145255036059838>"
+    },
+    {
+        "id": 85000014,
+        "name": "ranked-bronze-2025",
+        "TID": "TID_BATTLE_CARD_NAME_BRONZE_2025",
+        "icon": "bronze2025",
+        "bg": "bronze2025",
+        "stars": [
+            "bronze-1/0",
+            "bronze-1/1",
+            "bronze-1/2",
+            "bronze-1/3",
+            "bronze-1/4",
+            "bronze-1/5",
+            "bronze-1/6"
+        ],
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:bronze2025:1445137628688285727>"
+    },
+    {
+        "id": 85000015,
+        "name": "ranked-silver-2025",
+        "TID": "TID_BATTLE_CARD_NAME_SILVER_2025",
+        "icon": "silver2025",
+        "bg": "silver2025",
+        "stars": [
+            "silver-1/0",
+            "silver-1/1",
+            "silver-1/2",
+            "silver-1/3",
+            "silver-1/4",
+            "silver-1/5",
+            "silver-1/6"
+        ],
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:silver2025:1445137641816199291>"
+    },
+    {
+        "id": 85000016,
+        "name": "ranked-gold-2025",
+        "TID": "TID_BATTLE_CARD_NAME_GOLD_2025",
+        "icon": "gold2025",
+        "bg": "gold2025",
+        "stars": [
+            "gold-1/0",
+            "gold-1/1",
+            "gold-1/2",
+            "gold-1/3",
+            "gold-1/4",
+            "gold-1/5",
+            "gold-1/6"
+        ],
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:gold2025:1445137632307974145>"
+    },
+    {
+        "id": 85000017,
+        "name": "ranked-diamond-2025",
+        "TID": "TID_BATTLE_CARD_NAME_DIAMOND_2025",
+        "icon": "diamond2025",
+        "bg": "diamond2025",
+        "stars": [
+            "diamond-1/0",
+            "diamond-1/1",
+            "diamond-1/2",
+            "diamond-1/3",
+            "diamond-1/4",
+            "diamond-1/5",
+            "diamond-1/6"
+        ],
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:diamond2025:1445137630730649743>"
+    },
+    {
+        "id": 85000018,
+        "name": "ranked-mythic-2025",
+        "TID": "TID_BATTLE_CARD_NAME_MYTHIC_2025",
+        "icon": "mythic2025",
+        "bg": "mythic2025",
+        "stars": [
+            "mythic-1/0",
+            "mythic-1/1",
+            "mythic-1/2",
+            "mythic-1/3",
+            "mythic-1/4",
+            "mythic-1/5",
+            "mythic-1/6"
+        ],
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:mythic2025:1445137637437603950>"
+    },
+    {
+        "id": 85000019,
+        "name": "ranked-legendary-2025",
+        "TID": "TID_BATTLE_CARD_NAME_LEGENDARY_2025",
+        "icon": "legendary2025",
+        "bg": "legendary2025",
+        "stars": [
+            "legendary-1/0",
+            "legendary-1/1",
+            "legendary-1/2",
+            "legendary-1/3",
+            "legendary-1/4",
+            "legendary-1/5",
+            "legendary-1/6"
+        ],
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:legendary2025:1445137634178498702>"
+    },
+    {
+        "id": 85000020,
+        "name": "ranked-masters-2025",
+        "TID": "TID_BATTLE_CARD_NAME_MASTERS_2025",
+        "icon": "masters2025",
+        "bg": "masters2025",
+        "stars": [
+            "masters-1/0",
+            "masters-1/1",
+            "masters-1/2",
+            "masters-1/3",
+            "masters-1/4",
+            "masters-1/5",
+            "masters-1/6"
+        ],
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:masters2025:1445137635558424589>"
+    },
+    {
+        "id": 85000021,
+        "name": "ranked-pro-2025",
+        "TID": "TID_BATTLE_CARD_NAME_PRO_2025",
+        "icon": "pro2025",
+        "bg": "pro2025",
+        "stars": [
+            "pro-1/0",
+            "pro-1/1",
+            "pro-1/2",
+            "pro-1/3",
+            "pro-1/4",
+            "pro-1/5",
+            "pro-1/6"
+        ],
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:pro2025:1445137639320584364>"
+    },
+    {
+        "id": 85000022,
+        "name": "record1",
+        "TID": "TID_RECORD_CARD_NAME_LEVEL_1",
+        "icon": "record1",
+        "bg": "record1",
+        "disabled": true,
+        "devOnly": false,
+        "emoji": "<:icon_records_tier_1:1395852680613593208>"
+    },
+    {
+        "id": 85000023,
+        "name": "record2",
+        "TID": "TID_RECORD_CARD_NAME_LEVEL_2",
+        "icon": "record2",
+        "bg": "record2",
+        "disabled": true,
+        "devOnly": false,
+        "emoji": "<:icon_records_tier_2:1395852658153099346>"
+    },
+    {
+        "id": 85000024,
+        "name": "record3",
+        "TID": "TID_RECORD_CARD_NAME_LEVEL_3",
+        "icon": "record3",
+        "bg": "record3",
+        "disabled": true,
+        "devOnly": false,
+        "emoji": "<:icon_records_tier_3:1395852621054611546>"
+    },
+    {
+        "id": 85000025,
+        "name": "record4",
+        "TID": "TID_RECORD_CARD_NAME_LEVEL_4",
+        "icon": "record4",
+        "bg": "record4",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:icon_records_tier_4:1395852594894864486>"
+    },
+    {
+        "id": 85000026,
+        "name": "record5",
+        "TID": "TID_RECORD_CARD_NAME_LEVEL_5",
+        "icon": "record5",
+        "bg": "record5",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:icon_records_tier_5:1395852569904943135>"
+    },
+    {
+        "id": 85000027,
+        "name": "record6",
+        "TID": "TID_RECORD_CARD_NAME_LEVEL_6",
+        "icon": "record6",
+        "bg": "record6",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:icon_records_tier_6:1395852529518120960>"
+    },
+    {
+        "id": 85000028,
+        "name": "record7",
+        "TID": "TID_RECORD_CARD_NAME_LEVEL_7",
+        "icon": "record7",
+        "bg": "record7",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:icon_records_tier_7:1395852500636139631>"
+    },
+    {
+        "id": 85000029,
+        "name": "record8",
+        "TID": "TID_RECORD_CARD_NAME_LEVEL_8",
+        "icon": "record8",
+        "bg": "record8",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:icon_records_tier_8:1395852476435009708>"
+    },
+    {
+        "id": 85000030,
+        "name": "record9",
+        "TID": "TID_RECORD_CARD_NAME_LEVEL_9",
+        "icon": "record9",
+        "bg": "record9",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:icon_records_tier_9:1395852451617181887>"
+    },
+    {
+        "id": 85000031,
+        "name": "record10",
+        "TID": "TID_RECORD_CARD_NAME_LEVEL_10",
+        "icon": "record10",
+        "bg": "record10",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:icon_records_tier_10:1395852407686172834>"
+    },
+    {
+        "id": 85000032,
+        "name": "record11",
+        "TID": "TID_RECORD_CARD_NAME_LEVEL_11",
+        "icon": "record11",
+        "bg": "record11",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:icon_records_tier_11:1395852381215920249>"
+    },
+    {
+        "id": 85000033,
+        "name": "record12",
+        "TID": "TID_RECORD_CARD_NAME_LEVEL_12",
+        "icon": "record12",
+        "bg": "record12",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": "<:icon_records_tier_12:1395852057524703433>"
+    },
+    {
+        "id": 85000034,
+        "name": "fame-starrforce",
+        "TID": "TID_BATTLE_CARD_NAME_STARRFORCE_FAME",
+        "icon": "starrforce",
+        "bg": "starrforce",
+        "disabled": false,
+        "devOnly": false,
+        "emoji": ""
+    },
+    {
+        "id": 85000035,
+        "name": "prestige-1",
+        "TID": "TID_BATTLE_CARD_NAME_PRESTIGE_1",
+        "icon": "prestige",
+        "bg": "prestige1",
+        "disabled": false,
+        "devOnly": false,
+        "text": "1",
+        "emoji": ""
+    },
+    {
+        "id": 85000036,
+        "name": "prestige-2",
+        "TID": "TID_BATTLE_CARD_NAME_PRESTIGE_2",
+        "icon": "p2",
+        "bg": "prestige2",
+        "disabled": false,
+        "devOnly": false,
+        "text": "25",
+        "emoji": ""
+    },
+    {
+        "id": 85000037,
+        "name": "prestige-3",
+        "TID": "TID_BATTLE_CARD_NAME_PRESTIGE_3",
+        "icon": "p3",
+        "bg": "prestige3",
+        "disabled": false,
+        "devOnly": false,
+        "text": "50",
+        "emoji": ""
+    },
+
+    {
+        "id": 1001,
+        "name": "wukong",
+        "TID": "WUKONG",
+        "icon": "wukong",
+        "bg": "wukong",
+        "disabled": false,
+        "devOnly": true,
+        "text": "",
+        "emoji": ""
+    },
+    {
+        "id": 1002,
+        "name": "wukong-2",
+        "TID": "WUKONG",
+        "icon": "wukong",
+        "bg": "wukong2",
+        "disabled": false,
+        "devOnly": true,
+        "text": "",
+        "emoji": ""
+    }
+]

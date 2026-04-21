@@ -249,6 +249,8 @@ function getTop27Brawlers(rntBrawlers = [], bsBrawlers = []) {
     .slice(0, 27);
 }
 
+    const XP_SKEW_X = Math.tan((-8 * Math.PI) / 180);
+
 // ═══════════════════════════════════════════════════════
 // FETCH
 // ═══════════════════════════════════════════════════════
@@ -828,7 +830,7 @@ async function generateProfileCard(bsTag, bsPlayer, rntDataFromCaller = null) {
   // HEADER
   const iconSize = 84;
   bsBox(ctx, 0, 0, LW, 116, 'rgba(18, 15, 11, 0.86)', '#000000', 0);
-
+ 
   const avatarId = profileAvatar || bsPlayer?.icon?.id;
   if (avatarId && avatarId !== 'Unknown') {
     const iconImg = await tryImg(`https://cdn.brawlify.com/profile-icons/regular/${avatarId}.png`);
@@ -837,62 +839,147 @@ async function generateProfileCard(bsTag, bsPlayer, rntDataFromCaller = null) {
       ctx.drawImage(iconImg, 9, 9, iconSize, iconSize);
     }
   }
-
+ 
   const tagText = `#${bsTag.replace('#', '').toUpperCase()}`;
   const tagFontSize = fitTextSize(ctx, tagText, iconSize + 8, 16, 10, 'Roboto', 'bold');
   ctx.font = `bold ${tagFontSize}px Roboto`;
   ctx.fillStyle = PRAIRIE.cream;
   ctx.textAlign = 'center';
   ctx.fillText(tagText, 9 + iconSize / 2, 9 + iconSize + 18);
-
+ 
   const playerName = bsPlayer?.name || 'Joueur';
   const nameBoxX = iconSize + 18;
   const nameBoxY = 12;
   const nameBoxW = LW - nameBoxX - 10;
   const nameBoxH = 50;
-
+ 
   bsBox(ctx, nameBoxX, nameBoxY, nameBoxW, nameBoxH, 'rgba(28, 38, 22, 0.92)', '#000', 8);
-
-  const nameFontSize = fitTextSize(ctx, playerName, nameBoxW - 18, 32, 18, 'Lilita');
+ 
+  const nameFontSize = fitTextSize(ctx, playerName, nameBoxW - 18, 32, 18, 'Lilita One');
   ctx.textAlign = 'center';
-  drawOutlineText(ctx, playerName, nameBoxX + nameBoxW / 2, nameBoxY + 36, PRAIRIE.greenText, nameFontSize, 'Lilita', 5);
+  drawOutlineText(ctx, playerName, nameBoxX + nameBoxW / 2, nameBoxY + 36, PRAIRIE.greenText, nameFontSize, 'Lilita One', 5);
+ 
+const xpPerLevel = 2280;
+const xpProgress = Math.max(0, expPoints % xpPerLevel);
+const xpRatio = Math.max(0, Math.min(xpProgress / xpPerLevel, 1));
 
-  const xpPerLevel = 1000;
-  const xpProgress = Math.max(0, expPoints % xpPerLevel);
-  const xpRatio = Math.min(xpProgress / xpPerLevel, 1);
+// =========================
+// HEADER XP STYLE BOT
+// =========================
+const headerBarX = nameBoxX + 6;
+const headerBarY = 67;
+const headerBarW = nameBoxW - 12;
+const headerBarH = 36;
 
-  bsBox(ctx, nameBoxX, 68, 52, 32, '#4b77d6', '#000', 6);
-  ctx.font = 'bold 17px Roboto';
-  ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'center';
-  ctx.fillText(String(expLevel), nameBoxX + 26, 90);
+// fond général noir du bloc xp
+ctx.save();
+ctx.translate(headerBarX, headerBarY);
+ctx.transform(1, 0, XP_SKEW_X * 0.55, 1, 0, 0);
 
-  const barX = nameBoxX + 58;
-  const barY = 75;
-  const barW = nameBoxW - 58;
-  const barH = 17;
+rr(ctx, 0, 0, headerBarW, headerBarH, 7);
+ctx.fillStyle = '#0b0b11';
+ctx.fill();
+ctx.strokeStyle = '#000000';
+ctx.lineWidth = 3;
+ctx.stroke();
 
-  rr(ctx, barX, barY, barW, barH, 4);
-  ctx.fillStyle = '#12161a';
-  ctx.fill();
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 2;
-  ctx.stroke();
+// liseré interne discret
+rr(ctx, 2, 2, headerBarW - 4, headerBarH - 4, 5);
+ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+ctx.lineWidth = 1.2;
+ctx.stroke();
 
-  if (xpRatio > 0) {
-    const fillW = Math.max(6, Math.round((barW - 4) * xpRatio));
-    rr(ctx, barX + 2, barY + 2, fillW, barH - 4, 3);
-    const g = ctx.createLinearGradient(barX, barY, barX + barW, barY);
-    g.addColorStop(0, PRAIRIE.blueXP1);
-    g.addColorStop(1, PRAIRIE.blueXP2);
-    ctx.fillStyle = g;
-    ctx.fill();
-  }
+// =========================
+// BADGE LEVEL À GAUCHE
+// =========================
+const levelBadgeX = 6;
+const levelBadgeY = 4;
+const levelBadgeW = 58;
+const levelBadgeH = 28;
 
-  ctx.font = 'bold 11px Roboto';
-  ctx.fillStyle = PRAIRIE.muted;
-  ctx.textAlign = 'right';
-  ctx.fillText(`${xpProgress}/${xpPerLevel}`, barX + barW - 3, barY + 12);
+rr(ctx, levelBadgeX, levelBadgeY, levelBadgeW, levelBadgeH, 6);
+ctx.fillStyle = '#5f83e8';
+ctx.fill();
+ctx.strokeStyle = '#000000';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+rr(ctx, levelBadgeX + 2, levelBadgeY + 2, levelBadgeW - 4, levelBadgeH - 4, 4);
+ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+ctx.lineWidth = 1;
+ctx.stroke();
+
+ctx.restore();
+
+// texte level
+ctx.font = 'bold 17px Roboto';
+ctx.textAlign = 'center';
+ctx.strokeStyle = '#000000';
+ctx.lineWidth = 3;
+ctx.fillStyle = '#ffffff';
+ctx.strokeText(String(expLevel), headerBarX + 35, headerBarY + 24);
+ctx.fillText(String(expLevel), headerBarX + 35, headerBarY + 24);
+
+// =========================
+// BARRE XP INTERNE
+// =========================
+const expBarX = headerBarX + 70;
+const expBarY = headerBarY + 7;
+const expBarW = headerBarW - 84;
+const expBarH = 20;
+
+ctx.save();
+ctx.translate(expBarX, expBarY);
+ctx.transform(1, 0, XP_SKEW_X * 0.45, 1, 0, 0);
+
+// fond barre
+rr(ctx, 0, 0, expBarW, expBarH, 5);
+ctx.fillStyle = '#1f2335';
+ctx.fill();
+
+// ombre basse
+ctx.fillStyle = '#171b2a';
+ctx.fillRect(0, expBarH * 0.55, expBarW, expBarH * 0.45);
+
+// progression
+if (xpRatio > 0) {
+  const progressW = Math.max(10, expBarW * xpRatio);
+
+  ctx.save();
+  rr(ctx, 0, 0, progressW, expBarH, 5);
+  ctx.clip();
+
+  ctx.fillStyle = '#63cfff';
+  ctx.fillRect(0, 0, progressW, expBarH);
+
+  ctx.fillStyle = '#3b8cff';
+  ctx.fillRect(0, expBarH * 0.52, progressW, expBarH * 0.48);
+
+  // reflet léger
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.fillRect(0, 0, progressW, expBarH * 0.35);
+
+  ctx.restore();
+}
+
+ctx.restore();
+
+// =========================
+// TEXTE XP AU CENTRE
+// =========================
+const xpText = `${xpProgress.toLocaleString('fr-FR')}`;
+
+ctx.font = 'bold 14px Roboto';
+ctx.textAlign = 'center';
+ctx.strokeStyle = '#000000';
+ctx.lineWidth = 4;
+ctx.fillStyle = '#ffffff';
+
+const xpTextX = expBarX + expBarW / 2 + 8;
+const xpTextY = expBarY + 15;
+
+ctx.strokeText(xpText, xpTextX, xpTextY);
+ctx.fillText(xpText, xpTextX, xpTextY);
 
   // ════════════════════════════════════════════════════
   // BATTLE CARD GAUCHE
