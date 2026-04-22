@@ -1,13 +1,12 @@
 const { SlashCommandBuilder, AttachmentBuilder, PermissionFlagsBits } = require('discord.js');
 const { getPlayer } = require('../lib/brawlapi');
 const { supabase } = require('../lib/supabase');
-const { generateProfileCard } = require('../modules/profileCard');
+const { generateProfileCard } = require('../modules/profileCardExact');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('carte-profil')
     .setDescription('Génère la carte de profil visuelle (staff only)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
     .addUserOption(option =>
       option.setName('membre')
         .setDescription('Le membre (toi par défaut)')
