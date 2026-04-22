@@ -22,7 +22,7 @@ module.exports = {
     ),
 
   async execute(interaction) {
-    await interaction.deferReply;
+    await interaction.deferReply();
 
     const commande = interaction.options.getString('commande');
     const embed = buildHelpEmbed(commande);

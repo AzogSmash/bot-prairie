@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 const { getPlayer } = require('../lib/brawlapi');
 const { supabase } = require('../lib/supabase');
-const { generateProfileCard } = require('../modules/profileCardExact');
+const buffer = await renderProfileCard({ player, extra: {}, playerTag: data.brawlstars_tag });
 
 module.exports = {
   data: new SlashCommandBuilder()
