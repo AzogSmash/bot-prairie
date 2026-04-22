@@ -20,9 +20,11 @@ module.exports = {
       .addFields({
         name: '🎮 Brawl Stars',
         value: [
+          '`/help-commande` pour obtenir une aide complète sur une commande spécifique.',
           '`/lier #TAG` — Lie ton compte Brawl Stars à ton profil Prairie',
           '`/settings` — Gère tes comptes liés (jusqu\'à 5 comptes, compte principal, suppression)',
           '`/profil` — Affiche ton profil complet avec carte visuelle ou celui d\'un membre',
+          '`/carte-profil` — Carte de profil visuelle',
           '`/classement` — Classement Prairie par trophées avec filtres par club',
           '`/rusheurs` — Classement des membres qui pushent le plus (jour / semaine / mois / saison)',
           '`/clubs` — Vue globale des 7 clubs en temps réel',
