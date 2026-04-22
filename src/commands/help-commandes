@@ -12,11 +12,11 @@ module.exports = {
           { name: '/lier', value: 'lier' },
           { name: '/settings', value: 'settings' },
           { name: '/profil', value: 'profil' },
+          { name: '/carte-profil', value: 'carte-profil' },
           { name: '/classement', value: 'classement' },
           { name: '/rusheurs', value: 'rusheurs' },
           { name: '/clubs', value: 'clubs' },
           { name: '/absence', value: 'absence' },
-          { name: '/absences', value: 'absences' },
           { name: '/absence-annuler', value: 'absence-annuler' },
         )
     ),
@@ -154,7 +154,45 @@ function buildHelpEmbed(commande) {
         )
         .setFooter({ text: 'Prairie Brawl Stars • Stats en temps réel' })
         .setTimestamp();
-
+    
+    case 'carte-profil':
+        return new EmbedBuilder()
+            .setColor('#e91e8c')
+            .setTitle('🎨 /carte-profil — Carte de profil visuelle')
+            .setDescription(
+            'Génère une carte de profil visuelle style in-game Brawl Stars\navec tes stats, ton brawler favori, ton prestige et ta collection.'
+            )
+            .addFields(
+            {
+                name: '📋 Utilisation',
+                value: '`/carte-profil` → ta propre carte\n`/carte-profil @membre` → la carte d\'un autre membre',
+            },
+            {
+                name: '🎨 Contenu de la carte',
+                value: [
+                '• Ton pseudo avec couleur personnalisée',
+                '• Ton icône de profil et tag BS',
+                '• Trophées actuels et record',
+                '• Stats ranked (current / highest)',
+                '• Records, victoires 3v3 / Solo / Duo',
+                '• Brawler favori avec skin si disponible',
+                '• Collection de brawlers (3 rangées)',
+                '• Prestige total',
+                '• Win streak maximum',
+                ].join('\n'),
+            },
+            {
+                name: '⚡ Données utilisées',
+                value: 'La carte utilise l\'API BS officielle en temps réel.\nCertaines données avancées (ranked, records, skin favori) nécessitent les données étendues — disponibles sauf lors des mises à jour du jeu.',
+            },
+            {
+                name: '⚠️ Prérequis',
+                value: 'Avoir lié son compte avec `/lier` au préalable.',
+            },
+            )
+            .setFooter({ text: 'Prairie Brawl Stars • Carte générée en temps réel' })
+            .setTimestamp();
+    
     case 'classement':
       return new EmbedBuilder()
         .setColor('#f1c40f')
@@ -304,40 +342,6 @@ function buildHelpEmbed(commande) {
           },
         )
         .setFooter({ text: 'Prairie Brawl Stars • /absence-annuler pour annuler' })
-        .setTimestamp();
-
-    case 'absences':
-      return new EmbedBuilder()
-        .setColor('#e67e22')
-        .setTitle('📋 /absences — Consulter les absences')
-        .setDescription(
-          'Affiche la liste des absences actives avec filtres par club et période.'
-        )
-        .addFields(
-          {
-            name: '📋 Utilisation',
-            value: '`/absences` → toutes les absences actives\nFiltre par club et période via les menus déroulants',
-          },
-          {
-            name: '🌿 Filtre par club',
-            value: 'Tous les clubs • Prairie Étoilée • Fleurie • Céleste • Gelée • Brûlée • Mini Prairie • Sauvage',
-          },
-          {
-            name: '📅 Filtre par période',
-            value: [
-              '• **Toutes les périodes** — tout ce qui est encore actif',
-              '• **En ce moment** — absences en cours aujourd\'hui',
-              '• **Ce mois-ci** — absences qui débutent ce mois',
-              '• **Mois prochain** — absences prévues le mois prochain',
-              '• **Dans 2 mois+** — absences futures',
-            ].join('\n'),
-          },
-          {
-            name: '🛡️ Fonctionnalités staff',
-            value: 'Le staff voit toutes les absences de tous les membres.\nIl peut annuler n\'importe quelle absence directement depuis `/absences` ou via `/absence-annuler @membre`.',
-          },
-        )
-        .setFooter({ text: 'Prairie Brawl Stars • /absence pour déclarer la tienne' })
         .setTimestamp();
 
     case 'absence-annuler':
