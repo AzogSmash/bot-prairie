@@ -267,8 +267,41 @@ module.exports = {
       let cardFailed = false;
 
       try {
+        // Fallback BS officiel quand RNT est down (ex: maj du jeu)
+        const rntAvailable = rntData && Object.keys(rntData).length > 0;
+        
+        const bsCompat = rntAvailable ? rntData : {
+          // Champs directs lus par getStat() via player?.[statNameOrId]
+          trophies: player.trophies,
+          highestTrophies: player.highestTrophies,
+          '3vs3Victories': player['3vs3Victories'],
+          soloVictories: player.soloVictories,
+          duoVictories: player.duoVictories,
+          expLevel: player.expLevel,
+          totalPrestigeLevel: player.totalPrestigeLevel || 0,
+          brawlers: player.brawlers || [],
+          name: player.name,
+          tag: player.tag,
+          icon: player.icon,
+          nameColor: player.nameColor,
+          club: player.club,
+          // Stats array compatible getStat() avec IDs numériques
+          stats: [
+            { id: 3,  value: player.trophies },
+            { id: 4,  value: player.highestTrophies },
+            { id: 1,  value: player['3vs3Victories'] },
+            { id: 8,  value: player.soloVictories },
+            { id: 11, value: player.duoVictories },
+            { id: 2,  value: player.expPoints || 0 },
+            { id: 5,  value: player.brawlers?.length || 0 },
+            { id: 24, value: player.currentRankedSeason?.soloRank?.currentTrophies || 0 },
+            { id: 25, value: player.currentRankedSeason?.soloRank?.highestTrophies || 0 },
+            { id: 30, value: player.totalPrestigeLevel || 0 },
+          ],
+        };
+
         const cardBuffer = await Promise.race([
-          renderProfileCard({ player: { ...player, ...rntData }, extra: rntData, playerTag: bsTag }),
+          renderProfileCard({ player: { ...player, ...bsCompat }, extra: bsCompat, playerTag: bsTag }),
           new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Profile card timeout')), 10000)
           )

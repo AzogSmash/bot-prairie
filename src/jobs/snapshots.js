@@ -4,6 +4,7 @@ const { getCache, setProgressionCache } = require('../lib/cache');
 const { getProgressionStats } = require('../lib/progression');
 const { DateTime } = require('luxon');
 const { PRAIRIE_CLUBS } = require('../modules/clubsPanel');
+const { getAccountsSummary } = require('../lib/brawlAccounts');
 
 const GENERAL_CHANNEL_ID = '1173550145955180618';
 
@@ -57,29 +58,31 @@ async function saveSnapshots(members, type) {
   await supabase.from('trophies_snapshots').insert(rows);
 }
 
-async function updateMemberRoles(member, clubName, trophies) {
+async function updateMemberRoles(member, clubNames, trophies) {
   const rolesToAdd = [];
   const rolesToRemove = [];
 
-  // Rôle club attendu
-  const expectedClubRoleId = clubName && CLUB_ROLES[clubName] ? CLUB_ROLES[clubName] : null;
-  
-  // Rôles clubs actuels
+  const expectedClubRoleIds = new Set(
+    (clubNames || [])
+      .map(name => CLUB_ROLES[name])
+      .filter(Boolean)
+  );
+
   for (const roleId of ALL_CLUB_ROLE_IDS) {
     const hasRole = member.roles.cache.has(roleId);
-    if (roleId === expectedClubRoleId && !hasRole) {
+
+    if (expectedClubRoleIds.has(roleId) && !hasRole) {
       rolesToAdd.push(roleId);
-    } else if (roleId !== expectedClubRoleId && hasRole) {
+    } else if (!expectedClubRoleIds.has(roleId) && hasRole) {
       rolesToRemove.push(roleId);
     }
   }
 
-  // Rôle trophées attendu
   const expectedTrophyRoleId = getTrophyRole(trophies).roleId;
-  
-  // Rôles trophées actuels
+
   for (const roleId of ALL_TROPHY_ROLE_IDS) {
     const hasRole = member.roles.cache.has(roleId);
+
     if (roleId === expectedTrophyRoleId && !hasRole) {
       rolesToAdd.push(roleId);
     } else if (roleId !== expectedTrophyRoleId && hasRole) {
@@ -87,14 +90,15 @@ async function updateMemberRoles(member, clubName, trophies) {
     }
   }
 
-  // Applique les changements seulement si nécessaire
   if (rolesToRemove.length) await member.roles.remove(rolesToRemove).catch(() => {});
   if (rolesToAdd.length) await member.roles.add(rolesToAdd).catch(() => {});
 
   return rolesToAdd.length > 0 || rolesToRemove.length > 0;
 }
 
-async function updateRolesAndNotify(client) {
+async function updateRolesAndNotify(client, options = {}) {
+  const suppressNotifications = options.suppressNotifications === true;
+  const onlyDiscordId = options.onlyDiscordId || null;
   const { clubMembersCache } = getCache();
   if (!clubMembersCache.length) return;
 
@@ -109,7 +113,7 @@ async function updateRolesAndNotify(client) {
   // Récupère tous les membres liés
   const { data: linkedMembers } = await supabase
     .from('members')
-    .select('discord_id, brawlstars_tag, brawlstars_trophies')
+    .select('discord_id, brawlstars_tag, brawlstars_trophies, club_name, status')
     .not('brawlstars_tag', 'is', null);
 
   if (!linkedMembers?.length) return;
@@ -124,28 +128,34 @@ async function updateRolesAndNotify(client) {
   const dbUpdates = [];
 
   for (const dbMember of linkedMembers) {
-    const currentData = currentTrophiesMap.get(dbMember.brawlstars_tag);
-    if (!currentData) continue;
+    if (onlyDiscordId && dbMember.discord_id !== onlyDiscordId) continue;
 
     const member = guild.members.cache.get(dbMember.discord_id);
     if (!member) continue;
 
+    const summary = await getAccountsSummary(dbMember.discord_id, currentTrophiesMap);
+
+    if (!summary.accounts.length) continue;
+
     const oldTrophies = dbMember.brawlstars_trophies || 0;
-    const newTrophies = currentData.trophies;
-    const clubName = currentData.clubName;
+    const newTrophies = summary.bestTrophies;
+    const clubNames = summary.clubNames;
+    const mainClubName = summary.mainAccount?.clubName || null;
 
-    // Met à jour les rôles (seulement si changement)
-    await updateMemberRoles(member, clubName, newTrophies);
+    await updateMemberRoles(member, clubNames, newTrophies);
 
-    // Vérifie si nouveau palier atteint
-    if (oldTrophies > 0 && newTrophies > oldTrophies) {
+    const canNotifyProgress =
+      !suppressNotifications &&
+      dbMember.status !== 'nouveau';
+
+    if (canNotifyProgress && oldTrophies > 0 && newTrophies > oldTrophies) {
       const oldTier = getTrophyRole(oldTrophies);
       const newTier = getTrophyRole(newTrophies);
 
       if (oldTier.roleId !== newTier.roleId && newTier.min > oldTier.min) {
         notifications.push({
           member,
-          clubName,
+          clubName: mainClubName,
           oldTier: oldTier.name,
           newTier: newTier.name,
           trophies: newTrophies,
@@ -153,12 +163,16 @@ async function updateRolesAndNotify(client) {
       }
     }
 
-    // Prépare la mise à jour en batch
-    if (newTrophies !== oldTrophies || clubName !== dbMember.club_name) {
+    if (
+      newTrophies !== oldTrophies ||
+      mainClubName !== dbMember.club_name ||
+      dbMember.status !== 'actif'
+    ) {
       dbUpdates.push({
         discord_id: dbMember.discord_id,
         brawlstars_trophies: newTrophies,
-        club_name: clubName,
+        club_name: mainClubName,
+        status: 'actif',
       });
     }
   }
@@ -168,7 +182,11 @@ async function updateRolesAndNotify(client) {
     for (const update of dbUpdates) {
       await supabase
         .from('members')
-        .update({ brawlstars_trophies: update.brawlstars_trophies, club_name: update.club_name })
+        .update({
+          brawlstars_trophies: update.brawlstars_trophies,
+          club_name: update.club_name,
+          status: update.status,
+        })
         .eq('discord_id', update.discord_id);
     }
   }
@@ -234,4 +252,11 @@ async function updateSnapshots(client) {
   }
 }
 
-module.exports = { updateSnapshots, CLUB_ROLES, TROPHY_ROLES, getTrophyRole, updateMemberRoles };
+module.exports = {
+  updateSnapshots,
+  updateRolesAndNotify,
+  CLUB_ROLES,
+  TROPHY_ROLES,
+  getTrophyRole,
+  updateMemberRoles,
+};
