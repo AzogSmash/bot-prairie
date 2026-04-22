@@ -55,24 +55,38 @@ const STAT_ID = {
 
 function getStat(player, statNameOrId, fallback = 0) {
   const statsArray = player?.stats || player?.result?.stats || null;
+
   if (Array.isArray(statsArray)) {
     if (typeof statNameOrId === "number") {
-      const found = statsArray.find(s => s.id === statNameOrId);
-      if (found && found.value != null) return found.value;
+      const found = statsArray.find(
+        s => s.id === statNameOrId || s.stat === statNameOrId
+      );
+
+      if (found) {
+        if (found.value != null) return found.value;
+        if (found.count != null) return found.count;
+        if (found.total != null) return found.total;
+      }
     }
+
     const nameToFind = String(statNameOrId).toLowerCase();
-    const found = statsArray.find(s => s.name?.toLowerCase() === nameToFind);
-    if (found && found.value != null) return found.value;
+    const found = statsArray.find(
+      s =>
+        s.name?.toLowerCase() === nameToFind ||
+        s.label?.toLowerCase() === nameToFind
+    );
+
+    if (found) {
+      if (found.value != null) return found.value;
+      if (found.count != null) return found.count;
+      if (found.total != null) return found.total;
+    }
   }
+
   const directValue = player?.[statNameOrId];
   if (directValue != null) return directValue;
-  return fallback;
-}
 
-function fmt(n) {
-  if (n == null) return "0";
-  const num = Number(n);
-  return isNaN(num) ? "0" : num.toLocaleString("en-US");
+  return fallback;
 }
 
 
@@ -304,6 +318,12 @@ function getWorldForTrophies(t) {
   let w = WORLDS[0];
   for (const x of WORLDS) { if (t >= x.thresholds[0]) w = x; else break; }
   return w;
+}
+
+function fmt(n) {
+  if (n == null) return "0";
+  const num = Number(n);
+  return isNaN(num) ? "0" : num.toLocaleString("en-US");
 }
 
 async function loadLocal(filePath) {
@@ -692,25 +712,77 @@ async function renderProfileCard({ player, club, rankedTier, rankedScore, extra,
   const frameRawId = bc?.frame?.id ?? bc?.frame ?? null;
   const starsCount = Math.min(Math.max(rankedBc?.stars ?? 0, 0), 6);
   
-  const favSkinId  = bc?.favorite_skin ?? null;
+  const favSkinId =
+  bc?.favorite_skin ??
+  bc?.favoriteSkin ??
+  p?.battle_card?.favorite_skin ??
+  p?.battleCard?.favorite_skin ??
+  p?.battleCard?.favoriteSkin ??
+  extra?.battle_card?.favorite_skin ??
+  extra?.battleCard?.favorite_skin ??
+  extra?.battleCard?.favoriteSkin ??
+  null;
 
   const trophies         = getStat(p, STAT_ID.TROPHIES);
   const highestTrophies  = getStat(p, STAT_ID.HIGHEST_TROPHIES);
   const threeVsThreeWins = getStat(p, STAT_ID.THREE_V_THREE);
   const soloWins         = getStat(p, STAT_ID.SOLO_VICTORIES);
   const duoWins          = getStat(p, STAT_ID.DUO_VICTORIES);
-  const currentRankedVal = getStat(p, STAT_ID.CURRENT_RANKED_PTS);
-  const rankedVal        = getStat(p, STAT_ID.HIGHEST_RANKED_PTS);
+  const currentRankedVal =
+  getStat(p, STAT_ID.CURRENT_RANKED_PTS, null) ??
+  p?.currentRankedSeason?.soloRank?.currentTrophies ??
+  extra?.currentRankedSeason?.soloRank?.currentTrophies ??
+  0;
+  const rankedVal =
+  getStat(p, STAT_ID.HIGHEST_RANKED_PTS, null) ??
+  p?.currentRankedSeason?.soloRank?.highestTrophies ??
+  extra?.currentRankedSeason?.soloRank?.highestTrophies ??
+  0;
+  console.log('[CARD] ranked debug', {
+    currentRankedVal,
+    rankedVal,
+    p_currentRankedSeason: p?.currentRankedSeason ?? null,
+    extra_currentRankedSeason: extra?.currentRankedSeason ?? null,
+    p_stats_ids: Array.isArray(p?.stats) ? p.stats.map(s => s.id) : null,
+    extra_stats_ids: Array.isArray(extra?.stats) ? extra.stats.map(s => s.id) : null,
+  });
   const acYear           = getStat(p, STAT_ID.ACCOUNT_CREATION);
-  const recordPoints     = getStat(p, STAT_ID.RECORD_POINTS) ?? 0;
-  const recordLevel      = getStat(p, STAT_ID.RECORD_LEVEL) ?? 0;
+  const recordPoints =
+    getStat(p, STAT_ID.RECORD_POINTS, null) ??
+    extra?.recordPoints ??
+    extra?.record_points ??
+    0;
+
+  const recordLevel =
+    getStat(p, STAT_ID.RECORD_LEVEL, null) ??
+    extra?.recordLevel ??
+    extra?.record_level ??
+    0;
+  console.log('[CARD] records debug', {
+    recordPoints,
+    recordLevel,
+    extra_recordPoints: extra?.recordPoints ?? null,
+    extra_record_points: extra?.record_points ?? null,
+    extra_recordLevel: extra?.recordLevel ?? null,
+    extra_record_level: extra?.record_level ?? null,
+  });
   const ownedCount       = getStat(p, STAT_ID.OWNED_BRAWLERS) || (Array.isArray(p?.brawlers) ? p.brawlers.length : 0);
   const totalCount       = getCollectionTotals(p, extra).totalBrawlers || ownedCount;
   const expPoints        = getStat(p, STAT_ID.EXP_POINTS) ?? extra?.expPoints ?? 0;
   const famePoints       = getStat(p, STAT_ID.FAME_POINTS) ?? extra?.famePoints ?? 0;
 
   const iconId       = p?.profile_avatar ?? p?.icon?.id ?? 28000000;
-  const favBrawlerId = p?.favorite_brawler?.id ?? p?.favorite_brawler ?? extra?.favouriteBrawler ?? null;
+  const favBrawlerId =
+  p?.favorite_brawler?.id ??
+  p?.favoriteBrawler?.id ??
+  p?.favorite_brawler ??
+  p?.favoriteBrawler ??
+  extra?.favorite_brawler?.id ??
+  extra?.favoriteBrawler?.id ??
+  extra?.favorite_brawler ??
+  extra?.favoriteBrawler ??
+  extra?.favouriteBrawler ??
+  null;
   const firstIconId  = (bc?.first_profile_avatar != null && bc.first_profile_avatar !== 0) ? bc.first_profile_avatar : null;
   const secondIconId = (bc?.second_profile_avatar != null && bc.second_profile_avatar !== 0) ? bc.second_profile_avatar : null;
 
@@ -804,6 +876,13 @@ async function renderProfileCard({ player, club, rankedTier, rankedScore, extra,
     tryLoad(path.join(ICONS_DIR, "st.png")),
     fameData?.iconFile ? tryLoad(path.join(FAME_DIR, fameData.iconFile)) : Promise.resolve(null),
   ]);
+  console.log('[CARD] assets debug', {
+    favModelLoaded: !!favModelImg,
+    favTieredLoaded: !!favTieredIcon,
+    currentTierLoaded: !!currentTierIcon,
+    highestTierLoaded: !!highestTierIcon,
+    recordIconLoaded: !!icRecord,
+  });
 
   const { bg: frameBgImg, star: frameStarImg, prestigeText: framePrestigeText, icon: frameIconImg, isRanked: frameIsRanked } = frameResult ?? {};
 

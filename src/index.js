@@ -7,6 +7,12 @@ const { updateClubsPanel } = require('./modules/clubsPanel');
 const { updateSnapshots } = require('./jobs/snapshots');
 const { registerFonts } = require('./services/registerFonts');
 
+const {
+  handleSettingsButton,
+  handleSettingsModal,
+  handleSettingsSelect,
+} = require('./modules/settingsInteractions');
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -53,86 +59,119 @@ async function deployCommands() {
 }
 
 // Gestion des interactions
-  client.on('interactionCreate', async interaction => {
-
-    // ── Modals ────────────────────────────────────────────────
-    if (interaction.isModalSubmit()) {
-      if (interaction.customId.startsWith('absence_modal')) {
-        const absenceCmd = require('./commands/absence');
-        await absenceCmd.handleModal(interaction);
+client.on('interactionCreate', async interaction => {
+  // ── Settings first: Buttons / Modals / Selects ─────────────────
+  if (interaction.isButton() && interaction.customId.startsWith('settings:')) {
+    try {
+      return await handleSettingsButton(interaction);
+    } catch (error) {
+      console.error('[Settings Button]', error);
+      if (!interaction.replied && !interaction.deferred) {
+        return interaction.reply({ content: '❌ Erreur lors du traitement.', ephemeral: true });
       }
       return;
     }
+  }
 
-    // ── Menus déroulants ──────────────────────────────────────
-    if (interaction.isStringSelectMenu()) {
-      if (interaction.customId.startsWith('absences_')) {
-        const absencesCmd = require('./commands/absences');
-        await absencesCmd.handleSelect(interaction);
-      }
-      if (interaction.customId.startsWith('classement_')) {
-        const classementCmd = require('./commands/classement');
-        await classementCmd.handleSelect(interaction);
-      }
-      if (interaction.customId.startsWith('annuler_absence_select_')) {
-        const absenceAnnulerCmd = require('./commands/absence-annuler');
-        await absenceAnnulerCmd.handleSelect(interaction);
-      }
-      if (interaction.customId.startsWith('rusheurs_')) {
-        const rusheursCmd = require('./commands/rusheurs');
-        await rusheursCmd.handleSelect(interaction);
+  if (interaction.isModalSubmit() && interaction.customId.startsWith('settings:')) {
+    try {
+      return await handleSettingsModal(interaction);
+    } catch (error) {
+      console.error('[Settings Modal]', error);
+      if (!interaction.replied && !interaction.deferred) {
+        return interaction.reply({ content: '❌ Erreur lors du traitement.', ephemeral: true });
       }
       return;
     }
+  }
 
-    // ── Boutons ───────────────────────────────────────────────
+  if (interaction.isStringSelectMenu() && interaction.customId.startsWith('settings:')) {
+    try {
+      return await handleSettingsSelect(interaction);
+    } catch (error) {
+      console.error('[Settings Select]', error);
+      if (!interaction.replied && !interaction.deferred) {
+        return interaction.reply({ content: '❌ Erreur lors du traitement.', ephemeral: true });
+      }
+      return;
+    }
+  }
+
+  // ── Modals ────────────────────────────────────────────────
+  if (interaction.isModalSubmit()) {
+    if (interaction.customId.startsWith('absence_modal')) {
+      const absenceCmd = require('./commands/absence');
+      await absenceCmd.handleModal(interaction);
+    }
+    return;
+  }
+
+  // ── Menus déroulants ──────────────────────────────────────
+  if (interaction.isStringSelectMenu()) {
+    if (interaction.customId.startsWith('absences_')) {
+      const absencesCmd = require('./commands/absences');
+      await absencesCmd.handleSelect(interaction);
+    }
+    if (interaction.customId.startsWith('classement_')) {
+      const classementCmd = require('./commands/classement');
+      await classementCmd.handleSelect(interaction);
+    }
+    if (interaction.customId.startsWith('annuler_absence_select_')) {
+      const absenceAnnulerCmd = require('./commands/absence-annuler');
+      await absenceAnnulerCmd.handleSelect(interaction);
+    }
+    if (interaction.customId.startsWith('rusheurs_')) {
+      const rusheursCmd = require('./commands/rusheurs');
+      await rusheursCmd.handleSelect(interaction);
+    }
+    return;
+  }
+
+  // ── Boutons ───────────────────────────────────────────────
   if (interaction.isButton()) {
     const parts = interaction.customId.split('_');
     const action = parts[0];
 
-    // Bouton retour profil depuis classement
-      if (action === 'classement' && parts[1] === 'profil') {
-        await interaction.deferUpdate();
-        try {
-          const targetId = parts[parts.length - 1]; // dernier segment = userId
-          const target = await interaction.client.users.fetch(targetId);
-          const profilePayload = await buildProfileEmbed(target, interaction.client);
+    if (action === 'classement' && parts[1] === 'profil') {
+      await interaction.deferUpdate();
+      try {
+        const targetId = parts[parts.length - 1];
+        const target = await interaction.client.users.fetch(targetId);
+        const profilePayload = await buildProfileEmbed(target, interaction.client);
 
-          if (!profilePayload) {
-            await interaction.followUp({ content: '❌ Tu n\'as pas encore lié ton compte BS.', ephemeral: true });
-          } else {
-            const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+        if (!profilePayload) {
+          await interaction.followUp({ content: '❌ Tu n\'as pas encore lié ton compte BS.', ephemeral: true });
+        } else {
+          const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-            const row = new ActionRowBuilder().addComponents(
-              new ButtonBuilder()
-                .setCustomId(`refresh_${target.id}`)
-                .setLabel('🔄 Actualiser')
-                .setStyle(ButtonStyle.Secondary),
-              new ButtonBuilder()
-                .setCustomId(`classement_goto_0_tous_fromprofil`)
-                .setLabel('🏆 Classement Prairie')
-                .setStyle(ButtonStyle.Primary),
-            );
+          const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId(`refresh_${target.id}`)
+              .setLabel('🔄 Actualiser')
+              .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+              .setCustomId(`classement_goto_0_tous_fromprofil`)
+              .setLabel('🏆 Classement Prairie')
+              .setStyle(ButtonStyle.Primary),
+          );
 
-            await interaction.editReply({
-              ...profilePayload,
-              components: [row],
-            });
-          }
-        } catch (err) {
-          console.error(err);
+          await interaction.editReply({
+            ...profilePayload,
+            components: [row],
+          });
         }
-        return;
+      } catch (err) {
+        console.error(err);
       }
+      return;
+    }
 
-    // Pagination classement
     if (action === 'classement') {
       const classementCmd = require('./commands/classement');
       await classementCmd.handleButton(interaction);
       return;
     }
 
-    // Refresh profil
     if (action === 'refresh') {
       await interaction.deferUpdate();
       const target = await interaction.client.users.fetch(parts[1]);
@@ -157,6 +196,9 @@ async function deployCommands() {
   if (!command) return;
 
   try {
+    if (interaction.commandName === 'profil' && !interaction.deferred && !interaction.replied) {
+    }
+
     await command.execute(interaction);
   } catch (err) {
     console.error(err);

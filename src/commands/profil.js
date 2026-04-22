@@ -5,7 +5,7 @@ const { getCache, isCacheValid } = require('../lib/cache');
 const { getClub } = require('../lib/brawlapi');
 const { renderProfileCard } = require('../modules/profileCardExact');
 const { fetchRntProfile } = require('../lib/rntapi');
-
+const { getPreferredBsTag } = require('../lib/brawlAccounts');
 
 const PRAIRIE_CLUBS = [
   { tag: '#29UPLG8QQ', emoji: '🌟' },
@@ -84,16 +84,15 @@ async function buildProfileEmbed(target, client) {
     .select('*')
     .eq('discord_id', target.id)
     .single();
-
-  if (error || !data || !data.brawlstars_tag) return null;
+  const bsTag = await getPreferredBsTag(target.id);
+  if (error || !data || !bsTag) return null;
 
   const [player, battleLogData, allClubMembers, rnt] = await Promise.all([
-    getPlayer(data.brawlstars_tag),
-    getBattleLog(data.brawlstars_tag).catch(() => null),
+    getPlayer(bsTag),
+    getBattleLog(bsTag).catch(() => null),
     getAllClubMembers(),
-    fetchRntProfile(data.brawlstars_tag).catch(() => null),
+    fetchRntProfile(bsTag).catch(() => null),
   ]);
-
   const rntData = rnt?.result || rnt || {};
   const sortedMembers = [...allClubMembers].sort((a, b) => b.trophies - a.trophies);
   const rankInFamily = sortedMembers.findIndex(m => m.bsTag === player.tag) + 1;
@@ -102,6 +101,7 @@ async function buildProfileEmbed(target, client) {
   await supabase
     .from('members')
     .update({
+      brawlstars_tag: bsTag,
       brawlstars_trophies: player.trophies,
       club_name: player.club?.name || null,
       last_seen_at: new Date().toISOString(),
@@ -113,7 +113,6 @@ async function buildProfileEmbed(target, client) {
   const maxedBrawlers = brawlers.filter(b => b.power === 11).length;
   const hyperchargeBrawlers = brawlers.filter(b => b.hyperCharges?.length > 0).length;
   const maxWinStreak = brawlers.reduce((max, b) => Math.max(max, b.maxWinStreak || 0), 0);
-
   let winRate = null;
   let favoriteMode = null;
   let recentBrawler = null;
@@ -233,7 +232,7 @@ async function buildProfileEmbed(target, client) {
   return {
     embed,
     player,
-    bsTag: data.brawlstars_tag,
+    bsTag,
     rntData,
   };
 }
@@ -268,44 +267,67 @@ module.exports = {
 
       try {
         // Fallback BS officiel quand RNT est down (ex: maj du jeu)
-        const rntAvailable = rntData && Object.keys(rntData).length > 0;
-        
-        const bsCompat = rntAvailable ? rntData : {
-          // Champs directs lus par getStat() via player?.[statNameOrId]
-          trophies: player.trophies,
-          highestTrophies: player.highestTrophies,
-          '3vs3Victories': player['3vs3Victories'],
-          soloVictories: player.soloVictories,
-          duoVictories: player.duoVictories,
-          expLevel: player.expLevel,
-          totalPrestigeLevel: player.totalPrestigeLevel || 0,
-          brawlers: player.brawlers || [],
-          name: player.name,
-          tag: player.tag,
-          icon: player.icon,
-          nameColor: player.nameColor,
-          club: player.club,
-          // Stats array compatible getStat() avec IDs numériques
-          stats: [
-            { id: 3,  value: player.trophies },
-            { id: 4,  value: player.highestTrophies },
-            { id: 1,  value: player['3vs3Victories'] },
-            { id: 8,  value: player.soloVictories },
-            { id: 11, value: player.duoVictories },
-            { id: 2,  value: player.expPoints || 0 },
-            { id: 5,  value: player.brawlers?.length || 0 },
-            { id: 24, value: player.currentRankedSeason?.soloRank?.currentTrophies || 0 },
-            { id: 25, value: player.currentRankedSeason?.soloRank?.highestTrophies || 0 },
-            { id: 30, value: player.totalPrestigeLevel || 0 },
-          ],
-        };
+      const rendererPlayer = {
+        ...player,
+        stats: [
+          { id: 3,  value: player.trophies || 0 },
+          { id: 4,  value: player.highestTrophies || 0 },
+          { id: 1,  value: player['3vs3Victories'] || 0 },
+          { id: 8,  value: player.soloVictories || 0 },
+          { id: 11, value: player.duoVictories || 0 },
+          { id: 2,  value: player.expPoints || 0 },
+          { id: 5,  value: player.brawlers?.length || 0 },
+          { id: 24, value: player.currentRankedSeason?.soloRank?.currentTrophies || 0 },
+          { id: 25, value: player.currentRankedSeason?.soloRank?.highestTrophies || 0 },
+          { id: 30, value: player.totalPrestigeLevel || 0 },
+          { id: 31, value: rntData?.recordPoints || 0 },
+          { id: 32, value: rntData?.recordLevel || 0 },
+        ],
+      };
 
-        const cardBuffer = await Promise.race([
-          renderProfileCard({ player: { ...player, ...bsCompat }, extra: bsCompat, playerTag: bsTag }),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Profile card timeout')), 10000)
-          )
-        ]);
+      const rendererExtra = {
+        ...rntData,
+        trophies: player.trophies || 0,
+        highestTrophies: player.highestTrophies || 0,
+        '3vs3Victories': player['3vs3Victories'] || 0,
+        soloVictories: player.soloVictories || 0,
+        duoVictories: player.duoVictories || 0,
+        expLevel: player.expLevel || 0,
+        totalPrestigeLevel: player.totalPrestigeLevel || 0,
+        brawlers: player.brawlers || [],
+        name: player.name,
+        tag: player.tag,
+        icon: player.icon,
+        nameColor: player.nameColor,
+        club: player.club,
+        currentRankedSeason: player.currentRankedSeason || null,
+        battle_card: player.battleCard || player.battle_card || null,
+        battleCard: player.battleCard || player.battle_card || null,
+        favorite_brawler: player.favoriteBrawler || player.favorite_brawler || null,
+        favoriteBrawler: player.favoriteBrawler || player.favorite_brawler || null,
+        profile_avatar: player.icon?.id || null,
+        stats: [
+          { id: 3,  value: player.trophies || 0 },
+          { id: 4,  value: player.highestTrophies || 0 },
+          { id: 1,  value: player['3vs3Victories'] || 0 },
+          { id: 8,  value: player.soloVictories || 0 },
+          { id: 11, value: player.duoVictories || 0 },
+          { id: 2,  value: player.expPoints || 0 },
+          { id: 5,  value: player.brawlers?.length || 0 },
+          { id: 24, value: player.currentRankedSeason?.soloRank?.currentTrophies || 0 },
+          { id: 25, value: player.currentRankedSeason?.soloRank?.highestTrophies || 0 },
+          { id: 30, value: player.totalPrestigeLevel || 0 },
+          { id: 31, value: rntData?.recordPoints || 0 },
+          { id: 32, value: rntData?.recordLevel || 0 },
+        ],
+      };
+
+      const cardBuffer = await Promise.race([
+        renderProfileCard({ player: rendererPlayer, extra: rendererExtra, playerTag: bsTag }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Profile card timeout')), 10000)
+        )
+      ]);
 
         const { AttachmentBuilder } = require('discord.js');
         cardAttachment = new AttachmentBuilder(cardBuffer, { name: 'profile-card.png' });
