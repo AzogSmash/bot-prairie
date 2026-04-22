@@ -1,12 +1,12 @@
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 const { getPlayer } = require('../lib/brawlapi');
 const { supabase } = require('../lib/supabase');
-const buffer = await renderProfileCard({ player, extra: {}, playerTag: data.brawlstars_tag });
+const { renderProfileCard } = require('../modules/profileCardExact');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('carte-profil')
-    .setDescription('Génère la carte de profil visuelle BS')
+    .setDescription('Génère ta carte de profil visuelle Brawl Stars')
     .addUserOption(option =>
       option.setName('membre')
         .setDescription('Le membre (toi par défaut)')
@@ -26,13 +26,13 @@ module.exports = {
 
     if (!data?.brawlstars_tag) {
       return interaction.editReply({
-        content: `❌ **${target.username}** n'a pas encore lié son compte BS.`
+        content: `❌ **${target.username}** n'a pas encore lié son compte BS.\nUtilise \`/lier #TAG\` pour commencer !`
       });
     }
 
     try {
       const player = await getPlayer(data.brawlstars_tag);
-      const buffer = await generateProfileCard(data.brawlstars_tag, player);
+      const buffer = await renderProfileCard({ player, extra: {}, playerTag: data.brawlstars_tag });
       const attachment = new AttachmentBuilder(buffer, { name: 'carte-profil.png' });
       await interaction.editReply({ files: [attachment] });
     } catch (err) {
