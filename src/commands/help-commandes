@@ -1,0 +1,377 @@
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('help-commande')
+    .setDescription('Aide détaillée sur une commande du bot Prairie')
+    .addStringOption(option =>
+      option.setName('commande')
+        .setDescription('La commande sur laquelle tu veux de l\'aide')
+        .setRequired(true)
+        .addChoices(
+          { name: '/lier', value: 'lier' },
+          { name: '/settings', value: 'settings' },
+          { name: '/profil', value: 'profil' },
+          { name: '/classement', value: 'classement' },
+          { name: '/rusheurs', value: 'rusheurs' },
+          { name: '/clubs', value: 'clubs' },
+          { name: '/absence', value: 'absence' },
+          { name: '/absences', value: 'absences' },
+          { name: '/absence-annuler', value: 'absence-annuler' },
+        )
+    ),
+
+  async execute(interaction) {
+    await interaction.deferReply;
+
+    const commande = interaction.options.getString('commande');
+    const embed = buildHelpEmbed(commande);
+
+    if (!embed) {
+      return interaction.editReply({ content: '❌ Commande inconnue.' });
+    }
+
+    await interaction.editReply({ embeds: [embed] });
+  }
+};
+
+function buildHelpEmbed(commande) {
+  switch (commande) {
+
+    case 'lier':
+      return new EmbedBuilder()
+        .setColor('#2ecc71')
+        .setTitle('🔗 /lier — Lier ton compte Brawl Stars')
+        .setDescription(
+          'Lie un compte Brawl Stars à ton profil Discord Prairie.\n' +
+          'C\'est la **première étape obligatoire** pour accéder au profil, classement et rusheurs.'
+        )
+        .addFields(
+          {
+            name: '📋 Utilisation',
+            value: '`/lier #TONTAGBS`\nExemple : `/lier #P80YQJRL`',
+          },
+          {
+            name: '🔎 Où trouver ton tag ?',
+            value: 'Dans Brawl Stars → ton profil → sous ton nom en haut à gauche.\nIl commence toujours par `#` suivi de lettres et chiffres.\n⚠️ Charset valide : `0289PYLQGRJCUV` — pas de lettre O, que le zéro.',
+          },
+          {
+            name: '📚 Plusieurs comptes ?',
+            value: 'Tu peux lier jusqu\'à **5 comptes** Brawl Stars.\nLe **premier compte lié** devient ton compte principal.\nPour ajouter d\'autres comptes → `/settings`',
+          },
+          {
+            name: '🏷️ Rôles attribués automatiquement',
+            value: '• Rôle de ton club Prairie (si tu en fais partie)\n• Rôle de palier de trophées selon ton meilleur compte lié',
+          },
+          {
+            name: '⚠️ Erreurs fréquentes',
+            value: '• Tag invalide → vérifie qu\'il n\'y a pas de lettre O (utilise le zéro `0`)\n• Tag déjà lié → contacte le staff si ce compte t\'appartient\n• Limite atteinte → utilise `/settings` pour supprimer un ancien compte',
+          },
+        )
+        .setFooter({ text: 'Prairie Brawl Stars • /settings pour gérer tes comptes' })
+        .setTimestamp();
+
+    case 'settings':
+      return new EmbedBuilder()
+        .setColor('#5865F2')
+        .setTitle('⚙️ /settings — Gérer tes comptes liés')
+        .setDescription(
+          'Ouvre un panneau **privé** pour gérer tous tes comptes Brawl Stars liés.\n' +
+          'Visible uniquement par toi, jusqu\'à **5 comptes** supportés.'
+        )
+        .addFields(
+          {
+            name: '📋 Utilisation',
+            value: '`/settings`\nAucun paramètre requis.',
+          },
+          {
+            name: '➕ Ajouter un compte — bouton Add',
+            value: 'Un formulaire s\'ouvre pour entrer un tag BS.\nLe compte est vérifié via l\'API officielle avant d\'être ajouté.',
+          },
+          {
+            name: '👑 Changer le compte principal — bouton Set Main',
+            value: [
+              'Le compte principal est utilisé pour :',
+              '• Ton `/profil` et ta carte visuelle',
+              '• Ton rang dans le `/classement`',
+              '• Tes rôles de trophées Prairie',
+              '',
+              'Disponible uniquement si tu as **2 comptes ou plus**.',
+            ].join('\n'),
+          },
+          {
+            name: '🗑️ Supprimer un compte — bouton Delete',
+            value: 'Retire un compte de ta liste.\nSi tu supprimes ton compte principal, le suivant prend automatiquement le relais.',
+          },
+          {
+            name: '📊 Mise à jour automatique',
+            value: 'Après chaque modification, le bot recalcule ton meilleur score sur tous tes comptes et met à jour tes rôles Prairie.',
+          },
+          {
+            name: '⚠️ Limites',
+            value: '• Maximum **5 comptes** liés\n• Un même tag BS ne peut appartenir qu\'à un seul membre du serveur\n• Ton compte principal est marqué 👑 dans la liste',
+          },
+        )
+        .setFooter({ text: 'Prairie Brawl Stars • /lier pour ajouter ton premier compte' })
+        .setTimestamp();
+
+    case 'profil':
+      return new EmbedBuilder()
+        .setColor('#9b59b6')
+        .setTitle('👤 /profil — Afficher un profil Prairie')
+        .setDescription(
+          'Affiche le profil complet d\'un membre Prairie avec ses stats Brawl Stars\net sa **carte de profil visuelle** style in-game.'
+        )
+        .addFields(
+          {
+            name: '📋 Utilisation',
+            value: '`/profil` → ton propre profil\n`/profil @membre` → le profil d\'un autre membre',
+          },
+          {
+            name: '📊 Informations affichées',
+            value: [
+              '• Trophées actuels et record personnel',
+              '• Rang dans la famille Prairie (sur tous les membres des 7 clubs)',
+              '• Niveau d\'expérience et prestige total',
+              '• Brawler favori, collection, hypercharges',
+              '• Victoires 3v3 / Solo / Duo',
+              '• Win rate et mode favori sur les 25 dernières parties',
+              '• Carte de profil visuelle générée automatiquement',
+            ].join('\n'),
+          },
+          {
+            name: '🔄 Boutons disponibles',
+            value: '• **Actualiser** — recharge les stats en temps réel depuis l\'API BS\n• **Classement Prairie** — accès direct au classement de la famille',
+          },
+          {
+            name: '🎨 Carte de profil',
+            value: 'La carte affiche ton brawler favori, ton skin, tes stats ranked, records, brawlers collectés et ton prestige.\nElle est générée depuis les données BS officielles + données étendues quand disponibles.',
+          },
+          {
+            name: '⚠️ Prérequis',
+            value: 'Avoir lié son compte avec `/lier` au préalable.',
+          },
+        )
+        .setFooter({ text: 'Prairie Brawl Stars • Stats en temps réel' })
+        .setTimestamp();
+
+    case 'classement':
+      return new EmbedBuilder()
+        .setColor('#f1c40f')
+        .setTitle('🏆 /classement — Classement des membres Prairie')
+        .setDescription(
+          'Affiche le classement par trophées de tous les membres des 7 clubs Prairie,\navec filtres par club et pagination.'
+        )
+        .addFields(
+          {
+            name: '📋 Utilisation',
+            value: '`/classement` → classement global\nFiltre par club via le menu déroulant',
+          },
+          {
+            name: '🔍 Filtres disponibles',
+            value: [
+              '• 🌿 **Toute la famille** — tous les membres des 7 clubs',
+              '• 🌟 Prairie Étoilée',
+              '• 🌿 Prairie Fleurie',
+              '• 🪽 Prairie Céleste',
+              '• ❄️ Prairie Gelée',
+              '• 🔥 Prairie Brûlée',
+              '• 🌱 Mini Prairie',
+              '• 🐾 Prairie Sauvage',
+            ].join('\n'),
+          },
+          {
+            name: '🔗 Membres liés Discord',
+            value: 'Les membres ayant lié leur compte apparaissent avec leur pseudo Discord et l\'icône 🔗.\nEn vue par club, le rang global Prairie est aussi affiché à côté.',
+          },
+          {
+            name: '👈 Ton rang',
+            value: 'Ton entrée est mise en évidence avec **👈 toi** pour te repérer facilement.\nTon rang actuel est aussi affiché dans les stats en bas.',
+          },
+          {
+            name: '⚠️ Prérequis',
+            value: 'Avoir lié son compte avec `/lier` pour voir son rang mis en évidence.',
+          },
+        )
+        .setFooter({ text: 'Prairie Brawl Stars • Données récupérées en temps réel' })
+        .setTimestamp();
+
+    case 'rusheurs':
+      return new EmbedBuilder()
+        .setColor('#e67e22')
+        .setTitle('🔥 /rusheurs — Classement des rusheurs')
+        .setDescription(
+          'Affiche les membres qui ont **le plus pushé leurs trophées** sur une période donnée.\n' +
+          'Basé sur des snapshots horaires comparés à un point de départ.'
+        )
+        .addFields(
+          {
+            name: '📋 Utilisation',
+            value: '`/rusheurs` → classement saison par défaut\nFiltre par club et période via les menus déroulants',
+          },
+          {
+            name: '📅 Périodes disponibles',
+            value: [
+              '🔥 **Aujourd\'hui** — push depuis minuit',
+              '📅 **Cette semaine** — push depuis lundi',
+              '📆 **Ce mois** — push depuis le 1er du mois',
+              '🏆 **Cette saison** — push depuis le début de la saison BS en cours',
+            ].join('\n'),
+          },
+          {
+            name: '👑 Rois du push',
+            value: 'En vue **globale + saison**, le #1 de chaque club est mis en avant comme "Roi du push" de son club.',
+          },
+          {
+            name: '📸 Comment ça fonctionne ?',
+            value: 'Le bot prend un snapshot des trophées de chaque membre toutes les heures.\nLa progression est calculée entre le snapshot de référence (début de période) et le snapshot le plus récent.',
+          },
+          {
+            name: '⚠️ Prérequis & limites',
+            value: '• Avoir lié son compte avec `/lier`\n• Les données **daily/weekly/monthly** arrivent à minuit\n• Si tu n\'apparais pas, c\'est que ton tag n\'est pas encore dans les snapshots',
+          },
+        )
+        .setFooter({ text: 'Prairie Brawl Stars • Snapshots toutes les heures' })
+        .setTimestamp();
+
+    case 'clubs':
+      return new EmbedBuilder()
+        .setColor('#2ecc71')
+        .setTitle('🌿 /clubs — Vue d\'ensemble des 7 clubs')
+        .setDescription(
+          'Affiche en temps réel les informations de chaque club Prairie :\nmembres, trophées, classements mondiaux et places disponibles.'
+        )
+        .addFields(
+          {
+            name: '📋 Utilisation',
+            value: '`/clubs`\nAucun paramètre requis.',
+          },
+          {
+            name: '📊 Informations par club',
+            value: [
+              '• Places disponibles et jauge de remplissage',
+              '• Nombre de membres liés Discord',
+              '• Total de trophées, moyenne, trophées requis',
+              '• Classement mondial et France (actuel + record)',
+              '• Meilleur membre du club',
+              '• Lien Brawlify direct',
+            ].join('\n'),
+          },
+          {
+            name: '📈 Stats globales famille',
+            value: 'En haut de l\'embed : total membres, total trophées, moyenne famille, places disponibles au global, nombre de membres liés Discord.',
+          },
+          {
+            name: '🔁 Mise à jour',
+            value: 'Les données sont récupérées en temps réel à chaque utilisation de la commande.\nLes panels dans le salon dédié se mettent à jour automatiquement **toutes les heures**.',
+          },
+        )
+        .setFooter({ text: 'Prairie Brawl Stars • Données en temps réel' })
+        .setTimestamp();
+
+    case 'absence':
+      return new EmbedBuilder()
+        .setColor('#3498db')
+        .setTitle('📋 /absence — Déclarer une absence')
+        .setDescription(
+          'Déclare une absence pour prévenir le staff et éviter d\'être exclu pour inactivité.'
+        )
+        .addFields(
+          {
+            name: '📋 Utilisation',
+            value: '`/absence` → déclare ta propre absence\n`/absence @membre` → staff uniquement, créer une absence pour un autre membre',
+          },
+          {
+            name: '📝 Formulaire',
+            value: [
+              'Un formulaire s\'ouvre avec 3 champs :',
+              '• **Date de début** — format `JJ/MM` ou `JJ/MM/AAAA`',
+              '• **Date de fin** — même format',
+              '• **Raison** — optionnel (vacances, exams, voyage...)',
+            ].join('\n'),
+          },
+          {
+            name: '📅 Format des dates',
+            value: 'Exemples valides : `25/04`, `01/05`, `15/06/2026`\nSi tu n\'indiques pas l\'année, l\'année en cours est utilisée.',
+          },
+          {
+            name: '✅ Après la déclaration',
+            value: '• Tu reçois une confirmation avec les détails\n• Le staff est notifié automatiquement\n• Ton absence apparaît dans `/absences`\n• Pour annuler → `/absence-annuler`',
+          },
+          {
+            name: '⚠️ Règles',
+            value: '• La date de début ne peut pas être dans le passé (pour toi-même)\n• La date de fin doit être après la date de début\n• Le staff peut créer des absences rétroactives pour un membre',
+          },
+        )
+        .setFooter({ text: 'Prairie Brawl Stars • /absence-annuler pour annuler' })
+        .setTimestamp();
+
+    case 'absences':
+      return new EmbedBuilder()
+        .setColor('#e67e22')
+        .setTitle('📋 /absences — Consulter les absences')
+        .setDescription(
+          'Affiche la liste des absences actives avec filtres par club et période.'
+        )
+        .addFields(
+          {
+            name: '📋 Utilisation',
+            value: '`/absences` → toutes les absences actives\nFiltre par club et période via les menus déroulants',
+          },
+          {
+            name: '🌿 Filtre par club',
+            value: 'Tous les clubs • Prairie Étoilée • Fleurie • Céleste • Gelée • Brûlée • Mini Prairie • Sauvage',
+          },
+          {
+            name: '📅 Filtre par période',
+            value: [
+              '• **Toutes les périodes** — tout ce qui est encore actif',
+              '• **En ce moment** — absences en cours aujourd\'hui',
+              '• **Ce mois-ci** — absences qui débutent ce mois',
+              '• **Mois prochain** — absences prévues le mois prochain',
+              '• **Dans 2 mois+** — absences futures',
+            ].join('\n'),
+          },
+          {
+            name: '🛡️ Fonctionnalités staff',
+            value: 'Le staff voit toutes les absences de tous les membres.\nIl peut annuler n\'importe quelle absence directement depuis `/absences` ou via `/absence-annuler @membre`.',
+          },
+        )
+        .setFooter({ text: 'Prairie Brawl Stars • /absence pour déclarer la tienne' })
+        .setTimestamp();
+
+    case 'absence-annuler':
+      return new EmbedBuilder()
+        .setColor('#e74c3c')
+        .setTitle('❌ /absence-annuler — Annuler une absence')
+        .setDescription(
+          'Annule une absence active avant sa date de fin.'
+        )
+        .addFields(
+          {
+            name: '📋 Utilisation',
+            value: '`/absence-annuler` → annuler ta propre absence\n`/absence-annuler @membre` → staff uniquement',
+          },
+          {
+            name: '🔄 Comportement',
+            value: [
+              '• Si tu n\'as **qu\'une seule** absence active → annulation immédiate',
+              '• Si tu en as **plusieurs** → un menu s\'affiche pour choisir laquelle annuler',
+            ].join('\n'),
+          },
+          {
+            name: '✅ Après l\'annulation',
+            value: 'Tu reçois une confirmation et le staff est notifié automatiquement.',
+          },
+          {
+            name: '⚠️ Bon à savoir',
+            value: 'Seules les absences **encore actives** (date de fin non dépassée) peuvent être annulées.\nLes absences passées ne sont pas supprimées, elles restent dans l\'historique.',
+          },
+        )
+        .setFooter({ text: 'Prairie Brawl Stars • /absence pour en déclarer une nouvelle' })
+        .setTimestamp();
+
+    default:
+      return null;
+  }
+}
