@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { getPlayer } = require('../lib/brawlapi');
 const { supabase } = require('../lib/supabase');
 const {
@@ -15,16 +15,36 @@ module.exports = {
     .setDescription('Lie ton compte Brawl Stars à ton profil Prairie')
     .addStringOption(option =>
       option.setName('tag')
-        .setDescription('Ton tag Brawl Stars (ex: #2ABC123)')
+        .setDescription('Tag Brawl Stars (ex: #2ABC123)')
         .setRequired(true)
+    )
+    .addUserOption(option =>
+      option.setName('membre')
+        .setDescription('Staff : lier le compte d\'un autre membre')
+        .setRequired(false)
     ),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
 
     const tag = interaction.options.getString('tag');
-    const user = interaction.user;
-    const member = interaction.member;
+    const targetUser = interaction.options.getUser('membre');
+    const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageRoles);
+
+    if (targetUser && !isStaff) {
+      return interaction.editReply({
+        content: '❌ Seul le staff peut lier le compte d\'un autre membre.',
+      });
+    }
+
+    const user = targetUser || interaction.user;
+    const member = targetUser
+      ? await interaction.guild.members.fetch(targetUser.id).catch(() => null)
+      : interaction.member;
+
+    if (!member) {
+      return interaction.editReply({ content: '❌ Membre introuvable sur le serveur.' });
+    }
 
     try {
       const player = await getPlayer(tag);
@@ -41,16 +61,16 @@ module.exports = {
 
       if (alreadyLinkedToUser) {
         return interaction.editReply({
-          content: `ℹ️ Ce compte est déjà lié à ton profil.`,
+          content: `ℹ️ Ce compte est déjà lié à ce profil.`,
         });
       }
 
       if (existingAccounts.length >= 5) {
         return interaction.editReply({
-          content: `❌ Tu as déjà atteint la limite de 5 comptes liés. Utilise \`/settings\` pour gérer tes profils.`,
+          content: `❌ ${targetUser ? 'Ce membre a' : 'Tu as'} déjà atteint la limite de 5 comptes liés.`,
         });
       }
-      
+
       const { data: existingMember, error: existingMemberError } = await supabase
         .from('members')
         .select('discord_id, status')
@@ -85,7 +105,6 @@ module.exports = {
 
       for (const acc of allAccounts) {
         const accPlayer = await getPlayer(acc.bs_tag);
-
         summaryMap.set(acc.bs_tag, {
           trophies: accPlayer.trophies,
           clubName: accPlayer.club?.name || null,
@@ -114,11 +133,19 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setColor('#2ecc71')
-        .setTitle(isFirstAccount ? '✅ Compte principal lié avec succès !' : '✅ Compte secondaire ajouté avec succès !')
+        .setTitle(
+          targetUser
+            ? `✅ Compte lié pour ${user.username} !`
+            : isFirstAccount
+              ? '✅ Compte principal lié avec succès !'
+              : '✅ Compte secondaire ajouté avec succès !'
+        )
         .setDescription(
-          isFirstAccount
-            ? `Ton compte Brawl Stars principal est maintenant lié à ton profil Prairie.`
-            : `Ton compte Brawl Stars a bien été ajouté à tes profils liés.\nUtilise \`/settings\` pour gérer ton compte principal.`
+          targetUser
+            ? `Le compte Brawl Stars de **${user.username}** a été lié par le staff.`
+            : isFirstAccount
+              ? `Ton compte Brawl Stars principal est maintenant lié à ton profil Prairie.`
+              : `Ton compte Brawl Stars a bien été ajouté à tes profils liés.\nUtilise \`/settings\` pour gérer ton compte principal.`
         )
         .addFields(
           { name: '🎮 Joueur', value: player.name, inline: true },
@@ -133,10 +160,30 @@ module.exports = {
         .addFields(
           { name: '🏷️ Rôles Prairie', value: `${clubRolesDisplay}\n<@&${trophyTier.roleId}>`, inline: false },
         )
-        .setFooter({ text: 'Prairie Brawl Stars' })
+        .setFooter({ text: targetUser ? `Lié par ${interaction.user.username}` : 'Prairie Brawl Stars' })
         .setTimestamp();
 
       await interaction.editReply({ embeds: [embed] });
+
+      // Log staff
+      if (targetUser) {
+        const staffChannel = interaction.guild.channels.cache.get(process.env.STAFF_CHANNEL_ID);
+        if (staffChannel) {
+          await staffChannel.send({
+            embeds: [
+              new EmbedBuilder()
+                .setColor('#9b59b6')
+                .setTitle('🔗 Compte lié par le staff')
+                .addFields(
+                  { name: '👤 Membre', value: `${user}`, inline: true },
+                  { name: '🎮 Tag BS', value: player.tag, inline: true },
+                  { name: '🛡️ Staff', value: `${interaction.user}`, inline: true },
+                )
+                .setTimestamp()
+            ]
+          });
+        }
+      }
 
     } catch (err) {
       console.error('[Lier]', err);

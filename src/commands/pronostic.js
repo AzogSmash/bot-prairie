@@ -16,7 +16,6 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
 
-    // Vérifie que le membre est lié
     const { data: member } = await supabase
       .from('members')
       .select('brawlstars_tag')
@@ -29,7 +28,6 @@ module.exports = {
       });
     }
 
-    // Récupère les tournois ouverts ou en cours
     const { data: tournaments } = await supabase
       .from('tournaments')
       .select('*')
@@ -49,11 +47,9 @@ module.exports = {
         value: t.id,
       })));
 
-    const row = new ActionRowBuilder().addComponents(menu);
-
     await interaction.editReply({
       content: '🏆 **Pronostics Prairie** — Choisis un tournoi :',
-      components: [row],
+      components: [new ActionRowBuilder().addComponents(menu)],
     });
   },
 
@@ -61,7 +57,9 @@ module.exports = {
     const customId = interaction.customId;
 
     if (customId === 'pronostic_select_tournament') {
-      return handleTournamentSelect(interaction);
+      await interaction.deferUpdate();
+      const tournamentId = interaction.values[0];
+      return showPronosticForm(interaction, tournamentId, 0);
     }
 
     if (customId.startsWith('pronostic_vote_')) {
@@ -71,6 +69,14 @@ module.exports = {
 
   async handleButton(interaction) {
     const customId = interaction.customId;
+
+    if (customId.startsWith('pronostic_page_')) {
+      await interaction.deferUpdate();
+      const parts = customId.split('_');
+      const tournamentId = parts[2];
+      const page = parseInt(parts[3]);
+      return showPronosticForm(interaction, tournamentId, page);
+    }
 
     if (customId.startsWith('pronostic_submit_')) {
       return handleSubmit(interaction);
@@ -82,14 +88,7 @@ module.exports = {
   },
 };
 
-// ── Sélection du tournoi ──────────────────────────────────────────────────────
-async function handleTournamentSelect(interaction) {
-  await interaction.deferUpdate();
-  const tournamentId = interaction.values[0];
-  await showPronosticForm(interaction, tournamentId);
-}
-
-async function showPronosticForm(interaction, tournamentId) {
+async function showPronosticForm(interaction, tournamentId, page = 0) {
   const { data: tournament } = await supabase
     .from('tournaments')
     .select('*')
@@ -100,7 +99,6 @@ async function showPronosticForm(interaction, tournamentId) {
     return interaction.editReply({ content: '❌ Tournoi introuvable.', components: [] });
   }
 
-  // Vérifie si le membre a déjà soumis ses pronos
   const { data: existing } = await supabase
     .from('tournament_predictions')
     .select('*')
@@ -112,7 +110,6 @@ async function showPronosticForm(interaction, tournamentId) {
     return showMyPredictions(interaction, tournamentId, existing);
   }
 
-  // Récupère les matchs R1
   const { data: matches } = await supabase
     .from('tournament_matches')
     .select('*, team1:team1_id(id, name, seed, side), team2:team2_id(id, name, seed, side)')
@@ -130,11 +127,16 @@ async function showPronosticForm(interaction, tournamentId) {
     });
   }
 
-  // Récupère les pronos en cours (non soumis)
   const currentPreds = existing?.predictions || {};
-
   const leftMatches = matches.filter(m => m.side === 'left');
   const rightMatches = matches.filter(m => m.side === 'right');
+  const allMatches = [...leftMatches, ...rightMatches];
+
+  const pageSize = 4;
+  const totalPages = Math.ceil(allMatches.length / pageSize);
+  const safePage = Math.min(Math.max(page, 0), totalPages - 1);
+  const start = safePage * pageSize;
+  const pageMatches = allMatches.slice(start, start + pageSize);
 
   const embed = new EmbedBuilder()
     .setColor('#e67e22')
@@ -147,73 +149,91 @@ async function showPronosticForm(interaction, tournamentId) {
     .addFields(
       {
         name: '⬅️ Tableau Gauche',
-        value: leftMatches.map(m =>
-          `${currentPreds[m.id] ? (currentPreds[m.id] === m.team1?.id ? '✅' : '⬜') : '❓'} **${m.team1?.name}** vs **${m.team2?.name}** ${currentPreds[m.id] === m.team2?.id ? '✅' : ''}`
-        ).join('\n') || 'Aucun match',
+        value: leftMatches.map(m => {
+          const voted = currentPreds[m.id];
+          return `${voted ? '☑️' : '❓'} **${m.team1?.name}** vs **${m.team2?.name}**${voted ? ` → ${voted === m.team1?.id ? m.team1?.name : m.team2?.name}` : ''}`;
+        }).join('\n') || 'Aucun match',
         inline: true,
       },
       {
         name: '➡️ Tableau Droit',
-        value: rightMatches.map(m =>
-          `${currentPreds[m.id] ? (currentPreds[m.id] === m.team1?.id ? '✅' : '⬜') : '❓'} **${m.team1?.name}** vs **${m.team2?.name}** ${currentPreds[m.id] === m.team2?.id ? '✅' : ''}`
-        ).join('\n') || 'Aucun match',
+        value: rightMatches.map(m => {
+          const voted = currentPreds[m.id];
+          return `${voted ? '☑️' : '❓'} **${m.team1?.name}** vs **${m.team2?.name}**${voted ? ` → ${voted === m.team1?.id ? m.team1?.name : m.team2?.name}` : ''}`;
+        }).join('\n') || 'Aucun match',
         inline: true,
       },
     )
-    .setFooter({ text: `${Object.keys(currentPreds).length}/${matches.length} matchs votés` })
+    .setFooter({ text: `${Object.keys(currentPreds).length}/${allMatches.length} matchs votés • Page ${safePage + 1}/${totalPages}` })
     .setTimestamp();
 
   const components = [];
 
-  // Crée un select menu par match (max 5 par ActionRow, max 5 ActionRows)
-  const allMatches = [...leftMatches, ...rightMatches];
-  for (let i = 0; i < Math.min(allMatches.length, 4); i++) {
-    const m = allMatches[i];
+  for (const m of pageMatches) {
     const selected = currentPreds[m.id];
     const menu = new StringSelectMenuBuilder()
-      .setCustomId(`pronostic_vote_${tournamentId}_${m.id}`)
-      .setPlaceholder(`${m.side === 'left' ? '⬅️' : '➡️'} ${m.team1?.name} vs ${m.team2?.name}`)
+      .setCustomId(`pronostic_vote_${tournamentId}_${m.id}_${safePage}`)
+      .setPlaceholder(`${m.side === 'left' ? '⬅️ G' : '➡️ D'} — ${m.team1?.name} vs ${m.team2?.name}`)
       .addOptions([
         {
           label: m.team1?.name || 'Équipe 1',
           value: m.team1?.id,
-          description: `Seed ${m.team1?.seed} — Tableau ${m.side === 'left' ? 'Gauche' : 'Droit'}`,
+          description: `Tableau ${m.side === 'left' ? 'Gauche' : 'Droit'}`,
           default: selected === m.team1?.id,
         },
         {
           label: m.team2?.name || 'Équipe 2',
           value: m.team2?.id,
-          description: `Seed ${m.team2?.seed} — Tableau ${m.side === 'left' ? 'Gauche' : 'Droit'}`,
+          description: `Tableau ${m.side === 'left' ? 'Gauche' : 'Droit'}`,
           default: selected === m.team2?.id,
         },
       ]);
     components.push(new ActionRowBuilder().addComponents(menu));
   }
 
-  // Bouton soumettre
-  const allVoted = matches.every(m => currentPreds[m.id]);
-  const submitBtn = new ButtonBuilder()
-    .setCustomId(`pronostic_submit_${tournamentId}`)
-    .setLabel(allVoted ? '✅ Soumettre mes pronostics' : `⏳ Vote sur tous les matchs (${Object.keys(currentPreds).length}/${matches.length})`)
-    .setStyle(allVoted ? ButtonStyle.Success : ButtonStyle.Secondary)
-    .setDisabled(!allVoted);
+  const navRow = new ActionRowBuilder();
 
-  components.push(new ActionRowBuilder().addComponents(submitBtn));
+  if (safePage > 0) {
+    navRow.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`pronostic_page_${tournamentId}_${safePage - 1}`)
+        .setLabel('◀️ Précédent')
+        .setStyle(ButtonStyle.Secondary)
+    );
+  }
+
+  if (safePage < totalPages - 1) {
+    navRow.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`pronostic_page_${tournamentId}_${safePage + 1}`)
+        .setLabel('Suivant ▶️')
+        .setStyle(ButtonStyle.Secondary)
+    );
+  }
+
+  const allVoted = allMatches.every(m => currentPreds[m.id]);
+  navRow.addComponents(
+    new ButtonBuilder()
+      .setCustomId(`pronostic_submit_${tournamentId}`)
+      .setLabel(allVoted ? '✅ Soumettre mes pronostics' : `⏳ ${Object.keys(currentPreds).length}/${allMatches.length} votés`)
+      .setStyle(allVoted ? ButtonStyle.Success : ButtonStyle.Secondary)
+      .setDisabled(!allVoted)
+  );
+
+  components.push(navRow);
 
   await interaction.editReply({ embeds: [embed], components });
 }
 
-// ── Vote sur un match ─────────────────────────────────────────────────────────
 async function handleVoteSelect(interaction) {
   await interaction.deferUpdate();
 
   const parts = interaction.customId.split('_');
-  // pronostic_vote_{tournamentId}_{matchId}
   const tournamentId = parts[2];
   const matchId = parts[3];
+  const page = parseInt(parts[4]) || 0;
   const winnerId = interaction.values[0];
 
-  // Sauvegarde le vote (sans verrouiller)
   const { data: existing } = await supabase
     .from('tournament_predictions')
     .select('*')
@@ -240,11 +260,9 @@ async function handleVoteSelect(interaction) {
       });
   }
 
-  // Rafraîchit le formulaire
-  await showPronosticForm(interaction, tournamentId);
+  await showPronosticForm(interaction, tournamentId, page);
 }
 
-// ── Soumission des pronos ─────────────────────────────────────────────────────
 async function handleSubmit(interaction) {
   await interaction.deferUpdate();
 
@@ -261,7 +279,6 @@ async function handleSubmit(interaction) {
     return interaction.editReply({ content: '❌ Aucun pronostic trouvé.', components: [] });
   }
 
-  // Vérifie que tous les matchs R1 sont votés
   const { data: matches } = await supabase
     .from('tournament_matches')
     .select('id')
@@ -274,13 +291,9 @@ async function handleSubmit(interaction) {
   const allVoted = matches?.every(m => predictions[m.id]);
 
   if (!allVoted) {
-    return interaction.editReply({
-      content: '❌ Tu n\'as pas voté sur tous les matchs.',
-      components: [],
-    });
+    return interaction.editReply({ content: '❌ Tu n\'as pas voté sur tous les matchs.', components: [] });
   }
 
-  // Verrouille les pronos
   await supabase
     .from('tournament_predictions')
     .update({ locked_at: new Date().toISOString() })
@@ -312,7 +325,6 @@ async function handleSubmit(interaction) {
   });
 }
 
-// ── Affichage des pronos ──────────────────────────────────────────────────────
 async function showMyPredictions(interaction, tournamentId, myPrediction) {
   const { data: tournament } = await supabase
     .from('tournaments')
@@ -320,7 +332,6 @@ async function showMyPredictions(interaction, tournamentId, myPrediction) {
     .eq('id', tournamentId)
     .single();
 
-  // Récupère les matchs R1 avec les noms des équipes
   const { data: matches } = await supabase
     .from('tournament_matches')
     .select('*, team1:team1_id(id, name), team2:team2_id(id, name)')
@@ -367,7 +378,6 @@ async function handleViewPredictions(interaction) {
 
   const tournamentId = interaction.customId.split('_')[2];
 
-  // Vérifie que le membre a soumis ses propres pronos
   const { data: myPred } = await supabase
     .from('tournament_predictions')
     .select('*')
@@ -382,7 +392,6 @@ async function handleViewPredictions(interaction) {
     });
   }
 
-  // Récupère tous les pronos soumis
   const { data: allPreds } = await supabase
     .from('tournament_predictions')
     .select('*')
@@ -410,7 +419,6 @@ async function handleViewPredictions(interaction) {
     return interaction.editReply({ content: '❌ Aucun pronostic soumis pour l\'instant.', components: [] });
   }
 
-  // Calcule les stats par match
   const matchStats = {};
   for (const m of (matches || [])) {
     const votes = allPreds.map(p => p.predictions?.[m.id]).filter(Boolean);
@@ -423,7 +431,8 @@ async function handleViewPredictions(interaction) {
     const stats = matchStats[m.id];
     const pct1 = stats.total ? Math.round((stats.team1Votes / stats.total) * 100) : 0;
     const pct2 = stats.total ? Math.round((stats.team2Votes / stats.total) * 100) : 0;
-    return `**${m.team1?.name}** ${pct1}% vs ${pct2}% **${m.team2?.name}**`;
+    const side = m.side === 'left' ? '⬅️' : '➡️';
+    return `${side} **${m.team1?.name}** ${pct1}% vs ${pct2}% **${m.team2?.name}**`;
   }).join('\n') || 'Aucun match';
 
   const topPreds = allPreds.slice(0, 10).map((p, i) => {
@@ -437,16 +446,8 @@ async function handleViewPredictions(interaction) {
     .setColor('#f1c40f')
     .setTitle(`📊 Pronostics — ${tournament?.name}`)
     .addFields(
-      {
-        name: '📈 Tendances des votes',
-        value: lines,
-        inline: false,
-      },
-      {
-        name: `👥 Participants (${allPreds.length})`,
-        value: topPreds || 'Aucun',
-        inline: false,
-      },
+      { name: '📈 Tendances des votes', value: lines, inline: false },
+      { name: `👥 Participants (${allPreds.length})`, value: topPreds || 'Aucun', inline: false },
     )
     .setTimestamp();
 
