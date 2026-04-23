@@ -322,11 +322,39 @@ module.exports = {
         ],
       };
 
+      const rntAvailable = rntData && Object.keys(rntData).length > 0 && rntData.stats;
+
       const cardBuffer = await Promise.race([
-        renderProfileCard({ player: rendererPlayer, extra: rendererExtra, playerTag: bsTag }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Profile card timeout')), 10000)
-        )
+        renderProfileCard({
+          player: rntAvailable ? rntData : {
+            ...player,
+            stats: [
+              { id: 3,  value: player.trophies || 0 },
+              { id: 4,  value: player.highestTrophies || 0 },
+              { id: 1,  value: player['3vs3Victories'] || 0 },
+              { id: 8,  value: player.soloVictories || 0 },
+              { id: 11, value: player.duoVictories || 0 },
+              { id: 2,  value: player.expPoints || 0 },
+              { id: 5,  value: player.brawlers?.length || 0 },
+              { id: 24, value: 0 },
+              { id: 25, value: 0 },
+              { id: 30, value: player.totalPrestigeLevel || 0 },
+              { id: 31, value: 0 },
+              { id: 32, value: 0 },
+            ],
+          },
+          extra: rntAvailable ? {
+            expLevel: player.expLevel || 1,
+            expPoints: player.expPoints || 0,
+            clubName: player.club?.name || '',
+          } : {
+            expLevel: player.expLevel || 1,
+            expPoints: player.expPoints || 0,
+            clubName: player.club?.name || '',
+          },
+          playerTag: bsTag,
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Profile card timeout')), 10000))
       ]);
 
         const { AttachmentBuilder } = require('discord.js');

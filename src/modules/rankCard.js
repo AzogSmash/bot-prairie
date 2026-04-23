@@ -132,6 +132,11 @@ function normalizeRankCardData(bsPlayer, extra = {}) {
     winStreak: extra?.maxWinStreak ?? 0,
     prestigeTotal: extra?.totalPrestige ?? 0,
     brawlers: Array.isArray(bsPlayer?.brawlers) ? bsPlayer.brawlers : [],
+    gadgets:      (bsPlayer?.brawlers ?? []).reduce((sum, b) => sum + (b.gadgets?.length ?? 0), 0),
+    starPowers:   (bsPlayer?.brawlers ?? []).reduce((sum, b) => sum + (b.starPowers?.length ?? 0), 0),
+    hyperCharges: (bsPlayer?.brawlers ?? []).reduce((sum, b) => sum + (b.hyperCharges?.length ?? 0), 0),
+    gears:        (bsPlayer?.brawlers ?? []).reduce((sum, b) => sum + (b.gears?.length ?? 0), 0),
+    buffies:      (bsPlayer?.brawlers ?? []).reduce((sum, b) => sum + (b.buffies ? Object.values(b.buffies).filter(Boolean).length : 0), 0),
   };
 }
 
@@ -158,12 +163,10 @@ async function tryLoad(primaryLocalPath, fallbackLocalPath = null, remote = null
     const img = await loadLocal(p);
     if (img) return img;
   }
-
   if (remote?.cacheKey && remote?.url) {
     const img = await loadCachedRemote(remote.cacheKey, remote.url);
     if (img) return img;
   }
-
   return null;
 }
 
@@ -270,27 +273,19 @@ function fitText(ctx, text, maxWidth, startSize, weight = 900) {
   return size;
 }
 
-function drawMiniStatChip(ctx, { x, y, w, h, img, value, sub = "", subColor = "#bfc7d5" }) {
+// FIX 4 : icônes agrandis — iconSize = h - 4 au lieu de h - 12
+function drawMiniStatChip(ctx, { x, y, w, h, img, value }) {
   drawPanel(ctx, x, y, w, h, 8, "rgba(0,0,0,0.42)", "rgba(255,255,255,0.12)");
 
-  const iconSize = h - 12;
-  if (img) ctx.drawImage(img, S(x + 3), S(y + (h - iconSize) / 2), S(iconSize), S(iconSize));
+  const iconSize = h - 4;
+  if (img) ctx.drawImage(img, S(x + 2), S(y + (h - iconSize) / 2), S(iconSize), S(iconSize));
 
-  const tx = x + iconSize + 6;
+  const tx = x + iconSize + 5;
   ctx.textAlign = "left";
-  if (sub) {
-    ctx.textBaseline = "top";
-    ctx.font = FONT(16, 900);
-    outlined(ctx, value, tx, y + 3, "#ffffff", "#000000", 3);
-    ctx.font = FONT(11, 700);
-    ctx.fillStyle = subColor;
-    ctx.fillText(String(sub), S(tx), S(y + h - 10));
-  } else {
-    ctx.textBaseline = "middle";
-    const size = fitText(ctx, String(value), Math.max(28, w - iconSize - 10), 16, 900);
-    ctx.font = FONT(size, 900);
-    outlined(ctx, value, tx, y + h / 2, "#ffffff", "#000000", 3);
-  }
+  ctx.textBaseline = "middle";
+  const size = fitText(ctx, String(value), Math.max(28, w - iconSize - 8), 15, 900);
+  ctx.font = FONT(size, 900);
+  outlined(ctx, value, tx, y + h / 2, "#ffffff", "#000000", 3);
 }
 
 function drawIdentityBlock(ctx, data, assets, x, y, w, h) {
@@ -335,15 +330,16 @@ function drawIdentityBlock(ctx, data, assets, x, y, w, h) {
   const pillGap = 10;
   const pillW = Math.floor((textW - pillGap) / 2);
 
+  // FIX 4 : icônes pills agrandis — 28x28 au lieu de 24x24
   drawPanel(ctx, textX, pillY, pillW, pillH, 8, "rgba(0,0,0,0.42)", "rgba(255,255,255,0.08)");
-  if (assets.icPrestige) ctx.drawImage(assets.icPrestige, S(textX + 4), S(pillY + 4), S(24), S(24));
+  if (assets.icPrestige) ctx.drawImage(assets.icPrestige, S(textX + 2), S(pillY + 2), S(28), S(28));
   ctx.textBaseline = "middle";
-  outlined(ctx, String(data.prestigeTotal), textX + 32, pillY + pillH / 2, "#ffffff", "#000000", 3);
+  outlined(ctx, String(data.prestigeTotal), textX + 34, pillY + pillH / 2, "#ffffff", "#000000", 3);
 
   const wsX = textX + pillW + pillGap;
   drawPanel(ctx, wsX, pillY, pillW, pillH, 8, "rgba(0,0,0,0.42)", "rgba(255,255,255,0.08)");
-  if (assets.icWinStreak) ctx.drawImage(assets.icWinStreak, S(wsX + 4), S(pillY + 4), S(24), S(24));
-  outlined(ctx, String(data.winStreak), wsX + 32, pillY + pillH / 2, "#ffb15f", "#000000", 3);
+  if (assets.icWinStreak) ctx.drawImage(assets.icWinStreak, S(wsX + 2), S(pillY + 2), S(28), S(28));
+  outlined(ctx, String(data.winStreak), wsX + 34, pillY + pillH / 2, "#ffb15f", "#000000", 3);
 }
 
 function drawProgressBlock(ctx, data, assets, x, y, w, h) {
@@ -351,7 +347,8 @@ function drawProgressBlock(ctx, data, assets, x, y, w, h) {
 
   const line1Y = y + 24;
   const line2Y = y + 92;
-  const iconSize = 36;
+  // FIX 4 : icônes trophées/record agrandis — 56 au lieu de 36
+  const iconSize = 56;
   const barX = x + 18 + iconSize + 6;
   const barW = w - 18 - 14 - iconSize - 6;
   const barH = 26;
@@ -366,35 +363,29 @@ function drawProgressBlock(ctx, data, assets, x, y, w, h) {
   if (assets.icRecord) ctx.drawImage(assets.icRecord, S(x + 10), S(line2Y - 5), S(iconSize), S(iconSize));
   drawProgressBar(ctx, barX, line2Y, barW, barH, data.recordPoints / Math.max(data.recordMax, 1));
   outlined(ctx, `${fmt(data.recordPoints)} / ${fmt(data.recordMax)}`, barX + 8, line2Y + barH / 2, "#ffffff", "#000000", 3);
-  
-  const recBadgeW = 64;
-  const recBadgeH = 30;
-  const recBadgeX = x + w - recBadgeW - 12;
-  const recBadgeY = line2Y - 2;
 
-  drawPanel(ctx, recBadgeX, recBadgeY, recBadgeW, recBadgeH, 8, "rgba(0,0,0,0.48)", "rgba(255,255,255,0.12)");
+  // FIX 1 : badge L0 masqué si recordLevel = 0
+  if (data.recordLevel > 0) {
+    const recBadgeW = 64;
+    const recBadgeH = 30;
+    const recBadgeX = x + w - recBadgeW - 12;
+    const recBadgeY = line2Y - 2;
 
-  if (assets.icRecord) {
-    ctx.drawImage(assets.icRecord, S(recBadgeX + 4), S(recBadgeY + 4), S(22), S(22));
+    drawPanel(ctx, recBadgeX, recBadgeY, recBadgeW, recBadgeH, 8, "rgba(0,0,0,0.48)", "rgba(255,255,255,0.12)");
+    if (assets.icRecord) {
+      ctx.drawImage(assets.icRecord, S(recBadgeX + 4), S(recBadgeY + 4), S(22), S(22));
+    }
+    ctx.font = FONT(13, 900);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    outlined(ctx, `L${data.recordLevel}`, recBadgeX + 30, recBadgeY + recBadgeH / 2, "#ffffff", "#000000", 3);
   }
 
-  ctx.font = FONT(13, 900);
+  ctx.font = FONT(11, 900);
   ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  outlined(
-    ctx,
-    `L${Math.max(0, Number(data.recordLevel || 0))}`,
-    recBadgeX + 30,
-    recBadgeY + recBadgeH / 2,
-    "#ffffff",
-    "#000000",
-    3
-  );
-    ctx.font = FONT(11, 900);
-    ctx.textAlign = "left";
-    ctx.textBaseline = "bottom";
-    outlined(ctx, "TROPHÉES", barX, line1Y - 5, "#d9e3ff", "#000000", 3);
-    outlined(ctx, "RECORD", barX, line2Y - 5, "#d9e3ff", "#000000", 3);
+  ctx.textBaseline = "bottom";
+  outlined(ctx, "TROPHÉES", barX, line1Y - 5, "#d9e3ff", "#000000", 3);
+  outlined(ctx, "RECORD", barX, line2Y - 5, "#d9e3ff", "#000000", 3);
 }
 
 function drawMiniStatsBlock(ctx, data, assets, x, y, w, h) {
@@ -409,21 +400,21 @@ function drawMiniStatsBlock(ctx, data, assets, x, y, w, h) {
   const row2Y = row1Y + cellH + 10;
   const startX = x + sidePad;
 
-  const accountDisplay = data.accountCreation
-    ? String(data.accountCreation)
-    : new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).replace(/\//g, ".");
+  // FIX 2 : "undefined" remplacé par "—"
+  const accountDisplay = data.accountCreation ? String(data.accountCreation) : "—";
 
   const row1 = [
-    { img: assets.ic3v3, value: fmt(data.wins3v3) },
-    { img: assets.icDuo, value: fmt(data.duoWins) },
-    { img: assets.icSolo, value: fmt(data.soloWins) },
+    { img: assets.ic3v3,     value: fmt(data.wins3v3) },
+    { img: assets.icDuo,     value: fmt(data.duoWins) },
+    { img: assets.icSolo,    value: fmt(data.soloWins) },
     { img: assets.icTrophies, value: `${data.ownedCount}/${data.totalCount}` },
     { img: assets.icAccount, value: accountDisplay },
   ];
 
+  // FIX 3 : sous-labels ranked supprimés
   const row2 = [
-    { img: assets.curTierImg, value: fmt(data.currentRanked), sub: data.currentRankedLabel, subColor: "#69d0ff" },
-    { img: assets.hiTierImg, value: fmt(data.highestRanked), sub: data.highestRankedLabel, subColor: "#ffd86f" },
+    { img: assets.curTierImg, value: fmt(data.currentRanked) },
+    { img: assets.hiTierImg,  value: fmt(data.highestRanked) },
     { img: assets.icPrestige, value: String(data.prestigeTotal) },
     { img: assets.icWinStreak, value: String(data.winStreak) },
   ];
@@ -431,7 +422,21 @@ function drawMiniStatsBlock(ctx, data, assets, x, y, w, h) {
   for (let i = 0; i < cols; i += 1) {
     const cellX = startX + i * (cellW + gap);
     drawMiniStatChip(ctx, { x: cellX, y: row1Y, w: cellW, h: cellH, ...row1[i] });
-    drawMiniStatChip(ctx, { x: cellX, y: row2Y, w: cellW, h: cellH, ...row2[i] });
+    if (i < row2.length) {
+      drawMiniStatChip(ctx, { x: cellX, y: row2Y, w: cellW, h: cellH, ...row2[i] });
+    }
+  }
+  const row3 = [
+    { img: null, value: `${data.gadgets} gadgets` },
+    { img: null, value: `${data.starPowers} SP` },
+    { img: null, value: `${data.hyperCharges} HC` },
+    { img: null, value: `${data.gears} gears` },
+    { img: null, value: `${data.buffies} buffies` },
+  ];
+
+  for (let i = 0; i < cols; i += 1) {
+    const cellX = startX + i * (cellW + gap);
+    drawMiniStatChip(ctx, { x: cellX, y: row2Y + cellH + 10, w: cellW, h: cellH, ...row3[i] });
   }
 }
 

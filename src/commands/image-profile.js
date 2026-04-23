@@ -2,6 +2,8 @@ const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 const { getPlayer } = require('../lib/brawlapi');
 const { supabase } = require('../lib/supabase');
 const { renderProfileCard } = require('../modules/profileCardExact');
+const { fetchRntProfile } = require('../lib/rntapi');
+const { getPreferredBsTag } = require('../lib/brawlAccounts');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -17,22 +19,39 @@ module.exports = {
     await interaction.deferReply();
 
     const target = interaction.options.getUser('membre') || interaction.user;
+    const bsTag = await getPreferredBsTag(target.id);
 
-    const { data } = await supabase
-      .from('members')
-      .select('brawlstars_tag')
-      .eq('discord_id', target.id)
-      .maybeSingle();
-
-    if (!data?.brawlstars_tag) {
+    if (!bsTag) {
       return interaction.editReply({
         content: `❌ **${target.username}** n'a pas encore lié son compte BS.\nUtilise \`/lier #TAG\` pour commencer !`
       });
     }
 
     try {
-      const player = await getPlayer(data.brawlstars_tag);
-      const buffer = await renderProfileCard({ player, extra: {}, playerTag: data.brawlstars_tag });
+      const [player, rnt] = await Promise.all([
+        getPlayer(bsTag),
+        fetchRntProfile(bsTag).catch(() => null),
+      ]);
+
+      const rntData = rnt?.result || rnt || {};
+      const rntAvailable = rntData && Object.keys(rntData).length > 0 && rntData.stats;
+
+      if (!rntAvailable) {
+        return interaction.editReply({
+          content: '🔧 Mise à jour en cours — les visuels reviennent très bientôt !'
+        });
+      }
+
+      const buffer = await renderProfileCard({
+        player: rntData,
+        extra: {
+          expLevel: player.expLevel || 1,
+          expPoints: player.expPoints || 0,
+          clubName: player.club?.name || '',
+        },
+        playerTag: bsTag,
+      });
+
       const attachment = new AttachmentBuilder(buffer, { name: 'carte-profil.png' });
       await interaction.editReply({ files: [attachment] });
     } catch (err) {
