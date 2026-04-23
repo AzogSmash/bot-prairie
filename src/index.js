@@ -124,6 +124,10 @@ client.on('interactionCreate', async interaction => {
       const rusheursCmd = require('./commands/rusheurs');
       await rusheursCmd.handleSelect(interaction);
     }
+    if (interaction.customId.startsWith('pronostic_')) {
+      const pronosticCmd = require('./commands/pronostic');
+      await pronosticCmd.handleSelect(interaction);
+    }
     return;
   }
 
@@ -185,7 +189,11 @@ client.on('interactionCreate', async interaction => {
       }
       return;
     }
-
+    if (interaction.customId.startsWith('pronostic_')) {
+      const pronosticCmd = require('./commands/pronostic');
+      await pronosticCmd.handleButton(interaction);
+      return;
+    }
     return;
   }
 
