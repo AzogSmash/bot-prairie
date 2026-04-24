@@ -128,6 +128,10 @@ client.on('interactionCreate', async interaction => {
       const pronosticCmd = require('./commands/pronostic');
       await pronosticCmd.handleSelect(interaction);
     }
+    if (interaction.customId.startsWith('bracket_')) {
+      const bracketCmd = require('./commands/tournoi-bracket');
+      await bracketCmd.handleSelect(interaction);
+    }
     return;
   }
 
@@ -192,6 +196,11 @@ client.on('interactionCreate', async interaction => {
     if (interaction.customId.startsWith('pronostic_')) {
       const pronosticCmd = require('./commands/pronostic');
       await pronosticCmd.handleButton(interaction);
+      return;
+    }
+    if (interaction.customId.startsWith('bracket_')) {
+      const bracketCmd = require('./commands/tournoi-bracket');
+      await bracketCmd.handleButton(interaction);
       return;
     }
     return;
