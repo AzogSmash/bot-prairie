@@ -185,16 +185,26 @@ module.exports = {
       const mainCount = rows.filter(r => !r.is_substitute).length;
       const subCount = rows.filter(r => r.is_substitute).length;
 
+      const participantLines = rows
+        .filter(r => !r.is_substitute)
+        .sort((a, b) => b.elo - a.elo)
+        .map(r => `**${r.discord_username}** — ${r.elo > 0 ? `${r.elo} elo` : '⚪ Unranked'}`)
+        .join('\n');
+
+      const substituteLines = rows
+        .filter(r => r.is_substitute)
+        .map(r => `**${r.discord_username}** — ${r.elo > 0 ? `${r.elo} elo` : '⚪ Unranked'}`)
+        .join('\n');
+
       const embed = new EmbedBuilder()
         .setColor('#2ecc71')
         .setTitle(`✅ Participants inscrits — ${tournament.name}`)
-        .addFields(
-          { name: '👥 Participants', value: `${mainCount}`, inline: true },
-          { name: '🔄 Remplaçants', value: `${subCount}`, inline: true },
-          { name: '⚠️ Sans compte BS', value: noAccount.length ? noAccount.join(', ') : 'Aucun', inline: false },
-          { name: '📊 Elo 0 (unranked)', value: noElo.length ? noElo.join(', ') : 'Aucun', inline: false },
-        )
         .setDescription(`Utilise \`/tournoi-composer\` pour générer les équipes automatiquement.`)
+        .addFields(
+          { name: `👥 Participants (${rows.filter(r => !r.is_substitute).length})`, value: participantLines || 'Aucun', inline: false },
+          { name: `🔄 Remplaçants (${rows.filter(r => r.is_substitute).length})`, value: substituteLines || 'Aucun', inline: false },
+          { name: '⚠️ Sans compte BS', value: noAccount.length ? noAccount.join(', ') : 'Aucun', inline: false },
+        )
         .setTimestamp();
 
       await interaction.editReply({ embeds: [embed] });
