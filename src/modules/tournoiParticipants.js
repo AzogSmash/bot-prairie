@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { supabase } = require('../lib/supabase');
 const { getPlayer } = require('../lib/brawlapi');
+const { fetchRntProfile } = require('../lib/rntapi');
 
 // ── Noms de brawlers pour les équipes ─────────────────────────────────────────
 const TEAM_NAMES = [
@@ -24,14 +25,20 @@ async function getActiveTournament() {
 }
 
 // ── Récupère l'elo ranked depuis RNT ou BS officiel ───────────────────────────
+
+
 async function getPlayerElo(bsTag) {
   try {
-    const player = await getPlayer(bsTag);
-    // Elo ranked depuis l'API officielle
-    const elo = player?.currentRankedSeason?.soloRank?.currentTrophies
-      ?? player?.currentRankedSeason?.soloRank?.highestTrophies
-      ?? 0;
-    return { elo, name: player?.name || bsTag };
+    const rnt = await fetchRntProfile(bsTag).catch(() => null);
+    const rntData = rnt?.result || rnt || {};
+    
+    // Cherche l'elo ranked dans les stats RNT
+    const stats = rntData?.stats || [];
+    const currentRanked = stats.find(s => s.id === 24)?.value ?? 0;
+    const highestRanked = stats.find(s => s.id === 25)?.value ?? 0;
+    const elo = currentRanked || highestRanked || 0;
+    
+    return { elo, name: rntData?.name || bsTag };
   } catch {
     return { elo: 0, name: bsTag };
   }
