@@ -93,9 +93,11 @@ module.exports = {
 
       if (mode === 'role') {
         if (!role) return interaction.editReply({ content: '❌ Tu dois spécifier un rôle.' });
-        await interaction.guild.members.fetch();
-        const roleMembers = interaction.guild.roles.cache.get(role.id)?.members;
-        participantIds = roleMembers ? [...roleMembers.keys()] : [];
+        const fetchedRole = await interaction.guild.roles.fetch(role.id);
+        const roleMembers = await interaction.guild.members.fetch({ force: false });
+        participantIds = roleMembers
+          .filter(m => m.roles.cache.has(role.id))
+          .map(m => m.id);
       } else {
         if (!membresRaw) return interaction.editReply({ content: '❌ Tu dois spécifier des membres.' });
         const matches = membresRaw.match(/<@!?(\d+)>/g) || [];
