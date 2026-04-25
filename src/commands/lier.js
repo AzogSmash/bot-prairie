@@ -15,7 +15,7 @@ module.exports = {
     .setDescription('Lie ton compte Brawl Stars à ton profil Prairie')
     .addStringOption(option =>
       option.setName('tag')
-        .setDescription('Tag Brawl Stars (ex: #2ABC123)')
+        .setDescription('Tag Brawl Stars (ex: 2ABC123)')
         .setRequired(true)
     )
     .addUserOption(option =>

@@ -387,11 +387,11 @@ module.exports = {
   tournoiComposer: {
     data: new SlashCommandBuilder()
       .setName('tournoi-composer')
-      .setDescription('Compose les équipes automatiquement selon l\'elo (staff only)')
+      .setDescription('Génère le bracket et ouvre les pronos (staff only)')
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
       .addIntegerOption(o =>
         o.setName('membres_par_equipe')
-          .setDescription('Nombre de membres par équipe (défaut: 3)')
+          .setDescription('Nombre de membres par équipe pour le mode auto (défaut: 3)')
           .setRequired(false)
           .setMinValue(1)
           .setMaxValue(5)
@@ -403,89 +403,136 @@ module.exports = {
       const tournament = await getActiveTournament();
       if (!tournament) return interaction.editReply({ content: '❌ Aucun tournoi en cours.' });
 
-      const membersPerTeam = interaction.options.getInteger('membres_par_equipe') ?? 3;
-
-      const { data: participants } = await supabase
-        .from('tournament_participants')
+      // Vérifie si des équipes existent déjà (mode manuel)
+      const { data: existingTeams } = await supabase
+        .from('tournament_teams')
         .select('*')
         .eq('tournament_id', tournament.id)
-        .eq('is_substitute', false)
-        .order('elo', { ascending: false });
+        .order('side').order('seed');
 
-      if (!participants?.length) return interaction.editReply({ content: '❌ Aucun participant inscrit.' });
+      const hasManualTeams = existingTeams?.length > 0;
 
-      const totalTeams = Math.floor(participants.length / membersPerTeam);
-      if (totalTeams < 2) return interaction.editReply({ content: `❌ Pas assez de participants.` });
-      if (totalTeams !== tournament.size) {
-        return interaction.editReply({
-          content: `⚠️ Il faut exactement **${tournament.size * membersPerTeam} participants** pour ce tournoi (actuellement ${participants.length}).`
-        });
-      }
+      if (hasManualTeams) {
+        // ── MODE MANUEL — équipes déjà créées via /tournoi-equipe-manuel ──────
+        const leftTeams  = existingTeams.filter(t => t.side === 'left').sort((a, b) => a.seed - b.seed);
+        const rightTeams = existingTeams.filter(t => t.side === 'right').sort((a, b) => a.seed - b.seed);
 
-      // Snake draft puis optimisation
-      const sorted = [...participants].sort((a, b) => b.elo - a.elo);
-      let teams = snakeDraft(sorted, totalTeams);
-      teams = optimizeTeams(teams);
-
-      // Supprime équipes + matchs + membres existants
-      await supabase.from('tournament_team_members').delete().eq('tournament_id', tournament.id);
-      await supabase.from('tournament_matches').delete().eq('tournament_id', tournament.id);
-      await supabase.from('tournament_teams').delete().eq('tournament_id', tournament.id);
-
-      const half = totalTeams / 2;
-      const leftTeams  = teams.slice(0, half);
-      const rightTeams = teams.slice(half);
-
-      // Insère les équipes
-      const teamRows = [
-        ...leftTeams.map((t, i)  => ({ tournament_id: tournament.id, name: t.name, side: 'left',  seed: i + 1 })),
-        ...rightTeams.map((t, i) => ({ tournament_id: tournament.id, name: t.name, side: 'right', seed: i + 1 })),
-      ];
-
-      const { data: insertedTeams, error: teamError } = await supabase.from('tournament_teams').insert(teamRows).select();
-      if (teamError) { console.error('[TournoiComposer]', teamError); return interaction.editReply({ content: '❌ Erreur lors de la création des équipes.' }); }
-
-      const teamMap = {};
-      for (const t of insertedTeams) teamMap[`${t.side}_${t.seed}`] = t.id;
-
-      // Insère les membres
-      const memberRows = [];
-      const allTeams = [...leftTeams, ...rightTeams];
-      for (let i = 0; i < allTeams.length; i++) {
-        const side   = i < half ? 'left' : 'right';
-        const seed   = i < half ? i + 1 : i - half + 1;
-        const teamId = teamMap[`${side}_${seed}`];
-        for (const p of allTeams[i].members) {
-          memberRows.push({ team_id: teamId, tournament_id: tournament.id, discord_id: p.discord_id, discord_username: p.discord_username, bs_tag: p.bs_tag, elo: p.elo, is_substitute: false });
+        if (leftTeams.length === 0 || rightTeams.length === 0) {
+          return interaction.editReply({ content: '❌ Il faut des équipes des deux côtés.' });
         }
+
+        // Supprime les matchs existants et régénère
+        await supabase.from('tournament_matches').delete().eq('tournament_id', tournament.id);
+        await generateAndSaveMatches(tournament.id, leftTeams, rightTeams);
+
+        // Récupère les membres pour l'affichage
+        const { data: teamMembers } = await supabase
+          .from('tournament_team_members')
+          .select('*')
+          .eq('tournament_id', tournament.id);
+
+        const membersMap = {};
+        for (const m of (teamMembers || [])) {
+          if (!membersMap[m.team_id]) membersMap[m.team_id] = [];
+          membersMap[m.team_id].push(m.discord_username);
+        }
+
+        const leftLines  = leftTeams.map(t  => `**${t.name}** — ${(membersMap[t.id] || []).join(', ')}`).join('\n');
+        const rightLines = rightTeams.map(t => `**${t.name}** — ${(membersMap[t.id] || []).join(', ')}`).join('\n');
+
+        const embed = new EmbedBuilder()
+          .setColor('#2ecc71')
+          .setTitle(`✅ Bracket généré — ${tournament.name}`)
+          .setDescription(`**${existingTeams.length} équipes** — mode manuel\nLe bracket et les pronos sont maintenant disponibles !`)
+          .addFields(
+            { name: '⬅️ Tableau Gauche', value: leftLines  || 'Aucune', inline: false },
+            { name: '➡️ Tableau Droit',  value: rightLines || 'Aucune', inline: false },
+          )
+          .setFooter({ text: 'Utilise /tournoi-démarrer pour verrouiller les pronos' })
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+
+      } else {
+        // ── MODE AUTO — compose les équipes depuis les participants ───────────
+        const membersPerTeam = interaction.options.getInteger('membres_par_equipe') ?? 3;
+
+        const { data: participants } = await supabase
+          .from('tournament_participants')
+          .select('*')
+          .eq('tournament_id', tournament.id)
+          .eq('is_substitute', false)
+          .order('elo', { ascending: false });
+
+        if (!participants?.length) return interaction.editReply({ content: '❌ Aucun participant inscrit. Utilise `/tournoi-participants` ou `/tournoi-equipe-manuel`.' });
+
+        const totalTeams = Math.floor(participants.length / membersPerTeam);
+        if (totalTeams < 2) return interaction.editReply({ content: `❌ Pas assez de participants.` });
+        if (totalTeams !== tournament.size) {
+          return interaction.editReply({
+            content: `⚠️ Il faut exactement **${tournament.size * membersPerTeam} participants** pour ce tournoi (actuellement ${participants.length}).`
+          });
+        }
+
+        const sorted = [...participants].sort((a, b) => b.elo - a.elo);
+        let teams = snakeDraft(sorted, totalTeams);
+        teams = optimizeTeams(teams);
+
+        await supabase.from('tournament_team_members').delete().eq('tournament_id', tournament.id);
+        await supabase.from('tournament_matches').delete().eq('tournament_id', tournament.id);
+        await supabase.from('tournament_teams').delete().eq('tournament_id', tournament.id);
+
+        const half = totalTeams / 2;
+        const leftTeams  = teams.slice(0, half);
+        const rightTeams = teams.slice(half);
+
+        const teamRows = [
+          ...leftTeams.map((t, i)  => ({ tournament_id: tournament.id, name: t.name, side: 'left',  seed: i + 1 })),
+          ...rightTeams.map((t, i) => ({ tournament_id: tournament.id, name: t.name, side: 'right', seed: i + 1 })),
+        ];
+
+        const { data: insertedTeams, error: teamError } = await supabase.from('tournament_teams').insert(teamRows).select();
+        if (teamError) { console.error('[TournoiComposer]', teamError); return interaction.editReply({ content: '❌ Erreur lors de la création des équipes.' }); }
+
+        const teamMap = {};
+        for (const t of insertedTeams) teamMap[`${t.side}_${t.seed}`] = t.id;
+
+        const memberRows = [];
+        const allTeams = [...leftTeams, ...rightTeams];
+        for (let i = 0; i < allTeams.length; i++) {
+          const side   = i < half ? 'left' : 'right';
+          const seed   = i < half ? i + 1 : i - half + 1;
+          const teamId = teamMap[`${side}_${seed}`];
+          for (const p of allTeams[i].members) {
+            memberRows.push({ team_id: teamId, tournament_id: tournament.id, discord_id: p.discord_id, discord_username: p.discord_username, bs_tag: p.bs_tag, elo: p.elo, is_substitute: false });
+          }
+        }
+
+        await supabase.from('tournament_team_members').insert(memberRows);
+
+        const insertedLeft  = insertedTeams.filter(t => t.side === 'left').sort((a, b) => a.seed - b.seed);
+        const insertedRight = insertedTeams.filter(t => t.side === 'right').sort((a, b) => a.seed - b.seed);
+        await generateAndSaveMatches(tournament.id, insertedLeft, insertedRight);
+
+        const avgDeviation = Math.round(stdDev(teams));
+        const leftLines  = leftTeams.map(t  => { const avg = Math.round(teamAvgElo(t));  return `**${t.name}** [~${avg}] — ${t.members.map(m => `${m.discord_username} (${m.elo})`).join(', ')}`; }).join('\n');
+        const rightLines = rightTeams.map(t => { const avg = Math.round(teamAvgElo(t)); return `**${t.name}** [~${avg}] — ${t.members.map(m => `${m.discord_username} (${m.elo})`).join(', ')}`; }).join('\n');
+
+        const embed = new EmbedBuilder()
+          .setColor('#2ecc71')
+          .setTitle(`✅ Équipes composées — ${tournament.name}`)
+          .setDescription(`**${totalTeams} équipes** de **${membersPerTeam} membres** • Écart moyen : **${avgDeviation} elo**\nLe bracket et les pronos sont maintenant disponibles !`)
+          .addFields(
+            { name: '⬅️ Tableau Gauche', value: leftLines  || 'Aucune', inline: false },
+            { name: '➡️ Tableau Droit',  value: rightLines || 'Aucune', inline: false },
+          )
+          .setFooter({ text: 'Utilise /tournoi-ajuster pour modifier une équipe' })
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
       }
 
-      await supabase.from('tournament_team_members').insert(memberRows);
-
-      // Génère les matchs
-      const insertedLeft  = insertedTeams.filter(t => t.side === 'left').sort((a, b) => a.seed - b.seed);
-      const insertedRight = insertedTeams.filter(t => t.side === 'right').sort((a, b) => a.seed - b.seed);
-      await generateAndSaveMatches(tournament.id, insertedLeft, insertedRight);
-
-      // Affichage
-      const avgDeviation = Math.round(stdDev(teams));
-      const leftLines  = leftTeams.map(t  => { const avg = Math.round(teamAvgElo(t));  return `**${t.name}** [~${avg}] — ${t.members.map(m => `${m.discord_username} (${m.elo})`).join(', ')}`; }).join('\n');
-      const rightLines = rightTeams.map(t => { const avg = Math.round(teamAvgElo(t)); return `**${t.name}** [~${avg}] — ${t.members.map(m => `${m.discord_username} (${m.elo})`).join(', ')}`; }).join('\n');
-
-      const embed = new EmbedBuilder()
-        .setColor('#2ecc71')
-        .setTitle(`✅ Équipes composées — ${tournament.name}`)
-        .setDescription(`**${totalTeams} équipes** de **${membersPerTeam} membres** • Écart moyen entre équipes : **${avgDeviation} elo**\nLe bracket et les pronos sont maintenant disponibles !`)
-        .addFields(
-          { name: '⬅️ Tableau Gauche', value: leftLines  || 'Aucune', inline: false },
-          { name: '➡️ Tableau Droit',  value: rightLines || 'Aucune', inline: false },
-        )
-        .setFooter({ text: 'Utilise /tournoi-ajuster pour modifier une équipe' })
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-
-      // Génère et envoie l'image du bracket
+      // Génère l'image du bracket dans les deux cas
       const updatedTournament = await getActiveTournament();
       if (updatedTournament) {
         sendOrUpdateBracketImage(interaction.client, updatedTournament).catch(() => {});

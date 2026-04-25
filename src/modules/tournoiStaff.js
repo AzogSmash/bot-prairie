@@ -115,11 +115,17 @@ module.exports = {
         .setColor('#2ecc71')
         .setTitle(`🏆 Tournoi créé — ${nom}`)
         .setDescription(
-          `Tournoi créé avec succès !\n\n` +
-          `**Prochaines étapes :**\n` +
-          `1. Ajoute les équipes avec \`/tournoi-équipes\`\n` +
-          `2. Lance le tournoi avec \`/tournoi-démarrer\`\n\n` +
-          `⚠️ Tu as besoin de **${taille / 2} équipes par côté**`
+        `✅ Tournoi **${nom}** créé !\n\n` +
+        `**📋 Flow complet :**\n` +
+        `1️⃣ \`/tournoi-participants\` — Inscris les joueurs et récupère leurs elos\n` +
+        `2️⃣ \`/tournoi-composer\` — Génère les équipes équilibrées + le bracket + ouvre les pronos\n` +
+        `3️⃣ \`/tournoi-ajuster\` — Modifie un elo ou échange des membres si besoin\n` +
+        `4️⃣ \`/pronostic\` — Les membres font leurs pronos avant le début\n` +
+        `5️⃣ \`/tournoi-démarrer\` — Verrouille les pronos et démarre officiellement\n` +
+        `6️⃣ \`/tournoi-bracket\` — Entre les résultats match par match\n` +
+        `7️⃣ \`/tournoi-terminer\` — Clôture et affiche le classement des pronos\n\n` +
+        `**💡 Mode manuel :** \`/tournoi-équipes\` pour entrer les équipes à la main au lieu de \`/tournoi-composer\`\n` +
+        `⚠️ Ce tournoi nécessite **${taille / 2} équipes par côté**`
         )
         .addFields(
           { name: '👥 Taille', value: `${taille} équipes`, inline: true },

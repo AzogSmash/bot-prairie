@@ -26,7 +26,14 @@ client.commands = new Collection();
 
 // Chargement des commandes
 const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'));
+const DISABLED_COMMANDS = [
+  'pronostic.js',
+];
+
+const commandFiles = fs
+  .readdirSync(commandsPath)
+  .filter(f => f.endsWith('.js'))
+  .filter(f => !DISABLED_COMMANDS.includes(f));
 const commandsData = [];
 
 for (const file of commandFiles) {

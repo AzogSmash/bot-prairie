@@ -88,6 +88,38 @@ module.exports = {
   },
 };
 
+function computePredictionScore(matches, predictions) {
+  const finishedMatches = matches.filter(m => m.winner_id);
+
+  const leftMatches = finishedMatches.filter(m => m.side === 'left');
+  const rightMatches = finishedMatches.filter(m => m.side === 'right');
+  const finalMatches = finishedMatches.filter(m => m.side === 'final' || m.is_final === true);
+
+  const leftCorrect =
+    leftMatches.length > 0 &&
+    leftMatches.every(m => predictions[m.id] === m.winner_id);
+
+  const rightCorrect =
+    rightMatches.length > 0 &&
+    rightMatches.every(m => predictions[m.id] === m.winner_id);
+
+  const finalCorrect =
+    finalMatches.length > 0 &&
+    predictions[finalMatches[0].id] === finalMatches[0].winner_id;
+
+  const score =
+    (leftCorrect ? 1 : 0) +
+    (rightCorrect ? 1 : 0) +
+    (finalCorrect ? 1 : 0);
+
+  return {
+    score,
+    left_correct: leftCorrect,
+    right_correct: rightCorrect,
+    final_correct: finalCorrect,
+  };
+}
+
 async function showPronosticForm(interaction, tournamentId, page = 0) {
   const { data: tournament } = await supabase
     .from('tournaments')
@@ -110,15 +142,15 @@ async function showPronosticForm(interaction, tournamentId, page = 0) {
     return showMyPredictions(interaction, tournamentId, existing);
   }
 
-  const { data: matches } = await supabase
+    const { data: matches } = await supabase
     .from('tournament_matches')
     .select('*, team1:team1_id(id, name, seed, side), team2:team2_id(id, name, seed, side)')
     .eq('tournament_id', tournamentId)
-    .eq('round', 1)
     .not('team1_id', 'is', null)
     .not('team2_id', 'is', null)
-    .order('side')
-    .order('match_order');
+    .order('round', { ascending: true })
+    .order('side', { ascending: true })
+    .order('match_order', { ascending: true });
 
   if (!matches?.length) {
     return interaction.editReply({
@@ -128,9 +160,11 @@ async function showPronosticForm(interaction, tournamentId, page = 0) {
   }
 
   const currentPreds = existing?.predictions || {};
-  const leftMatches = matches.filter(m => m.side === 'left');
-  const rightMatches = matches.filter(m => m.side === 'right');
-  const allMatches = [...leftMatches, ...rightMatches];
+    const leftMatches = matches.filter(m => m.side === 'left');
+    const rightMatches = matches.filter(m => m.side === 'right');
+    const finalMatches = matches.filter(m => m.side === 'final' || m.round === 999 || m.is_final === true);
+
+    const allMatches = [...leftMatches, ...rightMatches, ...finalMatches];
 
   const pageSize = 4;
   const totalPages = Math.ceil(allMatches.length / pageSize);
@@ -163,6 +197,14 @@ async function showPronosticForm(interaction, tournamentId, page = 0) {
         }).join('\n') || 'Aucun match',
         inline: true,
       },
+      {
+        name: '🏆 Finale',
+        value: finalMatches.map(m => {
+            const voted = currentPreds[m.id];
+            return `${voted ? '☑️' : '❓'} **${m.team1?.name}** vs **${m.team2?.name}**${voted ? ` → ${voted === m.team1?.id ? m.team1?.name : m.team2?.name}` : ''}`;
+        }).join('\n') || 'Finale pas encore disponible',
+        inline: false,
+        },
     )
     .setFooter({ text: `${Object.keys(currentPreds).length}/${allMatches.length} matchs votés • Page ${safePage + 1}/${totalPages}` })
     .setTimestamp();
@@ -279,13 +321,12 @@ async function handleSubmit(interaction) {
     return interaction.editReply({ content: '❌ Aucun pronostic trouvé.', components: [] });
   }
 
-  const { data: matches } = await supabase
-    .from('tournament_matches')
-    .select('id')
-    .eq('tournament_id', tournamentId)
-    .eq('round', 1)
-    .not('team1_id', 'is', null)
-    .not('team2_id', 'is', null);
+const { data: matches } = await supabase
+  .from('tournament_matches')
+  .select('id')
+  .eq('tournament_id', tournamentId)
+  .not('team1_id', 'is', null)
+  .not('team2_id', 'is', null);
 
   const predictions = existing.predictions || {};
   const allVoted = matches?.every(m => predictions[m.id]);
@@ -336,7 +377,6 @@ async function showMyPredictions(interaction, tournamentId, myPrediction) {
     .from('tournament_matches')
     .select('*, team1:team1_id(id, name), team2:team2_id(id, name)')
     .eq('tournament_id', tournamentId)
-    .eq('round', 1)
     .not('team1_id', 'is', null)
     .not('team2_id', 'is', null)
     .order('side')
@@ -403,7 +443,6 @@ async function handleViewPredictions(interaction) {
     .from('tournament_matches')
     .select('*, team1:team1_id(id, name), team2:team2_id(id, name)')
     .eq('tournament_id', tournamentId)
-    .eq('round', 1)
     .not('team1_id', 'is', null)
     .not('team2_id', 'is', null)
     .order('side')

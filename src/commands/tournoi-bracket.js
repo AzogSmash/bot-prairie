@@ -141,25 +141,62 @@ module.exports = {
   },
 
   async handleButton(interaction) {
-    if (interaction.customId === 'bracket_refresh') {
-      await interaction.deferUpdate();
-      const tournament = await getActiveTournament();
-      if (!tournament) return interaction.editReply({ content: '❌ Aucun tournoi en cours.', components: [] });
+if (interaction.customId === 'bracket_refresh') {
+    await interaction.deferUpdate();
+    const tournament = await getActiveTournament();
+    if (!tournament) return interaction.editReply({ content: '❌ Aucun tournoi en cours.', components: [] });
 
-      const { data: matches } = await supabase
+    const { data: matches } = await supabase
         .from('tournament_matches')
         .select('*')
         .eq('tournament_id', tournament.id)
         .order('side').order('round').order('match_order');
 
-      const { data: teams } = await supabase
+    const { data: teams } = await supabase
         .from('tournament_teams')
         .select('*')
         .eq('tournament_id', tournament.id);
 
-      const embed = await buildBracketEmbed(tournament, matches, teams);
-      const components = buildComponents(tournament, matches, teams, interaction.member);
-      await interaction.editReply({ embeds: [embed], components });
+    const teamMap = {};
+    for (const t of (teams || [])) teamMap[t.id] = t;
+
+    // Affiche tous les matchs terminés pour correction
+    const finishedMatches = matches.filter(m => m.status === 'finished' && m.team1_id && m.team2_id);
+    const maxRound = Math.max(...matches.filter(m => m.side !== 'final').map(m => m.round));
+
+    const embed = await buildBracketEmbed(tournament, matches, teams);
+    embed.setDescription(`✏️ **Quel résultat veux-tu modifier ?**`);
+
+    const components = [];
+
+    const refreshRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+        .setCustomId('bracket_refresh')
+        .setLabel('✏️ Modifier un résultat')
+        .setStyle(ButtonStyle.Secondary)
+    );
+    components.push(refreshRow);
+
+    if (finishedMatches.length > 0) {
+        const menu = new StringSelectMenuBuilder()
+        .setCustomId(`bracket_match_${tournament.id}`)
+        .setPlaceholder('Choisis le match à corriger')
+        .addOptions(
+            finishedMatches.slice(0, 25).map(m => {
+            const t1 = teamMap[m.team1_id]?.name ?? '?';
+            const t2 = teamMap[m.team2_id]?.name ?? '?';
+            const sideLabel = m.side === 'left' ? '<' : m.side === 'right' ? '>' : 'F';
+            const roundLabel = getRoundLabel(m.round, maxRound);
+            return {
+                label: `${sideLabel} ${roundLabel} — ${t1} vs ${t2}`,
+                value: m.id,
+            };
+            })
+        );
+        components.push(new ActionRowBuilder().addComponents(menu));
+    }
+
+    await interaction.editReply({ embeds: [embed], components });
     }
   },
 };
@@ -172,9 +209,9 @@ function buildComponents(tournament, matches, teams, member) {
   // Bouton refresh toujours visible
   const refreshRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId('bracket_refresh')
-      .setLabel('🔄 Actualiser')
-      .setStyle(ButtonStyle.Secondary)
+    .setCustomId('bracket_refresh')
+    .setLabel('✏️ Modifier un résultat')
+    .setStyle(ButtonStyle.Secondary)
   );
   components.push(refreshRow);
 
