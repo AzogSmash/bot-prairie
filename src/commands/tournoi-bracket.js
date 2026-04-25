@@ -8,6 +8,7 @@ const {
   PermissionFlagsBits,
 } = require('discord.js');
 const { supabase } = require('../lib/supabase');
+const { sendOrUpdateBracketImage } = require('../modules/tournoiParticipants');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 async function getActiveTournament() {
@@ -264,6 +265,84 @@ async function handleMatchSelect(interaction) {
   });
 }
 
+// ── Propagation du gagnant vers le match suivant ──────────────────────────────
+async function propagateWinner(tournamentId, finishedMatch, winnerId) {
+  const { round, side, match_order } = finishedMatch;
+
+  // Récupère tous les matchs du tournoi
+  const { data: allMatches } = await supabase
+    .from('tournament_matches')
+    .select('*')
+    .eq('tournament_id', tournamentId)
+    .eq('side', side)
+    .order('round')
+    .order('match_order');
+
+  if (!allMatches?.length) return;
+
+  const maxRound = Math.max(...allMatches.map(m => m.round));
+  const nextRound = round + 1;
+  const nextMatches = allMatches.filter(m => m.round === nextRound);
+  if (!nextMatches.length) return;
+
+  // Logique de propagation selon la structure du bracket
+  // Les matchs du round actuel alimentent le match suivant
+  const currentRoundMatches = allMatches.filter(m => m.round === round).sort((a, b) => a.match_order - b.match_order);
+
+  // Trouve l'index du match terminé dans son round
+  const matchIndex = currentRoundMatches.findIndex(m => m.id === finishedMatch.id);
+
+  // Détermine quel match du round suivant reçoit ce gagnant
+  // et si c'est team1 ou team2
+  let targetMatchOrder, isTeam1;
+
+  // Pour n=6 :
+  // R1m1 → R2m1 team1, R1m2 → R2m1 team2, R1(bye seed5v6) → R2m2 (déjà rempli)
+  // R2m1 → R3m1 team1, R2m2 → R3m1 team2
+  
+  // Règle générale : les matchs se propagent par paires vers le round suivant
+  // match_order 1,2 → next match_order 1 (team1=gagnant m1, team2=gagnant m2)
+  // match_order 3,4 → next match_order 2 etc.
+
+  const nextMatchOrder = Math.ceil(match_order / 2);
+  isTeam1 = match_order % 2 === 1;
+
+  const targetMatch = nextMatches.find(m => m.match_order === nextMatchOrder);
+  if (!targetMatch) return;
+
+  const updateField = isTeam1 ? { team1_id: winnerId } : { team2_id: winnerId };
+  await supabase
+    .from('tournament_matches')
+    .update(updateField)
+    .eq('id', targetMatch.id);
+
+  // Si les deux équipes sont maintenant remplies, marque comme pending
+  const { data: updatedMatch } = await supabase
+    .from('tournament_matches')
+    .select('*')
+    .eq('id', targetMatch.id)
+    .single();
+
+  // Vérifie si c'est la finale — propager le gagnant de la finale de poule vers la grande finale
+  if (updatedMatch?.round === maxRound && updatedMatch?.status !== 'finished') {
+    // Gagnant de la finale de poule → grande finale
+    const { data: finalMatch } = await supabase
+      .from('tournament_matches')
+      .select('*')
+      .eq('tournament_id', tournamentId)
+      .eq('side', 'final')
+      .single();
+
+    if (finalMatch) {
+      const isFinalTeam1 = side === 'left';
+      await supabase
+        .from('tournament_matches')
+        .update(isFinalTeam1 ? { team1_id: null } : { team2_id: null })
+        .eq('id', finalMatch.id);
+    }
+  }
+}
+
 // ── Sélection du gagnant ──────────────────────────────────────────────────────
 async function handleWinnerSelect(interaction) {
   await interaction.deferUpdate();
@@ -273,11 +352,49 @@ async function handleWinnerSelect(interaction) {
   const matchId = parts[3];
   const winnerId = interaction.values[0];
 
+  // Récupère le match avant de l'update
+  const { data: finishedMatch } = await supabase
+    .from('tournament_matches')
+    .select('*')
+    .eq('id', matchId)
+    .single();
+
   // Enregistre le résultat
   await supabase
     .from('tournament_matches')
     .update({ winner_id: winnerId, status: 'finished' })
     .eq('id', matchId);
+
+  // Propage le gagnant vers le match suivant
+  if (finishedMatch) {
+    await propagateWinner(tournamentId, finishedMatch, winnerId);
+
+    // Si c'est une finale de poule, propage vers la grande finale
+    const { data: allMatches } = await supabase
+      .from('tournament_matches')
+      .select('*')
+      .eq('tournament_id', tournamentId)
+      .eq('side', finishedMatch.side);
+
+    const maxRound = Math.max(...(allMatches || []).map(m => m.round));
+
+    if (finishedMatch.round === maxRound) {
+      const { data: finalMatch } = await supabase
+        .from('tournament_matches')
+        .select('*')
+        .eq('tournament_id', tournamentId)
+        .eq('side', 'final')
+        .single();
+
+      if (finalMatch) {
+        const isFinalTeam1 = finishedMatch.side === 'left';
+        await supabase
+          .from('tournament_matches')
+          .update(isFinalTeam1 ? { team1_id: winnerId } : { team2_id: winnerId })
+          .eq('id', finalMatch.id);
+      }
+    }
+  }
 
   // Recalcule les scores des pronos
   await recalculateScores(tournamentId);
@@ -306,6 +423,9 @@ async function handleWinnerSelect(interaction) {
 
   const components = buildComponents(tournament, matches, teams, interaction.member);
   await interaction.editReply({ embeds: [embed], components });
+
+  // Met à jour l'image du bracket
+  sendOrUpdateBracketImage(interaction.client, tournament).catch(() => {});
 }
 
 // ── Recalcul des scores ───────────────────────────────────────────────────────

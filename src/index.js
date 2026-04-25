@@ -31,6 +31,10 @@ const commandsData = [];
 
 for (const file of commandFiles) {
   const command = require(path.join(commandsPath, file));
+  if (!command?.data) {
+    console.error('❌ Commande invalide:', file);
+    continue;
+  }
   client.commands.set(command.data.name, command);
   commandsData.push(command.data.toJSON());
 }

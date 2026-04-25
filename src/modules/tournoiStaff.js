@@ -85,9 +85,12 @@ module.exports = {
           .setDescription('Nombre total d\'équipes')
           .setRequired(true)
           .addChoices(
-            { name: '12 équipes', value: 12 },
-            { name: '24 équipes', value: 24 },
-            { name: '48 équipes', value: 48 },
+            { name: '8 équipes (4 par côté)', value: 8 },
+            { name: '12 équipes (6 par côté)', value: 12 },
+            { name: '16 équipes (8 par côté)', value: 16 },
+            { name: '24 équipes (12 par côté)', value: 24 },
+            { name: '32 équipes (16 par côté)', value: 32 },
+            { name: '48 équipes (24 par côté)', value: 48 },
           )
       ),
 
@@ -137,46 +140,29 @@ module.exports = {
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
 
     async execute(interaction) {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: 64 });
 
       const tournament = await getActiveTournament(['open']);
       if (!tournament) return interaction.editReply({ content: '❌ Aucun tournoi ouvert trouvé.' });
 
-      const { data: teams } = await supabase
-        .from('tournament_teams')
-        .select('*')
-        .eq('tournament_id', tournament.id)
-        .order('side').order('seed');
-
-      if (!teams || teams.length !== tournament.size) {
-        return interaction.editReply({
-          content: `❌ Il manque des équipes — ${teams?.length ?? 0}/${tournament.size} ajoutées.`
-        });
-      }
-
-      const leftTeams = teams.filter(t => t.side === 'left').sort((a, b) => a.seed - b.seed);
-      const rightTeams = teams.filter(t => t.side === 'right').sort((a, b) => a.seed - b.seed);
-      const teamsPerSide = tournament.size / 2;
-
-      const leftMatches = generateSideMatches(tournament.id, 'left', leftTeams.slice(0, teamsPerSide));
-      const rightMatches = generateSideMatches(tournament.id, 'right', rightTeams.slice(0, teamsPerSide));
-      const finalMatch = generateFinalMatch(tournament.id);
-
-      const { error: matchError } = await supabase
+      // Vérifie que les matchs ont bien été générés par /tournoi-composer
+      const { count: matchCount } = await supabase
         .from('tournament_matches')
-        .insert([...leftMatches, ...rightMatches, finalMatch]);
+        .select('*', { count: 'exact', head: true })
+        .eq('tournament_id', tournament.id);
 
-      if (matchError) {
-        console.error('[TournoiDémarrer]', matchError);
-        return interaction.editReply({ content: '❌ Erreur lors de la génération du bracket.' });
+      if (!matchCount) {
+        return interaction.editReply({ content: '❌ Le bracket n\'est pas encore généré. Utilise `/tournoi-composer` d\'abord.' });
       }
 
+      // Verrouille les pronos
       await supabase
         .from('tournament_predictions')
         .update({ locked_at: new Date().toISOString() })
         .eq('tournament_id', tournament.id)
         .is('locked_at', null);
 
+      // Met à jour le statut
       await supabase
         .from('tournaments')
         .update({ status: 'started' })
@@ -190,11 +176,11 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor('#e67e22')
         .setTitle(`🏆 ${tournament.name} — Tournoi démarré !`)
-        .setDescription('Le bracket a été généré et les pronos sont verrouillés.')
+        .setDescription('Les pronos sont maintenant verrouillés. Le tournoi commence !')
         .addFields(
           { name: '👥 Équipes', value: `${tournament.size}`, inline: true },
           { name: '🎯 Pronos verrouillés', value: `${pronoCount ?? 0}`, inline: true },
-          { name: '🎮 Matchs générés', value: `${leftMatches.length + rightMatches.length + 1}`, inline: true },
+          { name: '🎮 Matchs', value: `${matchCount}`, inline: true },
         )
         .setTimestamp();
 
@@ -225,7 +211,7 @@ module.exports = {
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
 
     async execute(interaction) {
-      await interaction.deferReply();
+      await interaction.deferReply({ flags: 64 });
 
       const tournament = await getActiveTournament(['started']);
       if (!tournament) return interaction.editReply({ content: '❌ Aucun tournoi en cours.' });

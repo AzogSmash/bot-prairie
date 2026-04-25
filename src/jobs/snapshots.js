@@ -108,7 +108,7 @@ async function updateRolesAndNotify(client, options = {}) {
   if (!guild) return;
 
   // Fetch tous les membres du serveur en une fois
-  await guild.members.fetch();
+  await guild.members.fetch({ limit: 1000 }).catch(() => {});
 
   // Récupère tous les membres liés
   const { data: linkedMembers } = await supabase
