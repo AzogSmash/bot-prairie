@@ -1,7 +1,8 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, AttachmentBuilder } = require('discord.js');
 const { supabase } = require('../lib/supabase');
 const { getPlayer } = require('../lib/brawlapi');
 const { fetchRntProfile } = require('../lib/rntapi');
+const { renderBracket } = require('./bracketRenderer');
 
 const TEAM_NAMES = [
   'Shelly', 'Colt', 'Bull', 'Brock', 'El Primo', 'Barley', 'Poco', 'Rosa',
@@ -214,15 +215,56 @@ function generateSideMatches(tournamentId, side, teams) {
 }
 
 async function generateAndSaveMatches(tournamentId, leftTeams, rightTeams) {
-  // Supprime les matchs existants
   await supabase.from('tournament_matches').delete().eq('tournament_id', tournamentId);
-
   const leftMatches  = generateSideMatches(tournamentId, 'left', leftTeams);
   const rightMatches = generateSideMatches(tournamentId, 'right', rightTeams);
   const finalMatch   = { tournament_id: tournamentId, round: 99, side: 'final', match_order: 1, team1_id: null, team2_id: null };
-
   await supabase.from('tournament_matches').insert([...leftMatches, ...rightMatches, finalMatch]);
 }
+
+// ── Envoie ou met à jour l'image du bracket ───────────────────────────────────
+async function sendOrUpdateBracketImage(client, tournament) {
+  try {
+    const channelId = process.env.TOURNAMENT_CHANNEL_ID;
+    if (!channelId) return;
+
+    const channel = await client.channels.fetch(channelId).catch(() => null);
+    if (!channel) return;
+
+    // Récupère les données
+    const { data: matches } = await supabase.from('tournament_matches').select('*').eq('tournament_id', tournament.id).order('side').order('round').order('match_order');
+    const { data: teams }   = await supabase.from('tournament_teams').select('*').eq('tournament_id', tournament.id);
+    const { data: members } = await supabase.from('tournament_team_members').select('*').eq('tournament_id', tournament.id);
+
+    if (!matches?.length) return;
+
+    const buffer = await renderBracket(tournament, matches, teams, members).catch(err => { console.error('[BracketImage]', err); return null; });
+    if (!buffer) return;
+
+    const attachment = new AttachmentBuilder(buffer, { name: 'bracket.png' });
+
+    // Met à jour le message existant ou en crée un nouveau
+    if (tournament.bracket_message_id && tournament.bracket_channel_id) {
+      try {
+        const ch  = await client.channels.fetch(tournament.bracket_channel_id);
+        const msg = await ch.messages.fetch(tournament.bracket_message_id);
+        await msg.edit({ content: `🏆 **${tournament.name}** — Bracket en cours`, files: [attachment] });
+        return;
+      } catch {
+        // Message supprimé — on en recrée un
+      }
+    }
+
+    // Nouveau message
+    const msg = await channel.send({ content: `🏆 **${tournament.name}** — Bracket en cours`, files: [attachment] });
+    await supabase.from('tournaments').update({ bracket_message_id: msg.id, bracket_channel_id: channel.id }).eq('id', tournament.id);
+
+  } catch (err) {
+    console.error('[sendOrUpdateBracketImage]', err);
+  }
+}
+
+module.exports.sendOrUpdateBracketImage = sendOrUpdateBracketImage;
 
 module.exports = {
   // ── /tournoi-participants ───────────────────────────────────────────────────
@@ -442,10 +484,14 @@ module.exports = {
         .setTimestamp();
 
       await interaction.editReply({ embeds: [embed] });
+
+      // Génère et envoie l'image du bracket
+      const updatedTournament = await getActiveTournament();
+      if (updatedTournament) {
+        sendOrUpdateBracketImage(interaction.client, updatedTournament).catch(() => {});
+      }
     }
   },
-
-  // ── /tournoi-ajuster ────────────────────────────────────────────────────────
   tournoiAjuster: {
     data: new SlashCommandBuilder()
       .setName('tournoi-ajuster')
