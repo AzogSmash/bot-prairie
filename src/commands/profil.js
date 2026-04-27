@@ -236,6 +236,8 @@ async function buildProfileEmbed(target, client) {
     rntData,
   };
 }
+console.log('[DEBUG PLAYER]', JSON.stringify(player, null, 2));
+console.log('[DEBUG RNT]', JSON.stringify(rntData, null, 2));
 
 module.exports = {
   data: new SlashCommandBuilder()
