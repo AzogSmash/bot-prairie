@@ -41,4 +41,19 @@ function getRankTierFromRankedScore(score = 0) {
   return "pro";
 }
 
-module.exports = { getRankedTierId, getRankTierFromRankedScore };
+const TIER_NAME_TO_ID = {
+  'bronze i': '58000000', 'bronze ii': '58000001', 'bronze iii': '58000002',
+  'silver i': '58000003', 'silver ii': '58000004', 'silver iii': '58000005',
+  'gold i': '58000006', 'gold ii': '58000007', 'gold iii': '58000008',
+  'diamond i': '58000009', 'diamond ii': '58000010', 'diamond iii': '58000011',
+  'mythic i': '58000012', 'mythic ii': '58000013', 'mythic iii': '58000014',
+  'legendary i': '58000015', 'legendary ii': '58000016', 'legendary iii': '58000017',
+  'masters i': '58000018', 'masters ii': '58000019', 'masters iii': '58000020',
+  'pro': '58000021',
+};
+
+function getRankedTierIdFromName(name = '') {
+  return TIER_NAME_TO_ID[name.toLowerCase()] ?? '58000000';
+}
+
+module.exports = { getRankedTierId, getRankTierFromRankedScore, getRankedTierIdFromName };

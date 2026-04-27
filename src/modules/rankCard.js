@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { createCanvas, loadImage } = require("@napi-rs/canvas");
 const { getCachedOrFetch } = require("../services/imageCache");
-const { getRankedTierId } = require("../services/rankedTiers");
+const { getRankedTierId, getRankedTierIdFromName } = require("../services/rankedTiers");
 
 const ASSETS = path.resolve(__dirname, "..", "assets");
 const BG_DIR = path.join(ASSETS, "backgrounds");
@@ -123,6 +123,8 @@ function normalizeRankCardData(bsPlayer, extra = {}) {
     currentRankedLabel: getRankedLabel(currentRanked),
     highestRanked,
     highestRankedLabel: getRankedLabel(highestRanked),
+    currentRankedName: extra?.currentRankedName ?? '',
+    highestRankedName: extra?.highestRankedName ?? '',
     recordPoints: extra?.recordPoints ?? 0,
     recordMax: extra?.recordMax ?? 45000,
     recordLevel: extra?.recordLevel ?? 0,
@@ -194,6 +196,12 @@ async function loadProfileIcon(iconId) {
 async function loadRankedTieredIcon(score = 0) {
   if (Number(score || 0) <= 0) return null;
   const id = getRankedTierId(score);
+  return tryLoad(path.join(RANKED_DIR, `${id}.png`));
+}
+
+async function loadRankedTieredIconFromName(rankName = '') {
+  if (!rankName) return null;
+  const id = getRankedTierIdFromName(rankName);
   return tryLoad(path.join(RANKED_DIR, `${id}.png`));
 }
 
@@ -456,7 +464,7 @@ async function preloadHeaderAssets(data) {
   ] = await Promise.all([
     loadProfileIcon(data.iconId),
     loadRankedTieredIcon(data.currentRanked),
-    loadRankedTieredIcon(data.highestRanked),
+    data.highestRankedName ? loadRankedTieredIconFromName(data.highestRankedName) : loadRankedTieredIcon(data.highestRanked),
     loadBorderlessIcon("winstreak.png"),
     loadBorderlessIcon("prestige.png"),
     tryLoad(path.join(ICONS_DIR, "trophies.png")),

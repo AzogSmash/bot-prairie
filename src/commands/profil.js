@@ -349,10 +349,12 @@ module.exports = {
             expLevel: player.expLevel || 1,
             expPoints: player.expPoints || 0,
             clubName: player.club?.name || '',
+            highestAllTimeRankedRankName: player.highestAllTimeRankedRankName || '',
           } : {
             expLevel: player.expLevel || 1,
             expPoints: player.expPoints || 0,
             clubName: player.club?.name || '',
+            highestAllTimeRankedRankName: player.highestAllTimeRankedRankName || '',
           },
           playerTag: bsTag,
         }),

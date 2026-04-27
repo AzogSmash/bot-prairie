@@ -4,7 +4,7 @@ const fs   = require('fs');
 const { registerFonts } = require('../services/registerFonts');
 const { getPlayer }     = require('../lib/brawlapi');
 const { generateRankCard } = require('../modules/rankCard');
-
+const { fetchRntProfile } = require('../lib/rntapi');
 registerFonts();
 
 async function main() {
@@ -15,21 +15,22 @@ async function main() {
   const bsPlayer = await getPlayer(`#${tag}`);
   console.log(`[TEST] Joueur: ${bsPlayer.name} — ${bsPlayer.brawlers?.length} brawlers`);
 
-  // Données RNT optionnelles — à brancher sur fetchRntProfile si besoin
-  const rntData = {
-    currentRankedPts: 1250,
-    highestRankedPts: 8343,
-    recordPoints:     30580,
-    totalBrawlers:    bsPlayer.brawlers?.length ?? 0,
-    accountCreation:  2018,
-    expLevel:         bsPlayer.expLevel ?? 225,
-    expProgress:      0.63,
-    expCurrent:       1425,
-    expMax:           2280,
-    famePoints:       0,
-    maxWinStreak:     43,
-    totalPrestige:    103,
-  };
+// Remplace le rntData hardcodé par :
+const rnt = await fetchRntProfile(`#${tag}`);
+const rntResult = rnt?.result || rnt || {};
+
+const rntData = {
+  currentRankedPts: rntResult.stats?.find(s => s.id === 24)?.value ?? 0,
+  currentRankedName: bsPlayer.rankedRankName ?? '',
+  highestRankedPts: rntResult.stats?.find(s => s.id === 25)?.value ?? 0,
+  highestRankedName: bsPlayer.highestAllTimeRankedRankName ?? '',
+  recordPoints: rntResult.stats?.find(s => s.id === 31)?.value ?? 0,
+  recordLevel: rntResult.stats?.find(s => s.id === 32)?.value ?? 0,
+  totalBrawlers: bsPlayer.brawlers?.length ?? 0,
+  accountCreation: rntResult.stats?.find(s => s.id === 27)?.value ?? null,
+  maxWinStreak: rntResult.max_winstreak ?? 0,
+  totalPrestige: bsPlayer.totalPrestigeLevel ?? 0,
+};
 
   console.log('[TEST] Génération rank card...');
   const buffer = await generateRankCard(bsPlayer, rntData);

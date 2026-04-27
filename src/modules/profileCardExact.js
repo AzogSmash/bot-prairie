@@ -6,7 +6,7 @@ const {
 } = require("@napi-rs/canvas");
 
 const { getCachedOrFetch } = require("../services/imageCache");
-const { getRankedTierId, getRankTierFromRankedScore } = require("../services/rankedTiers");
+const { getRankedTierId, getRankedTierIdFromName, getRankTierFromRankedScore } = require("../services/rankedTiers");
 const frameData = require("../services/frames.json");
 
 const ASSETS            = path.resolve(__dirname, "..", "assets");
@@ -398,6 +398,15 @@ async function loadProfileIcon(iconId) {
 async function loadRankedTieredIcon(score = 0) {
   const id = getRankedTierId(score);
 
+  return await tryLoad(
+    path.join(RANKED_TIERED_DIR, `${id}.png`),
+    path.join(RANKED_DIR, `${id}.png`)
+  );
+}
+
+async function loadRankedTieredIconFromName(rankName = '') {
+  if (!rankName) return null;
+  const id = getRankedTierIdFromName(rankName);
   return await tryLoad(
     path.join(RANKED_TIERED_DIR, `${id}.png`),
     path.join(RANKED_DIR, `${id}.png`)
@@ -854,7 +863,9 @@ async function renderProfileCard({ player, club, rankedTier, rankedScore, extra,
     loadLocal(path.join(BG_DIR, "fond_profil2.png")).catch(() => null),
     loadLocal(path.join(PROFILE_ICONS_DIR, `${iconId}.png`)).catch(() => null),
     loadRankedTieredIcon(currentRankedVal),
-    loadRankedTieredIcon(rankedVal),
+    extra?.highestAllTimeRankedRankName
+      ? loadRankedTieredIconFromName(extra.highestAllTimeRankedRankName)
+      : loadRankedTieredIcon(rankedVal),
     firstIconId  ? loadProfileIcon(firstIconId)  : Promise.resolve(null),
     secondIconId ? loadProfileIcon(secondIconId) : Promise.resolve(null),
     tryLoad(path.join(WORLDS_DIR, `${world.icon}.png`)),
