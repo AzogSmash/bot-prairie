@@ -180,7 +180,10 @@ async function buildProfileEmbed(target, client) {
     .eq('discord_id', target.id);
 
   const brawlers = player.brawlers || [];
-
+  if (brawlers.length > 0) {
+   console.log('[DEBUG GADGETS]', JSON.stringify(brawlers[0].gadgets, null, 2));
+   console.log('[DEBUG SP]', JSON.stringify(brawlers[0].starPowers, null, 2));
+  }
   // ── Collection ────────────────────────────────────────────────────────────
   const totalBrawlers   = brawlers.length;
   const maxedBrawlers   = brawlers.filter(b => b.power === 11).length;
