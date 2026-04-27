@@ -51,87 +51,61 @@ function getPrevMilestone(trophies) {
   return [...milestones].reverse().find(m => m <= trophies) || 0;
 }
 
-function progressBar(current, max, length = 12) {
+function progressBar(current, max, length = 10) {
   const filled = Math.min(Math.round((current / max) * length), length);
   return '█'.repeat(filled) + '░'.repeat(length - filled);
 }
 
 function modeLabel(mode) {
   const modes = {
-    gemGrab: '💎 Gem Grab', brawlBall: '⚽ Brawl Ball',
-    heist: '💰 Heist', bounty: '⭐ Bounty',
-    hotZone: '🔥 Hot Zone', knockout: '🥊 Knockout',
-    duoShowdown: '👥 Duo Showdown', soloShowdown: '☠️ Solo Showdown',
-    trioShowdown: '👥 Trio Showdown', wipeout: '💥 Wipeout', siege: '🤖 Siege',
+    gemGrab: 'Gem Grab', brawlBall: 'Brawl Ball',
+    heist: 'Heist', bounty: 'Bounty',
+    hotZone: 'Hot Zone', knockout: 'Knockout',
+    duoShowdown: 'Duo Showdown', soloShowdown: 'Solo Showdown',
+    trioShowdown: 'Trio Showdown', wipeout: 'Wipeout', siege: 'Siege',
   };
-  return modes[mode] || `🎮 ${mode}`;
+  return modes[mode] || mode;
 }
 
-function getRankedTier(elo) {
-  if (elo >= 11250) return 'Pro';
-  if (elo >= 8250)  return 'Masters';
-  if (elo >= 6000)  return 'Legendary';
-  if (elo >= 4500)  return 'Mythic';
-  if (elo >= 3000)  return 'Diamond';
-  if (elo >= 1500)  return 'Gold';
-  if (elo >= 750)   return 'Silver';
-  return 'Bronze';
-}
-
-function getRankedEmoji(elo) {
-  if (elo >= 11250) return '🔴'; // Pro
-  if (elo >= 8250)  return '🟣'; // Masters
-  if (elo >= 6000)  return '⭐'; // Legendary
-  if (elo >= 4500)  return '💎'; // Mythic
-  if (elo >= 3000)  return '🔷'; // Diamond
-  if (elo >= 1500)  return '🥇'; // Gold
-  if (elo >= 750)   return '🥈'; // Silver
-  return '🥉'; // Bronze
+function getRankedEmoji(rankName) {
+  if (!rankName) return '🥉';
+  const n = rankName.toLowerCase();
+  if (n.includes('pro'))       return '🔴';
+  if (n.includes('masters'))   return '🟣';
+  if (n.includes('legendary')) return '⭐';
+  if (n.includes('mythic'))    return '💎';
+  if (n.includes('diamond'))   return '🔷';
+  if (n.includes('gold'))      return '🥇';
+  if (n.includes('silver'))    return '🥈';
+  return '🥉';
 }
 
 async function getPushSnapshots(bsTag) {
   const now = new Date();
-
-  // Début du jour
-  const startOfDay = new Date(now);
-  startOfDay.setHours(0, 0, 0, 0);
-
-  // Début de la semaine (lundi)
+  const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
   const startOfWeek = new Date(now);
   startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
   startOfWeek.setHours(0, 0, 0, 0);
 
-  // Début de la saison
   const { data: season } = await supabase
-    .from('season_starts')
-    .select('started_at')
-    .order('started_at', { ascending: false })
-    .limit(1);
+    .from('season_starts').select('started_at')
+    .order('started_at', { ascending: false }).limit(1);
   const seasonStart = season?.[0]?.started_at;
 
-  // Snapshot actuel
   const { data: currentSnap } = await supabase
-    .from('trophies_snapshots')
-    .select('trophies')
-    .eq('bs_tag', bsTag)
-    .eq('type', 'hourly')
-    .order('snapshot_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .from('trophies_snapshots').select('trophies')
+    .eq('bs_tag', bsTag).eq('type', 'hourly')
+    .order('snapshot_at', { ascending: false }).limit(1).maybeSingle();
 
   const currentTrophies = currentSnap?.trophies;
   if (!currentTrophies) return { daily: null, weekly: null, season: null };
 
   async function getPushSince(since) {
     const { data } = await supabase
-      .from('trophies_snapshots')
-      .select('trophies')
-      .eq('bs_tag', bsTag)
-      .eq('type', 'hourly')
+      .from('trophies_snapshots').select('trophies')
+      .eq('bs_tag', bsTag).eq('type', 'hourly')
       .gte('snapshot_at', since.toISOString())
-      .order('snapshot_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .order('snapshot_at', { ascending: true }).limit(1).maybeSingle();
     if (!data) return null;
     const diff = currentTrophies - data.trophies;
     return diff > 0 ? diff : 0;
@@ -148,10 +122,7 @@ async function getPushSnapshots(bsTag) {
 
 async function buildProfileEmbed(target, client) {
   const { data, error } = await supabase
-    .from('members')
-    .select('*')
-    .eq('discord_id', target.id)
-    .single();
+    .from('members').select('*').eq('discord_id', target.id).single();
   const bsTag = await getPreferredBsTag(target.id);
   if (error || !data || !bsTag) return null;
 
@@ -168,79 +139,73 @@ async function buildProfileEmbed(target, client) {
   const sortedMembers = [...allClubMembers].sort((a, b) => b.trophies - a.trophies);
   const rankInFamily  = sortedMembers.findIndex(m => m.bsTag === player.tag) + 1;
   const totalInFamily = sortedMembers.length;
+  const isPrairie     = allClubMembers.some(m => m.bsTag === player.tag);
 
-  await supabase
-    .from('members')
-    .update({
-      brawlstars_tag: bsTag,
-      brawlstars_trophies: player.trophies,
-      club_name: player.club?.name || null,
-      last_seen_at: new Date().toISOString(),
-    })
-    .eq('discord_id', target.id);
+  await supabase.from('members').update({
+    brawlstars_tag: bsTag,
+    brawlstars_trophies: player.trophies,
+    club_name: player.club?.name || null,
+    last_seen_at: new Date().toISOString(),
+  }).eq('discord_id', target.id);
 
   const brawlers = player.brawlers || [];
-  if (brawlers.length > 0) {
-   console.log('[DEBUG GADGETS]', JSON.stringify(brawlers[0].gadgets, null, 2));
-   console.log('[DEBUG SP]', JSON.stringify(brawlers[0].starPowers, null, 2));
-  }
-  // ── Collection ────────────────────────────────────────────────────────────
-  const totalBrawlers   = brawlers.length;
-  const maxedBrawlers   = brawlers.filter(b => b.power === 11).length;
-  const hypercharges    = brawlers.filter(b => b.hyperCharges?.length > 0).length;
-  const totalGadgets    = brawlers.reduce((sum, b) => sum + (b.gadgets?.filter(g => g.gadget).length || 0), 0);
-  const maxGadgets      = brawlers.reduce((sum, b) => sum + (b.gadgets?.length || 0), 0);
-  const totalSP         = brawlers.reduce((sum, b) => sum + (b.starPowers?.filter(s => s.starPower).length || 0), 0);
-  const maxSP           = brawlers.reduce((sum, b) => sum + (b.starPowers?.length || 0), 0);
-  const totalGears      = brawlers.reduce((sum, b) => sum + (b.gears?.length || 0), 0);
-  const maxGears        = totalBrawlers * 2;
 
-  // ── Classé ────────────────────────────────────────────────────────────────
-  const rankedElo         = player.rankedElo || 0;
-  const rankedRankName    = player.rankedRankName || 'Bronze I';
-  const highestElo        = player.highestAllTimeRankedElo || 0;
-  const highestRankName   = player.highestAllTimeRankedRankName || '';
-  const rankedEmoji       = getRankedEmoji(rankedElo);
+  // ── Collection ──────────────────────────────────────────────────────────
+  const totalBrawlers = brawlers.length;
+  const maxedBrawlers = brawlers.filter(b => b.power === 11).length;
+  const hypercharges  = brawlers.filter(b => b.hyperCharges?.length > 0).length;
+  const totalGadgets  = brawlers.reduce((sum, b) => sum + (b.gadgets?.length || 0), 0);
+  const maxGadgets    = totalBrawlers * 2;
+  const totalSP       = brawlers.reduce((sum, b) => sum + (b.starPowers?.length || 0), 0);
+  const maxSP         = totalBrawlers * 2;
+  const totalGears    = brawlers.reduce((sum, b) => sum + (b.gears?.length || 0), 0);
+  const maxGears      = totalBrawlers * 2;
 
-  // ── Battle log ────────────────────────────────────────────────────────────
-  let winRate = null;
-  let lastMode = null;
-  let lastBrawler = null;
+  // ── Classé ──────────────────────────────────────────────────────────────
+  const rankedElo      = player.rankedElo || 0;
+  const rankedName     = player.rankedRankName || 'Bronze I';
+  const highestElo     = player.highestAllTimeRankedElo || 0;
+  const highestName    = player.highestAllTimeRankedRankName || 'Bronze I';
+  const rankedEmoji    = getRankedEmoji(rankedName);
+  const highestEmoji   = getRankedEmoji(highestName);
 
+  // ── Battle log ──────────────────────────────────────────────────────────
+  let winRate = null, lastMode = null, lastBrawler = null;
   if (battleLogData?.items?.length > 0) {
     const battles = battleLogData.items.slice(0, 25);
     const results = battles.filter(b => b.battle?.result);
     const wins    = results.filter(b => b.battle.result === 'victory').length;
     winRate = results.length > 0 ? Math.round((wins / results.length) * 100) : null;
-
-    const lastBattle = battles[0];
-    lastMode = lastBattle?.event?.mode || null;
-    if (lastBattle?.battle?.teams) {
-      const allPlayers = lastBattle.battle.teams.flat();
-      const me = allPlayers.find(p => p.tag === player.tag);
+    const last = battles[0];
+    lastMode = last?.event?.mode || null;
+    if (last?.battle?.teams) {
+      const me = last.battle.teams.flat().find(p => p.tag === player.tag);
       lastBrawler = me?.brawler?.name || null;
     }
   }
 
-  // ── Progression trophées ──────────────────────────────────────────────────
+  // ── Progression ─────────────────────────────────────────────────────────
   const nextMilestone = getNextMilestone(player.trophies);
   const prevMilestone = getPrevMilestone(player.trophies);
   const progress = nextMilestone
     ? progressBar(player.trophies - prevMilestone, nextMilestone - prevMilestone)
-    : '████████████';
+    : '██████████';
 
   const podiumEmojis = ['👑', '🥈', '🥉'];
   const rankEmoji    = rankInFamily <= 3 ? podiumEmojis[rankInFamily - 1] : '🌿';
   const color        = parseNameColor(player.nameColor);
   const bsIconUrl    = player.icon?.id
-    ? `https://cdn.brawlify.com/profile-icons/regular/${player.icon.id}.png`
-    : null;
+    ? `https://cdn.brawlify.com/profile-icons/regular/${player.icon.id}.png` : null;
 
-  // ── Rang Prairie ──────────────────────────────────────────────────────────
-  const isPrairie  = allClubMembers.some(m => m.bsTag === player.tag);
-  const rangPrairie = rankInFamily > 0 && isPrairie
-    ? `**#${rankInFamily}** / ${totalInFamily}`
+  const rangStr = rankInFamily > 0 && isPrairie
+    ? `${rankEmoji} **#${rankInFamily}** / ${totalInFamily}`
     : 'Hors Prairie';
+
+  const pushStr = [
+    `🔥 Aujourd'hui : **${pushData.daily !== null ? '+' + pushData.daily.toLocaleString('fr-FR') : '—'}**`,
+    `📅 Cette semaine : **${pushData.weekly !== null ? '+' + pushData.weekly.toLocaleString('fr-FR') : '—'}**`,
+    `🏆 Cette saison : **${pushData.season !== null ? '+' + pushData.season.toLocaleString('fr-FR') : '—'}**`,
+  ].join('\n');
 
   const embed = new EmbedBuilder()
     .setColor(color)
@@ -250,91 +215,78 @@ async function buildProfileEmbed(target, client) {
     })
     .setThumbnail(bsIconUrl || target.displayAvatarURL({ dynamic: true, size: 256 }))
 
-    // ── Bloc 1 : Trophées ────────────────────────────────────────────────
-    .addFields(
-      { name: '🏆 Trophées', value: `**${player.trophies.toLocaleString('fr-FR')}**`, inline: true },
-      { name: '📈 Record', value: `**${player.highestTrophies?.toLocaleString('fr-FR') || '?'}**`, inline: true },
-      { name: `${rankEmoji} Rang Prairie`, value: rangPrairie, inline: true },
-    )
-
-    // ── Progression ──────────────────────────────────────────────────────
+    // ── Trophées + Rang ──────────────────────────────────────────────────
     .addFields({
-      name: nextMilestone ? `Vers ${nextMilestone.toLocaleString('fr-FR')} trophées` : 'Progression',
-      value: nextMilestone
-        ? `\`${progress}\` ${player.trophies.toLocaleString('fr-FR')} / ${nextMilestone.toLocaleString('fr-FR')}`
-        : `\`████████████\` Palier max atteint 🎉`,
-      inline: false,
-    })
-
-    // ── Bloc 2 : Classé ──────────────────────────────────────────────────
-    .addFields(
-      {
-        name: `${rankedEmoji} Classé`,
-        value: `**${rankedRankName}** — ${rankedElo.toLocaleString('fr-FR')} pts`,
-        inline: true,
-      },
-      {
-        name: '🏅 Record classé',
-        value: `**${highestRankName}** — ${highestElo.toLocaleString('fr-FR')} pts`,
-        inline: true,
-      },
-      { name: '\u200b', value: '\u200b', inline: true },
-    )
-
-    // ── Bloc 3 : Victoires ───────────────────────────────────────────────
-    .addFields(
-      { name: '⚔️ 3v3', value: `**${player['3vs3Victories']?.toLocaleString('fr-FR') || '?'}**`, inline: true },
-      { name: '☠️ Solo', value: `**${player.soloVictories?.toLocaleString('fr-FR') || '?'}**`, inline: true },
-      { name: '👥 Duo', value: `**${player.duoVictories?.toLocaleString('fr-FR') || '?'}**`, inline: true },
-    )
-
-    // ── Bloc 4 : Collection ──────────────────────────────────────────────
-    .addFields(
-      { name: '🗂️ Brawlers', value: `**${totalBrawlers}** • ${maxedBrawlers} max`, inline: true },
-      { name: '⚡ Hypercharges', value: `**${hypercharges}**`, inline: true },
-      { name: '🎯 Niveau', value: `**${player.expLevel}** • Prestige **${player.totalPrestigeLevel || 0}**`, inline: true },
-    )
-    .addFields(
-      { name: '🔧 Gadgets', value: `**${totalGadgets}** / ${maxGadgets}`, inline: true },
-      { name: '⭐ Star Powers', value: `**${totalSP}** / ${maxSP}`, inline: true },
-      { name: '⚙️ Gears', value: `**${totalGears}** / ${maxGears}`, inline: true },
-    )
-
-    // ── Bloc 5 : Push ────────────────────────────────────────────────────
-    .addFields({
-      name: '🚀 Push',
+      name: '🏆 Trophées',
       value: [
-        `Aujourd'hui : **${pushData.daily !== null ? '+' + pushData.daily.toLocaleString('fr-FR') : '—'}** 🏆`,
-        `Cette semaine : **${pushData.weekly !== null ? '+' + pushData.weekly.toLocaleString('fr-FR') : '—'}** 🏆`,
-        `Cette saison : **${pushData.season !== null ? '+' + pushData.season.toLocaleString('fr-FR') : '—'}** 🏆`,
+        `🏆 **${player.trophies.toLocaleString('fr-FR')}** • Record : **${player.highestTrophies?.toLocaleString('fr-FR') || '?'}**`,
+        `\`${progress}\` ${player.trophies.toLocaleString('fr-FR')} / ${nextMilestone?.toLocaleString('fr-FR') || 'MAX'}`,
+        `${rangStr} dans la Prairie`,
       ].join('\n'),
       inline: false,
     })
 
-    // ── Bloc 6 : Dernières parties ───────────────────────────────────────
+    // ── Classé ───────────────────────────────────────────────────────────
+    .addFields({
+      name: '🎯 Classé',
+      value: [
+        `${rankedEmoji} Actuel : **${rankedName}** — ${rankedElo.toLocaleString('fr-FR')} pts`,
+        `${highestEmoji} Record : **${highestName}** — ${highestElo.toLocaleString('fr-FR')} pts`,
+      ].join('\n'),
+      inline: false,
+    })
+
+    // ── Victoires ────────────────────────────────────────────────────────
+    .addFields({
+      name: '⚔️ Victoires',
+      value: [
+        `⚔️ 3v3 : **${player['3vs3Victories']?.toLocaleString('fr-FR') || '?'}**  •  ☠️ Solo : **${player.soloVictories?.toLocaleString('fr-FR') || '?'}**  •  👥 Duo : **${player.duoVictories?.toLocaleString('fr-FR') || '?'}**`,
+      ].join('\n'),
+      inline: false,
+    })
+
+    // ── Collection ───────────────────────────────────────────────────────
+    .addFields({
+      name: '🗂️ Collection',
+      value: [
+        `🗂️ Brawlers : **${totalBrawlers}** • ${maxedBrawlers} au max • ⚡ ${hypercharges} HC`,
+        `🎯 Niveau **${player.expLevel}** • Prestige **${player.totalPrestigeLevel || 0}**`,
+        `🔧 Gadgets : **${totalGadgets}** / ${maxGadgets}  •  ⭐ Star Powers : **${totalSP}** / ${maxSP}  •  ⚙️ Gears : **${totalGears}** / ${maxGears}`,
+      ].join('\n'),
+      inline: false,
+    })
+
+    // ── Push ─────────────────────────────────────────────────────────────
+    .addFields({
+      name: '🚀 Push',
+      value: pushStr,
+      inline: false,
+    })
+
+    // ── Dernières parties ────────────────────────────────────────────────
     .addFields({
       name: '📊 25 dernières parties',
       value: [
-        winRate !== null ? `🎯 Win rate : **${winRate}%**` : null,
-        lastMode ? `🕹️ Dernier mode : **${modeLabel(lastMode)}**` : null,
-        lastBrawler ? `🎮 Dernier brawler : **${lastBrawler}**` : null,
+        winRate !== null    ? `🎯 Win rate : **${winRate}%**` : null,
+        lastMode            ? `🕹️ Dernier mode : **${modeLabel(lastMode)}**` : null,
+        lastBrawler         ? `🎮 Dernier brawler : **${lastBrawler}**` : null,
       ].filter(Boolean).join('\n') || 'Aucune partie récente',
       inline: false,
     })
 
     // ── Statut ───────────────────────────────────────────────────────────
     .addFields({
-      name: '📋 Statut Prairie',
-      value: data.status === 'staff'   ? '🛡️ Staff Prairie'
-           : data.status === 'inactif' ? '⚠️ Inactif'
-           : data.status === 'nouveau' ? '🆕 Nouveau membre'
-           : '✅ Membre actif',
-      inline: true,
+      name: '📋 Statut',
+      value: [
+        `🌿 ${player.club?.name || 'Sans club'}  •  ${
+          data.status === 'staff'   ? '🛡️ Staff Prairie' :
+          data.status === 'inactif' ? '⚠️ Inactif' :
+          data.status === 'nouveau' ? '🆕 Nouveau membre' :
+          '✅ Membre actif'
+        }`,
+      ].join('\n'),
+      inline: false,
     })
-    .addFields(
-      { name: '🌿 Club', value: player.club?.name || 'Sans club', inline: true },
-      { name: '\u200b', value: '\u200b', inline: true },
-    )
 
     .setFooter({ text: 'Prairie Brawl Stars • Stats en temps réel' })
     .setTimestamp();
@@ -345,7 +297,7 @@ async function buildProfileEmbed(target, client) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('profil-test')
-    .setDescription('Affiche le profil Prairie d\'un membre')
+    .setDescription('Test du nouveau profil (staff only)')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
     .addUserOption(option =>
       option.setName('membre')
@@ -362,18 +314,15 @@ module.exports = {
 
       if (!profileData) {
         return interaction.editReply({
-          content: `❌ **${target.username}** n'a pas encore lié son compte Brawl Stars.\nUtilise \`/lier #TAG\` pour commencer !`
+          content: `❌ **${target.username}** n'a pas encore lié son compte Brawl Stars.`
         });
       }
 
       const { embed, player, bsTag, rntData } = profileData;
 
       let cardAttachment = null;
-      let cardFailed = false;
-
       try {
         const rntAvailable = rntData && Object.keys(rntData).length > 0 && rntData.stats;
-
         const cardBuffer = await Promise.race([
           renderProfileCard({
             player: rntAvailable ? rntData : {
@@ -386,27 +335,19 @@ module.exports = {
                 { id: 11, value: player.duoVictories || 0 },
                 { id: 2,  value: player.expPoints || 0 },
                 { id: 5,  value: player.brawlers?.length || 0 },
-                { id: 24, value: 0 },
-                { id: 25, value: 0 },
+                { id: 24, value: 0 }, { id: 25, value: 0 },
                 { id: 30, value: player.totalPrestigeLevel || 0 },
-                { id: 31, value: 0 },
-                { id: 32, value: 0 },
+                { id: 31, value: 0 }, { id: 32, value: 0 },
               ],
             },
-            extra: {
-              expLevel: player.expLevel || 1,
-              expPoints: player.expPoints || 0,
-              clubName: player.club?.name || '',
-            },
+            extra: { expLevel: player.expLevel || 1, expPoints: player.expPoints || 0, clubName: player.club?.name || '' },
             playerTag: bsTag,
           }),
           new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
         ]);
-
         cardAttachment = new AttachmentBuilder(cardBuffer, { name: 'profile-card.png' });
         embed.setImage('attachment://profile-card.png');
       } catch (err) {
-        cardFailed = true;
         console.error('[PROFILE CARD FAIL]', bsTag, err.message);
       }
 
@@ -428,7 +369,7 @@ module.exports = {
       });
 
     } catch (err) {
-      console.error('[Profil]', err);
+      console.error('[ProfilTest]', err);
       await interaction.editReply({ content: '❌ Erreur lors de la récupération du profil.' });
     }
   }
