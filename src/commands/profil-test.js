@@ -68,16 +68,16 @@ function modeLabel(mode) {
 }
 
 function getRankedEmoji(rankName) {
-  if (!rankName) return '🥉';
+  if (!rankName) return 'X';
   const n = rankName.toLowerCase();
-  if (n.includes('pro'))       return '🔴';
-  if (n.includes('masters'))   return '🟣';
-  if (n.includes('legendary')) return '⭐';
-  if (n.includes('mythic'))    return '💎';
-  if (n.includes('diamond'))   return '🔷';
-  if (n.includes('gold'))      return '🥇';
-  if (n.includes('silver'))    return '🥈';
-  return '🥉';
+  if (n.includes('pro'))       return 'X'; // emoji_ranked_pro
+  if (n.includes('masters'))   return 'X'; // emoji_ranked_masters
+  if (n.includes('legendary')) return 'X'; // emoji_ranked_legendary
+  if (n.includes('mythic'))    return 'X'; // emoji_ranked_mythic
+  if (n.includes('diamond'))   return 'X'; // emoji_ranked_diamond
+  if (n.includes('gold'))      return 'X'; // emoji_ranked_gold
+  if (n.includes('silver'))    return 'X'; // emoji_ranked_silver
+  return 'X'; // emoji_ranked_bronze
 }
 
 async function getPushSnapshots(bsTag) {
@@ -215,76 +215,72 @@ async function buildProfileEmbed(target, client) {
     })
     .setThumbnail(bsIconUrl || target.displayAvatarURL({ dynamic: true, size: 256 }))
 
-    // ── Trophées + Rang ──────────────────────────────────────────────────
+    // ── Identité ─────────────────────────────────────────────────────────
     .addFields({
-      name: '🏆 Trophées',
+      name: `X ${player.club?.name || 'Sans club'}`,
       value: [
-        `🏆 **${player.trophies.toLocaleString('fr-FR')}** • Record : **${player.highestTrophies?.toLocaleString('fr-FR') || '?'}**`,
+        `${rangStr}  •  ${data.status === 'staff' ? '🛡️ Staff' : data.status === 'inactif' ? '⚠️ Inactif' : data.status === 'nouveau' ? '🆕 Nouveau' : '✅ Actif'}`,
+      ].join('\n'),
+      inline: false,
+    })
+
+    // ── Trophées ─────────────────────────────────────────────────────────
+    .addFields({
+      name: 'X Trophées',
+      value: [
+        `X **${player.trophies.toLocaleString('fr-FR')}** / X ${player.highestTrophies?.toLocaleString('fr-FR') || '?'}`,
         `\`${progress}\` ${player.trophies.toLocaleString('fr-FR')} / ${nextMilestone?.toLocaleString('fr-FR') || 'MAX'}`,
-        `${rangStr} dans la Prairie`,
       ].join('\n'),
       inline: false,
     })
 
     // ── Classé ───────────────────────────────────────────────────────────
     .addFields({
-      name: '🎯 Classé',
+      name: 'X Classé',
       value: [
-        `${rankedEmoji} Actuel : **${rankedName}** — ${rankedElo.toLocaleString('fr-FR')} pts`,
-        `${highestEmoji} Record : **${highestName}** — ${highestElo.toLocaleString('fr-FR')} pts`,
+        `${rankedEmoji} **${rankedName}** — ${rankedElo.toLocaleString('fr-FR')} pts`,
+        `${highestEmoji} **${highestName}** — ${highestElo.toLocaleString('fr-FR')} pts`,
       ].join('\n'),
       inline: false,
     })
 
     // ── Victoires ────────────────────────────────────────────────────────
     .addFields({
-      name: '⚔️ Victoires',
-      value: [
-        `⚔️ 3v3 : **${player['3vs3Victories']?.toLocaleString('fr-FR') || '?'}**  •  ☠️ Solo : **${player.soloVictories?.toLocaleString('fr-FR') || '?'}**  •  👥 Duo : **${player.duoVictories?.toLocaleString('fr-FR') || '?'}**`,
-      ].join('\n'),
+      name: 'X Victoires',
+      value: `X **${player['3vs3Victories']?.toLocaleString('fr-FR') || '?'}**  •  X **${player.soloVictories?.toLocaleString('fr-FR') || '?'}**  •  X **${player.duoVictories?.toLocaleString('fr-FR') || '?'}**`,
       inline: false,
     })
 
     // ── Collection ───────────────────────────────────────────────────────
     .addFields({
-      name: '🗂️ Collection',
+      name: 'X Collection',
       value: [
-        `🗂️ Brawlers : **${totalBrawlers}** • ${maxedBrawlers} au max • ⚡ ${hypercharges} HC`,
-        `🎯 Niveau **${player.expLevel}** • Prestige **${player.totalPrestigeLevel || 0}**`,
-        `🔧 Gadgets : **${totalGadgets}** / ${maxGadgets}  •  ⭐ Star Powers : **${totalSP}** / ${maxSP}  •  ⚙️ Gears : **${totalGears}** / ${maxGears}`,
+        `X **${totalBrawlers}** brawlers  •  X **${maxedBrawlers}** max  •  X **${hypercharges}** HC`,
+        `X **${totalGadgets}** / ${maxGadgets}  •  X **${totalSP}** / ${maxSP}  •  X **${totalGears}** / ${maxGears}`,
+        `X Niv. **${player.expLevel}**  •  X Prestige **${player.totalPrestigeLevel || 0}**`,
       ].join('\n'),
       inline: false,
     })
 
     // ── Push ─────────────────────────────────────────────────────────────
     .addFields({
-      name: '🚀 Push',
-      value: pushStr,
+      name: 'X Push',
+      value: [
+        `X Aujourd'hui : **${pushData.daily !== null ? '+' + pushData.daily.toLocaleString('fr-FR') : '—'}**`,
+        `X Cette semaine : **${pushData.weekly !== null ? '+' + pushData.weekly.toLocaleString('fr-FR') : '—'}**`,
+        `X Cette saison : **${pushData.season !== null ? '+' + pushData.season.toLocaleString('fr-FR') : '—'}**`,
+      ].join('\n'),
       inline: false,
     })
 
     // ── Dernières parties ────────────────────────────────────────────────
     .addFields({
-      name: '📊 25 dernières parties',
+      name: 'X 25 dernières parties',
       value: [
-        winRate !== null    ? `🎯 Win rate : **${winRate}%**` : null,
-        lastMode            ? `🕹️ Dernier mode : **${modeLabel(lastMode)}**` : null,
-        lastBrawler         ? `🎮 Dernier brawler : **${lastBrawler}**` : null,
+        winRate !== null ? `X Win rate : **${winRate}%**` : null,
+        lastMode         ? `X Dernier mode : **${modeLabel(lastMode)}**` : null,
+        lastBrawler      ? `X Dernier brawler : **${lastBrawler}**` : null,
       ].filter(Boolean).join('\n') || 'Aucune partie récente',
-      inline: false,
-    })
-
-    // ── Statut ───────────────────────────────────────────────────────────
-    .addFields({
-      name: '📋 Statut',
-      value: [
-        `🌿 ${player.club?.name || 'Sans club'}  •  ${
-          data.status === 'staff'   ? '🛡️ Staff Prairie' :
-          data.status === 'inactif' ? '⚠️ Inactif' :
-          data.status === 'nouveau' ? '🆕 Nouveau membre' :
-          '✅ Membre actif'
-        }`,
-      ].join('\n'),
       inline: false,
     })
 
