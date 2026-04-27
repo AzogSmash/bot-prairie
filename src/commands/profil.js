@@ -94,6 +94,8 @@ async function buildProfileEmbed(target, client) {
     fetchRntProfile(bsTag).catch(() => null),
   ]);
   const rntData = rnt?.result || rnt || {};
+  console.log('[DEBUG PLAYER]', JSON.stringify(player, null, 2));
+  console.log('[DEBUG RNT]', JSON.stringify(rntData, null, 2));
   const sortedMembers = [...allClubMembers].sort((a, b) => b.trophies - a.trophies);
   const rankInFamily = sortedMembers.findIndex(m => m.bsTag === player.tag) + 1;
   const totalInFamily = sortedMembers.length;
@@ -236,8 +238,6 @@ async function buildProfileEmbed(target, client) {
     rntData,
   };
 }
-console.log('[DEBUG PLAYER]', JSON.stringify(player, null, 2));
-console.log('[DEBUG RNT]', JSON.stringify(rntData, null, 2));
 
 module.exports = {
   data: new SlashCommandBuilder()
