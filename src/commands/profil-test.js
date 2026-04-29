@@ -6,6 +6,11 @@ const { getClub } = require('../lib/brawlapi');
 const { renderProfileCard } = require('../modules/profileCardExact');
 const { fetchRntProfile } = require('../lib/rntapi');
 const { getPreferredBsTag } = require('../lib/brawlAccounts');
+const BRAWLERS_META = require('../assets/brawlers-meta.json');
+const TOTAL_BRAWLERS = BRAWLERS_META.length;
+const MAX_GADGETS    = BRAWLERS_META.reduce((s, b) => s + b.totalGadgets, 0);
+const MAX_SP         = BRAWLERS_META.reduce((s, b) => s + b.totalSP, 0);
+
 
 const PRAIRIE_CLUBS = [
   { tag: '#29UPLG8QQ', emoji: '🌟' },
@@ -155,11 +160,11 @@ async function buildProfileEmbed(target, client) {
   const maxedBrawlers = brawlers.filter(b => b.power === 11).length;
   const hypercharges  = brawlers.filter(b => b.hyperCharges?.length > 0).length;
   const totalGadgets  = brawlers.reduce((sum, b) => sum + (b.gadgets?.length || 0), 0);
-  const maxGadgets    = totalBrawlers * 2;
+  const maxGadgets    = MAX_GADGETS;
   const totalSP       = brawlers.reduce((sum, b) => sum + (b.starPowers?.length || 0), 0);
-  const maxSP         = totalBrawlers * 2;
+  const maxSP         = MAX_SP;
   const totalGears    = brawlers.reduce((sum, b) => sum + (b.gears?.length || 0), 0);
-  const maxGears      = totalBrawlers * 2;
+  const maxGears      = TOTAL_BRAWLERS * 6;
 
   // ── Classé ──────────────────────────────────────────────────────────────
   const rankedElo      = player.rankedElo || 0;
@@ -255,7 +260,7 @@ async function buildProfileEmbed(target, client) {
     .addFields({
       name: 'X Collection',
       value: [
-        `X **${totalBrawlers}** brawlers  •  X **${maxedBrawlers}** max  •  X **${hypercharges}** HC`,
+        `X **${totalBrawlers}** / ${TOTAL_BRAWLERS} brawlers  •  X **${maxedBrawlers}** max  •  X **${hypercharges}** HC`,
         `X **${totalGadgets}** / ${maxGadgets}  •  X **${totalSP}** / ${maxSP}  •  X **${totalGears}** / ${maxGears}`,
         `X Niv. **${player.expLevel}**  •  X Prestige **${player.totalPrestigeLevel || 0}**`,
       ].join('\n'),

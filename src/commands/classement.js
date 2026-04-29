@@ -40,6 +40,15 @@ async function buildClassement(clubFilter = 'tous') {
     }
   }
 
+  // ← ICI
+  const seenTags = new Map();
+  for (const m of allMembers) {
+    if (!seenTags.has(m.bsTag) || m.trophies > seenTags.get(m.bsTag).trophies) {
+      seenTags.set(m.bsTag, m);
+    }
+  }
+  allMembers = [...seenTags.values()];
+
   const { data: linkedMembers } = await supabase
     .from('members')
     .select('discord_username, brawlstars_tag')
