@@ -8,7 +8,7 @@ const { fetchRntProfile } = require('../lib/rntapi');
 registerFonts();
 
 async function main() {
-  const inputTag = process.argv[2] || 'P80YQJRL';
+  const inputTag = process.argv[2] || '80P2R8JJL';
   const tag = inputTag.replace(/^#*/, '').toUpperCase();
 
   console.log(`[TEST] Récupération joueur BS #${tag}...`);

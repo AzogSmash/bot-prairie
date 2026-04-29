@@ -1,0 +1,626 @@
+[
+  {
+    "id": 16000106,
+    "name": "Bolt",
+    "totalGadgets": 4,
+    "totalSP": 2
+  },
+  {
+    "id": 16000105,
+    "name": "Starr Nova",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000104,
+    "name": "Damian",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000103,
+    "name": "Najia",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000102,
+    "name": "Sirius",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000101,
+    "name": "Glowy",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000100,
+    "name": "Gigi",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000099,
+    "name": "Pierce",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000098,
+    "name": "Ziggy",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000097,
+    "name": "Mina",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000096,
+    "name": "Trunk",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000095,
+    "name": "Alli",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000094,
+    "name": "Kaze",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000093,
+    "name": "Jae-Yong",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000092,
+    "name": "Finx",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000091,
+    "name": "Lumi",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000090,
+    "name": "Ollie",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000089,
+    "name": "Meeple",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000087,
+    "name": "Juju",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000086,
+    "name": "Shade",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000085,
+    "name": "Kenji",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000084,
+    "name": "Moe",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000083,
+    "name": "Clancy",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000082,
+    "name": "Berry",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000081,
+    "name": "Lily",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000080,
+    "name": "Draco",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000079,
+    "name": "Angelo",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000078,
+    "name": "Melodie",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000077,
+    "name": "Larry & Lawrie",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000076,
+    "name": "Kit",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000075,
+    "name": "Mico",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000074,
+    "name": "Charlie",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000073,
+    "name": "Chuck",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000072,
+    "name": "Pearl",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000071,
+    "name": "Doug",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000070,
+    "name": "Cordelius",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000069,
+    "name": "Hank",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000068,
+    "name": "Maisie",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000067,
+    "name": "Willow",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000066,
+    "name": "R-T",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000065,
+    "name": "Mandy",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000064,
+    "name": "Gray",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000063,
+    "name": "Chester",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000062,
+    "name": "Buster",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000061,
+    "name": "Gus",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000060,
+    "name": "Sam",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000059,
+    "name": "Otis",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000058,
+    "name": "Bonnie",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000057,
+    "name": "Janet",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000056,
+    "name": "Eve",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000054,
+    "name": "Fang",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000053,
+    "name": "Lola",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000052,
+    "name": "Meg",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000051,
+    "name": "Ash",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000050,
+    "name": "Griff",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000049,
+    "name": "Buzz",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000048,
+    "name": "Grom",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000047,
+    "name": "Squeak",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000046,
+    "name": "Belle",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000045,
+    "name": "Stu",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000044,
+    "name": "Ruffs",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000043,
+    "name": "Edgar",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000042,
+    "name": "Byron",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000041,
+    "name": "Lou",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000040,
+    "name": "Amber",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000039,
+    "name": "Colette",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000038,
+    "name": "Surge",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000037,
+    "name": "Sprout",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000036,
+    "name": "Nani",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000035,
+    "name": "Gale",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000034,
+    "name": "Jacky",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000032,
+    "name": "Max",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000031,
+    "name": "Mr. P",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000030,
+    "name": "Emz",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000029,
+    "name": "Bea",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000028,
+    "name": "Sandy",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000027,
+    "name": "8-Bit",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000026,
+    "name": "Bibi",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000025,
+    "name": "Carl",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000024,
+    "name": "Rosa",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000023,
+    "name": "Leon",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000022,
+    "name": "Tick",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000021,
+    "name": "Gene",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000020,
+    "name": "Frank",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000019,
+    "name": "Penny",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000018,
+    "name": "Darryl",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000017,
+    "name": "Tara",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000016,
+    "name": "Pam",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000015,
+    "name": "Piper",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000014,
+    "name": "Bo",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000013,
+    "name": "Poco",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000012,
+    "name": "Crow",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000011,
+    "name": "Mortis",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000010,
+    "name": "El Primo",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000009,
+    "name": "Dynamike",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000008,
+    "name": "Nita",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000007,
+    "name": "Jessie",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000006,
+    "name": "Barley",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000005,
+    "name": "Spike",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000004,
+    "name": "Rico",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000003,
+    "name": "Brock",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000002,
+    "name": "Bull",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000001,
+    "name": "Colt",
+    "totalGadgets": 2,
+    "totalSP": 2
+  },
+  {
+    "id": 16000000,
+    "name": "Shelly",
+    "totalGadgets": 2,
+    "totalSP": 2
+  }
+]
