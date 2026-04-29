@@ -400,7 +400,7 @@ function drawMiniStatsBlock(ctx, data, assets, x, y, w, h) {
     { img: assets.ic3v3,      value: fmt(data.wins3v3) },
     { img: assets.icDuo,      value: fmt(data.duoWins) },
     { img: assets.icSolo,     value: fmt(data.soloWins) },
-    { img: assets.icTrophies, value: `${data.ownedCount}/${data.totalCount}` },
+    { img: assets.icCadenas, value: `${data.ownedCount}/${data.totalCount}` },
     { img: assets.icAccount,  value: accountDisplay },
   ];
 
@@ -440,7 +440,7 @@ async function preloadHeaderAssets(data) {
   const [
     avatar, curTierImg, hiTierImg,
     icWinStreak, icPrestige, icTrophies, icRecord,
-    ic3v3, icDuo, icSolo, icAccount,
+    ic3v3, icDuo, icSolo,icCadenas, icAccount,
     icBuffies, icGadget, icSP, icHC, icP11, icGear,
   ] = await Promise.all([
     loadProfileIcon(data.iconId),
@@ -455,6 +455,7 @@ async function preloadHeaderAssets(data) {
     tryLoad(path.join(ICONS_DIR, "mode_3v3.png")),
     loadBorderlessIcon("duo.png"),
     loadBorderlessIcon("solo.png"),
+    tryLoad(path.join(ICONS_DIR, "cadenas.png")),
     loadBorderlessIcon("exp.png"),
     tryLoad(path.join(ICONS_DIR, "buffies.png")),
     tryLoad(path.join(ICONS_DIR, "gadget.png")),
@@ -467,7 +468,7 @@ async function preloadHeaderAssets(data) {
   return {
     avatar, curTierImg, hiTierImg,
     icWinStreak, icPrestige, icTrophies, icRecord,
-    ic3v3, icDuo, icSolo, icAccount,
+    ic3v3, icDuo, icSolo,icCadenas, icAccount,
     icBuffies, icGadget, icSP, icHC, icP11, icGear,
   };
 }
