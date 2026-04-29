@@ -110,7 +110,9 @@ function normalizeRankCardData(bsPlayer, extra = {}) {
   console.log('[DEBUG] totalBrawlers:', extra?.totalBrawlers, 'maxGadgets:', (extra?.totalBrawlers ?? bsPlayer?.brawlers?.length ?? 0) * 2);
   const currentRanked = extra?.currentRankedPts ?? 0;
   const highestRanked = extra?.highestRankedPts ?? 0;
+  const BUFFIES_IDS = require('../assets/buffies.json');
   return {
+    maxBuffies: 45,
     iconId: bsPlayer?.profile_avatar ?? bsPlayer?.icon?.id ?? 28000000,
     playerName: bsPlayer?.name || "Unknown",
     tag: normalizeTag(bsPlayer?.tag),
@@ -409,10 +411,11 @@ function drawMiniStatsBlock(ctx, data, assets, x, y, w, h) {
 
   // FIX 3 : sous-labels ranked supprimés
   const row2 = [
-    { img: assets.curTierImg, value: fmt(data.currentRanked) },
-    { img: assets.hiTierImg,  value: fmt(data.highestRanked) },
-    { img: assets.icPrestige, value: String(data.prestigeTotal) },
+    { img: assets.curTierImg,  value: fmt(data.currentRanked) },
+    { img: assets.hiTierImg,   value: fmt(data.highestRanked) },
+    { img: assets.icPrestige,  value: String(data.prestigeTotal) },
     { img: assets.icWinStreak, value: String(data.winStreak) },
+    { img: assets.icBuffies,     value: `${data.buffies}/${data.maxBuffies}` },
   ];
 
   for (let i = 0; i < cols; i += 1) {
@@ -423,11 +426,11 @@ function drawMiniStatsBlock(ctx, data, assets, x, y, w, h) {
     }
   }
   const row3 = [
-    { img: assets.icGadget, value: `${data.gadgets}/${data.maxGadgets}` },
-    { img: assets.icSP,     value: `${data.starPowers}/${data.maxSP}` },
-    { img: assets.icHC,     value: String(data.hyperCharges) },
-    { img: assets.icP11,    value: `${data.p11}/${data.ownedCount}` },
-    { img: assets.icGear,   value: `${data.gears}/${data.maxGears}` },
+    { img: assets.icGadget,  value: `${data.gadgets}/${data.maxGadgets}` },
+    { img: assets.icSP,      value: `${data.starPowers}/${data.maxSP}` },
+    { img: assets.icHC,      value: String(data.hyperCharges) },
+    { img: assets.icP11,     value: `${data.p11}/${data.ownedCount}` },
+    { img: assets.icGear,             value: `${data.gears}/${data.maxGears}` },
   ];
 
   for (let i = 0; i < row3.length; i += 1) {
@@ -449,10 +452,12 @@ async function preloadHeaderAssets(data) {
     icDuo,
     icSolo,
     icAccount,
-    icP11,
+    icBuffies,
     icGadget,
     icSP,
     icHC,
+    icP11,
+    icGear, 
   ] = await Promise.all([
     loadProfileIcon(data.iconId),
     loadRankedTieredIcon(data.currentRanked),
@@ -465,6 +470,7 @@ async function preloadHeaderAssets(data) {
     loadBorderlessIcon("duo.png"),
     loadBorderlessIcon("solo.png"),
     loadBorderlessIcon("exp.png"),
+    tryLoad(path.join(ICONS_DIR, "buffies.png")),
     tryLoad(path.join(ICONS_DIR, "gadget.png")),
     tryLoad(path.join(ICONS_DIR, "sp.png")),
     tryLoad(path.join(ICONS_DIR, "hyper.png")),
@@ -476,9 +482,11 @@ async function preloadHeaderAssets(data) {
     avatar, curTierImg, hiTierImg,
     icWinStreak, icPrestige, icTrophies, icRecord,
     ic3v3, icDuo, icSolo, icAccount,
-    icGadget, icSP, icHC,
+    icGadget, icSP, icHC,icP11, icGear, icBuffies,
   };
 }
+
+const BUFFIES_WITH_ABILITY = require('../assets/buffies.json');
 
 async function drawHeader(ctx, bsPlayer, extra = {}) {
   const data = normalizeRankCardData(bsPlayer, extra);
@@ -523,7 +531,7 @@ async function drawBrawlerGrid(ctx, brawlers, startY) {
         null,
         {
           cacheKey: `brawlers/portrait/${id}.png`,
-          url: `https://cdn.brawlify.com/brawlers/borderless/${id}.png`,
+          url: `https://raw.githubusercontent.com/Brawlify/CDN/master/brawlers/portraits/${id}.png`,
         },
       ),
       tryLoad(path.join(PRESTIGES_DIR, `${prestige.level}.png`)),

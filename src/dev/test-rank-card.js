@@ -15,6 +15,9 @@ async function main() {
   const bsPlayer = await getPlayer(`#${tag}`);
   console.log(`[TEST] Joueur: ${bsPlayer.name} — ${bsPlayer.brawlers?.length} brawlers`);
 
+  const sorted = [...bsPlayer.brawlers].sort((a, b) => (b.trophies ?? 0) - (a.trophies ?? 0));
+  console.log('Dernier brawler (moins de trophées):', sorted[sorted.length - 1]);
+
 // Remplace le rntData hardcodé par :
 const rnt = await fetchRntProfile(`#${tag}`);
 const rntResult = rnt?.result || rnt || {};

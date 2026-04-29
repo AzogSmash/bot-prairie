@@ -1,14 +1,14 @@
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 const { getPlayer } = require('../lib/brawlapi');
 const { supabase } = require('../lib/supabase');
-const { renderProfileCard } = require('../modules/profileCardExact');
+const { generateRankCard } = require('../modules/rankCard');
 const { fetchRntProfile } = require('../lib/rntapi');
 const { getPreferredBsTag } = require('../lib/brawlAccounts');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('image-profil')
-    .setDescription('Génère ta carte de profil visuelle Brawl Stars')
+    .setName('image-prestige')
+    .setDescription('Génère ta carte de prestige Brawl Stars')
     .addUserOption(option =>
       option.setName('membre')
         .setDescription('Le membre (toi par défaut)')
@@ -34,28 +34,26 @@ module.exports = {
       ]);
 
       const rntData = rnt?.result || rnt || {};
-      const rntAvailable = rntData && Object.keys(rntData).length > 0 && rntData.stats;
 
-      if (!rntAvailable) {
-        return interaction.editReply({
-          content: '🔧 Mise à jour en cours — les visuels reviennent très bientôt !'
-        });
-      }
+      const extra = {
+        currentRankedPts:   rntData.stats?.find(s => s.id === 24)?.value ?? 0,
+        currentRankedName:  player.rankedRankName ?? '',
+        highestRankedPts:   rntData.stats?.find(s => s.id === 25)?.value ?? 0,
+        highestRankedName:  player.highestAllTimeRankedRankName ?? '',
+        recordPoints:       rntData.stats?.find(s => s.id === 31)?.value ?? 0,
+        recordLevel:        rntData.stats?.find(s => s.id === 32)?.value ?? 0,
+        totalBrawlers:      player.brawlers?.length ?? 0,
+        accountCreation:    rntData.stats?.find(s => s.id === 27)?.value ?? null,
+        maxWinStreak:       rntData.max_winstreak ?? 0,
+        totalPrestige:      player.totalPrestigeLevel ?? 0,
+      };
 
-      const buffer = await renderProfileCard({
-        player: rntData,
-        extra: {
-          expLevel: player.expLevel || 1,
-          expPoints: player.expPoints || 0,
-          clubName: player.club?.name || '',
-        },
-        playerTag: bsTag,
-      });
+      const buffer = await generateRankCard(player, extra);
 
-      const attachment = new AttachmentBuilder(buffer, { name: 'carte-profil.png' });
+      const attachment = new AttachmentBuilder(buffer, { name: 'carte-rank.png' });
       await interaction.editReply({ files: [attachment] });
     } catch (err) {
-      console.error('[CarteProfil]', err);
+      console.error('[CarteRank]', err);
       await interaction.editReply({ content: `❌ Erreur lors de la génération : ${err.message}` });
     }
   }
