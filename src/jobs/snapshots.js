@@ -5,6 +5,7 @@ const { getProgressionStats } = require('../lib/progression');
 const { DateTime } = require('luxon');
 const { PRAIRIE_CLUBS } = require('../modules/clubsPanel');
 const { getAccountsSummary } = require('../lib/brawlAccounts');
+const { getPlayer } = require('../lib/brawlapi');
 
 const GENERAL_CHANNEL_ID = '1173550145955180618';
 
@@ -25,10 +26,10 @@ const TROPHY_ROLES = [
   { min: 140000, roleId: '1488793749709525022', name: '+140k 🏆' },
   { min: 120000, roleId: '1488793538916257812', name: '+120k 🏆' },
   { min: 100000, roleId: '1469069465189748878', name: '+100k 🏆' },
-  { min: 75000, roleId: '1489338610221060358', name: '+75k 🏆' },
-  { min: 50000, roleId: '1489338218301227078', name: '+50k 🏆' },
-  { min: 25000, roleId: '1489338230850453524', name: '+25k 🏆' },
-  { min: 0, roleId: '1469068880369553569', name: '-25k 🏆' },
+  { min: 75000,  roleId: '1489338610221060358', name: '+75k 🏆' },
+  { min: 50000,  roleId: '1489338218301227078', name: '+50k 🏆' },
+  { min: 25000,  roleId: '1489338230850453524', name: '+25k 🏆' },
+  { min: 0,      roleId: '1469068880369553569', name: '-25k 🏆' },
 ];
 
 const ALL_CLUB_ROLE_IDS = Object.values(CLUB_ROLES);
@@ -63,31 +64,21 @@ async function updateMemberRoles(member, clubNames, trophies) {
   const rolesToRemove = [];
 
   const expectedClubRoleIds = new Set(
-    (clubNames || [])
-      .map(name => CLUB_ROLES[name])
-      .filter(Boolean)
+    (clubNames || []).map(name => CLUB_ROLES[name]).filter(Boolean)
   );
 
   for (const roleId of ALL_CLUB_ROLE_IDS) {
     const hasRole = member.roles.cache.has(roleId);
-
-    if (expectedClubRoleIds.has(roleId) && !hasRole) {
-      rolesToAdd.push(roleId);
-    } else if (!expectedClubRoleIds.has(roleId) && hasRole) {
-      rolesToRemove.push(roleId);
-    }
+    if (expectedClubRoleIds.has(roleId) && !hasRole) rolesToAdd.push(roleId);
+    else if (!expectedClubRoleIds.has(roleId) && hasRole) rolesToRemove.push(roleId);
   }
 
   const expectedTrophyRoleId = getTrophyRole(trophies).roleId;
 
   for (const roleId of ALL_TROPHY_ROLE_IDS) {
     const hasRole = member.roles.cache.has(roleId);
-
-    if (roleId === expectedTrophyRoleId && !hasRole) {
-      rolesToAdd.push(roleId);
-    } else if (roleId !== expectedTrophyRoleId && hasRole) {
-      rolesToRemove.push(roleId);
-    }
+    if (roleId === expectedTrophyRoleId && !hasRole) rolesToAdd.push(roleId);
+    else if (roleId !== expectedTrophyRoleId && hasRole) rolesToRemove.push(roleId);
   }
 
   if (rolesToRemove.length) await member.roles.remove(rolesToRemove).catch(() => {});
@@ -107,10 +98,8 @@ async function updateRolesAndNotify(client, options = {}) {
   const guild = await client.guilds.fetch(process.env.GUILD_ID).catch(() => null);
   if (!guild) return;
 
-  // Fetch tous les membres du serveur en une fois
   await guild.members.fetch({ limit: 1000 }).catch(() => {});
 
-  // Récupère tous les membres liés
   const { data: linkedMembers } = await supabase
     .from('members')
     .select('discord_id, brawlstars_tag, brawlstars_trophies, club_name, status')
@@ -118,12 +107,55 @@ async function updateRolesAndNotify(client, options = {}) {
 
   if (!linkedMembers?.length) return;
 
-  // Map des trophées actuels depuis le cache
+  // ── Construction du cache trophées ────────────────────────────────────────
+  // 1. Membres des clubs Prairie (cache déjà dispo)
   const currentTrophiesMap = new Map();
   for (const m of clubMembersCache) {
     currentTrophiesMap.set(m.bsTag, { trophies: m.trophies, clubName: m.clubName, bsName: m.bsName });
   }
 
+  // 2. Tous les comptes liés en une seule requête Supabase
+  const { data: allLinkedAccounts } = await supabase
+    .from('member_brawl_accounts')
+    .select('discord_id, bs_tag');
+
+  // Map discord_id → [bs_tags]
+  const accountsByDiscordId = new Map();
+  for (const acc of (allLinkedAccounts || [])) {
+    if (!accountsByDiscordId.has(acc.discord_id)) accountsByDiscordId.set(acc.discord_id, []);
+    accountsByDiscordId.get(acc.discord_id).push(acc.bs_tag);
+  }
+
+  // Map discord_id → dbMember pour le fallback
+  const dbMemberMap = new Map(linkedMembers.map(m => [m.discord_id, m]));
+
+  // 3. Pour les tags non encore dans le cache, appel API BS
+  for (const [discordId, tags] of accountsByDiscordId) {
+    const dbMember = dbMemberMap.get(discordId);
+    for (const bsTag of tags) {
+      if (!bsTag || currentTrophiesMap.has(bsTag)) continue;
+
+      try {
+        const player = await getPlayer(bsTag);
+        currentTrophiesMap.set(bsTag, {
+          trophies: player.trophies ?? 0,
+          clubName: player.club?.name ?? null,
+          bsName: player.name ?? null,
+        });
+      } catch {
+        // Fallback sur les données en base si l'API échoue
+        if (dbMember?.brawlstars_trophies) {
+          currentTrophiesMap.set(bsTag, {
+            trophies: dbMember.brawlstars_trophies,
+            clubName: dbMember.club_name,
+            bsName: null,
+          });
+        }
+      }
+    }
+  }
+
+  // ── Mise à jour des rôles et détection des paliers ────────────────────────
   const notifications = [];
   const dbUpdates = [];
 
@@ -134,7 +166,6 @@ async function updateRolesAndNotify(client, options = {}) {
     if (!member) continue;
 
     const summary = await getAccountsSummary(dbMember.discord_id, currentTrophiesMap);
-
     if (!summary.accounts.length) continue;
 
     const oldTrophies = dbMember.brawlstars_trophies || 0;
@@ -144,9 +175,7 @@ async function updateRolesAndNotify(client, options = {}) {
 
     await updateMemberRoles(member, clubNames, newTrophies);
 
-    const canNotifyProgress =
-      !suppressNotifications &&
-      dbMember.status !== 'nouveau';
+    const canNotifyProgress = !suppressNotifications && dbMember.status !== 'nouveau';
 
     if (canNotifyProgress && oldTrophies > 0 && newTrophies > oldTrophies) {
       const oldTier = getTrophyRole(oldTrophies);
@@ -163,11 +192,7 @@ async function updateRolesAndNotify(client, options = {}) {
       }
     }
 
-    if (
-      newTrophies !== oldTrophies ||
-      mainClubName !== dbMember.club_name ||
-      dbMember.status !== 'actif'
-    ) {
+    if (newTrophies !== oldTrophies || mainClubName !== dbMember.club_name || dbMember.status !== 'actif') {
       dbUpdates.push({
         discord_id: dbMember.discord_id,
         brawlstars_trophies: newTrophies,
@@ -177,24 +202,22 @@ async function updateRolesAndNotify(client, options = {}) {
     }
   }
 
-  // Mise à jour batch Supabase
-  if (dbUpdates.length) {
-    for (const update of dbUpdates) {
-      await supabase
-        .from('members')
-        .update({
-          brawlstars_trophies: update.brawlstars_trophies,
-          club_name: update.club_name,
-          status: update.status,
-        })
-        .eq('discord_id', update.discord_id);
-    }
+  // ── Mise à jour Supabase ───────────────────────────────────────────────────
+  for (const update of dbUpdates) {
+    await supabase
+      .from('members')
+      .update({
+        brawlstars_trophies: update.brawlstars_trophies,
+        club_name: update.club_name,
+        status: update.status,
+      })
+      .eq('discord_id', update.discord_id);
   }
 
-  // Envoie les notifications
+  // ── Notifications paliers ─────────────────────────────────────────────────
   if (notifications.length > 0) {
     const generalChannel = await guild.channels.fetch(GENERAL_CHANNEL_ID).catch(() => null);
-    
+
     if (generalChannel) {
       for (const notif of notifications) {
         const embed = new EmbedBuilder()
@@ -210,9 +233,9 @@ async function updateRolesAndNotify(client, options = {}) {
           .setFooter({ text: 'Prairie Brawl Stars • Progression' })
           .setTimestamp();
 
-        await generalChannel.send({ 
+        await generalChannel.send({
           content: `Félicitations ${notif.member} ! 🎊`,
-          embeds: [embed] 
+          embeds: [embed],
         });
 
         await new Promise(r => setTimeout(r, 1000));
