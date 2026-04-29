@@ -3,7 +3,7 @@ const { supabase } = require('../lib/supabase');
 const { getPlayer } = require('../lib/brawlapi');
 const { fetchRntProfile } = require('../lib/rntapi');
 const { renderBracket } = require('./bracketRenderer');
-const { generateAndSaveMatches } = require('../modules/bracketGenerator');
+const { generateAndSaveMatches } = require('./bracketGenerator');
 
 const TEAM_NAMES = [
   'Shelly', 'Colt', 'Bull', 'Brock', 'El Primo', 'Barley', 'Poco', 'Rosa',

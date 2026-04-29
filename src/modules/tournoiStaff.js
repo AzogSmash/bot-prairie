@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { supabase } = require('../lib/supabase');
-const { generateAndSaveMatches } = require('../modules/bracketGenerator');
+const { generateAndSaveMatches } = require('./bracketGenerator');
 
 // ── Tournoi actif ─────────────────────────────────────────────────────────────
 async function getActiveTournament(statusFilter = ['open', 'started']) {
