@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 const { getPlayer } = require('../lib/brawlapi');
-const { supabase } = require('../lib/supabase');
 const { generateRankCard } = require('../modules/rankCard');
 const { fetchRntProfile } = require('../lib/rntapi');
 const { getPreferredBsTag } = require('../lib/brawlAccounts');
@@ -34,26 +33,25 @@ module.exports = {
       ]);
 
       const rntData = rnt?.result || rnt || {};
+      const stats = rntData?.stats || [];
 
       const extra = {
-        currentRankedPts:   rntData.stats?.find(s => s.id === 24)?.value ?? 0,
-        currentRankedName:  player.rankedRankName ?? '',
-        highestRankedPts:   rntData.stats?.find(s => s.id === 25)?.value ?? 0,
-        highestRankedName:  player.highestAllTimeRankedRankName ?? '',
-        recordPoints:       rntData.stats?.find(s => s.id === 31)?.value ?? 0,
-        recordLevel:        rntData.stats?.find(s => s.id === 32)?.value ?? 0,
-        totalBrawlers:      player.brawlers?.length ?? 0,
-        accountCreation:    rntData.stats?.find(s => s.id === 27)?.value ?? null,
-        maxWinStreak:       rntData.max_winstreak ?? 0,
-        totalPrestige:      player.totalPrestigeLevel ?? 0,
+        currentRankedPts:  stats.find(s => s.id === 24)?.value ?? 0,
+        currentRankedName: player.rankedRankName ?? '',
+        highestRankedPts:  stats.find(s => s.id === 25)?.value ?? 0,
+        highestRankedName: player.highestAllTimeRankedRankName ?? '',
+        recordPoints:      stats.find(s => s.id === 31)?.value ?? 0,
+        recordLevel:       stats.find(s => s.id === 32)?.value ?? 0,
+        accountCreation:   stats.find(s => s.id === 27)?.value ?? null,
+        maxWinStreak:      rntData.max_winstreak ?? 0,
+        totalPrestige:     player.totalPrestigeLevel ?? 0,
       };
 
       const buffer = await generateRankCard(player, extra);
+      await interaction.editReply({ files: [new AttachmentBuilder(buffer, { name: 'image-prestige.png' })] });
 
-      const attachment = new AttachmentBuilder(buffer, { name: 'carte-rank.png' });
-      await interaction.editReply({ files: [attachment] });
     } catch (err) {
-      console.error('[CarteRank]', err);
+      console.error('[ImagePrestige]', err);
       await interaction.editReply({ content: `❌ Erreur lors de la génération : ${err.message}` });
     }
   }

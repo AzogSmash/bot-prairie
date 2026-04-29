@@ -572,11 +572,6 @@ async function drawBrawlerGrid(ctx, brawlers, startY) {
       const bdY = cy + (ACTUAL_H - bdS) / 2;
       ctx.drawImage(badge, S(bdX), S(bdY), S(bdS), S(bdS));
     }
-
-    ctx.font = FONT(12, 900);
-    ctx.textBaseline = "bottom";
-    ctx.textAlign = "right";
-    outlined(ctx, fmt(trophies), cx + CELL_W - 6, cy + ACTUAL_H - 5, "#ffffff", "#000000", 3);
   }
 }
 
