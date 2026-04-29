@@ -107,6 +107,7 @@ function getRecordIconFile(level = 0) {
 }
 
 function normalizeRankCardData(bsPlayer, extra = {}) {
+  console.log('[DEBUG] totalBrawlers:', extra?.totalBrawlers, 'maxGadgets:', (extra?.totalBrawlers ?? bsPlayer?.brawlers?.length ?? 0) * 2);
   const currentRanked = extra?.currentRankedPts ?? 0;
   const highestRanked = extra?.highestRankedPts ?? 0;
   return {
@@ -123,6 +124,9 @@ function normalizeRankCardData(bsPlayer, extra = {}) {
     currentRankedLabel: getRankedLabel(currentRanked),
     highestRanked,
     highestRankedLabel: getRankedLabel(highestRanked),
+    p11:       (bsPlayer?.brawlers ?? []).filter(b => b.power === 11).length,
+    maxGadgets: (extra?.totalBrawlers ?? bsPlayer?.brawlers?.length ?? 0) * 2,
+    maxSP:      (extra?.totalBrawlers ?? bsPlayer?.brawlers?.length ?? 0) * 2,
     currentRankedName: extra?.currentRankedName ?? '',
     highestRankedName: extra?.highestRankedName ?? '',
     recordPoints: extra?.recordPoints ?? 0,
@@ -137,7 +141,8 @@ function normalizeRankCardData(bsPlayer, extra = {}) {
     gadgets:      (bsPlayer?.brawlers ?? []).reduce((sum, b) => sum + (b.gadgets?.length ?? 0), 0),
     starPowers:   (bsPlayer?.brawlers ?? []).reduce((sum, b) => sum + (b.starPowers?.length ?? 0), 0),
     hyperCharges: (bsPlayer?.brawlers ?? []).reduce((sum, b) => sum + (b.hyperCharges?.length ?? 0), 0),
-    gears:        (bsPlayer?.brawlers ?? []).reduce((sum, b) => sum + (b.gears?.length ?? 0), 0),
+    gears:    (bsPlayer?.brawlers ?? []).reduce((sum, b) => sum + (b.gears?.length ?? 0), 0),
+    maxGears: (extra?.totalBrawlers ?? bsPlayer?.brawlers?.length ?? 0) * 6,
     buffies:      (bsPlayer?.brawlers ?? []).reduce((sum, b) => sum + (b.buffies ? Object.values(b.buffies).filter(Boolean).length : 0), 0),
   };
 }
@@ -372,23 +377,6 @@ function drawProgressBlock(ctx, data, assets, x, y, w, h) {
   drawProgressBar(ctx, barX, line2Y, barW, barH, data.recordPoints / Math.max(data.recordMax, 1));
   outlined(ctx, `${fmt(data.recordPoints)} / ${fmt(data.recordMax)}`, barX + 8, line2Y + barH / 2, "#ffffff", "#000000", 3);
 
-  // FIX 1 : badge L0 masqué si recordLevel = 0
-  if (data.recordLevel > 0) {
-    const recBadgeW = 64;
-    const recBadgeH = 30;
-    const recBadgeX = x + w - recBadgeW - 12;
-    const recBadgeY = line2Y - 2;
-
-    drawPanel(ctx, recBadgeX, recBadgeY, recBadgeW, recBadgeH, 8, "rgba(0,0,0,0.48)", "rgba(255,255,255,0.12)");
-    if (assets.icRecord) {
-      ctx.drawImage(assets.icRecord, S(recBadgeX + 4), S(recBadgeY + 4), S(22), S(22));
-    }
-    ctx.font = FONT(13, 900);
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    outlined(ctx, `L${data.recordLevel}`, recBadgeX + 30, recBadgeY + recBadgeH / 2, "#ffffff", "#000000", 3);
-  }
-
   ctx.font = FONT(11, 900);
   ctx.textAlign = "left";
   ctx.textBaseline = "bottom";
@@ -435,14 +423,14 @@ function drawMiniStatsBlock(ctx, data, assets, x, y, w, h) {
     }
   }
   const row3 = [
-    { img: null, value: `${data.gadgets} gadgets` },
-    { img: null, value: `${data.starPowers} SP` },
-    { img: null, value: `${data.hyperCharges} HC` },
-    { img: null, value: `${data.gears} gears` },
-    { img: null, value: `${data.buffies} buffies` },
+    { img: assets.icGadget, value: `${data.gadgets}/${data.maxGadgets}` },
+    { img: assets.icSP,     value: `${data.starPowers}/${data.maxSP}` },
+    { img: assets.icHC,     value: String(data.hyperCharges) },
+    { img: assets.icP11,    value: `${data.p11}/${data.ownedCount}` },
+    { img: assets.icGear,   value: `${data.gears}/${data.maxGears}` },
   ];
 
-  for (let i = 0; i < cols; i += 1) {
+  for (let i = 0; i < row3.length; i += 1) {
     const cellX = startX + i * (cellW + gap);
     drawMiniStatChip(ctx, { x: cellX, y: row2Y + cellH + 10, w: cellW, h: cellH, ...row3[i] });
   }
@@ -461,6 +449,10 @@ async function preloadHeaderAssets(data) {
     icDuo,
     icSolo,
     icAccount,
+    icP11,
+    icGadget,
+    icSP,
+    icHC,
   ] = await Promise.all([
     loadProfileIcon(data.iconId),
     loadRankedTieredIcon(data.currentRanked),
@@ -473,20 +465,18 @@ async function preloadHeaderAssets(data) {
     loadBorderlessIcon("duo.png"),
     loadBorderlessIcon("solo.png"),
     loadBorderlessIcon("exp.png"),
+    tryLoad(path.join(ICONS_DIR, "gadget.png")),
+    tryLoad(path.join(ICONS_DIR, "sp.png")),
+    tryLoad(path.join(ICONS_DIR, "hyper.png")),
+    tryLoad(path.join(ICONS_DIR, "p11.png")),
+    tryLoad(path.join(ICONS_DIR, "gear.png")),
   ]);
 
   return {
-    avatar,
-    curTierImg,
-    hiTierImg,
-    icWinStreak,
-    icPrestige,
-    icTrophies,
-    icRecord,
-    ic3v3,
-    icDuo,
-    icSolo,
-    icAccount,
+    avatar, curTierImg, hiTierImg,
+    icWinStreak, icPrestige, icTrophies, icRecord,
+    ic3v3, icDuo, icSolo, icAccount,
+    icGadget, icSP, icHC,
   };
 }
 
@@ -498,6 +488,7 @@ async function drawHeader(ctx, bsPlayer, extra = {}) {
   const headerY = MARGIN;
   const headerW = W - MARGIN * 2;
   const headerH = 178;
+
 
   const leftW = 430;
   const midW = 390;

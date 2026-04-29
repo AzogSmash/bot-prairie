@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { supabase } = require('../lib/supabase');
+const { generateAndSaveMatches } = require('../modules/bracketGenerator');
 
 // ── Tournoi actif ─────────────────────────────────────────────────────────────
 async function getActiveTournament(statusFilter = ['open', 'started']) {
@@ -13,56 +14,6 @@ async function getActiveTournament(statusFilter = ['open', 'started']) {
   return data;
 }
 
-// ── Génération des matchs du bracket ─────────────────────────────────────────
-function generateSideMatches(tournamentId, side, teams) {
-  const matches = [];
-  const n = teams.length;
-
-  if (n === 6) {
-    matches.push({ tournament_id: tournamentId, round: 1, side, match_order: 1, team1_id: teams[0].id, team2_id: teams[1].id });
-    matches.push({ tournament_id: tournamentId, round: 1, side, match_order: 2, team1_id: teams[2].id, team2_id: teams[3].id });
-    matches.push({ tournament_id: tournamentId, round: 1, side, match_order: 3, team1_id: teams[4].id, team2_id: teams[5].id });
-    matches.push({ tournament_id: tournamentId, round: 2, side, match_order: 1, team1_id: null, team2_id: null });
-    matches.push({ tournament_id: tournamentId, round: 3, side, match_order: 1, team1_id: null, team2_id: null });
-  }
-
-  if (n === 12) {
-    matches.push({ tournament_id: tournamentId, round: 1, side, match_order: 1, team1_id: teams[0].id, team2_id: teams[1].id });
-    matches.push({ tournament_id: tournamentId, round: 1, side, match_order: 2, team1_id: teams[2].id, team2_id: teams[3].id });
-    matches.push({ tournament_id: tournamentId, round: 1, side, match_order: 3, team1_id: teams[4].id, team2_id: teams[5].id });
-    matches.push({ tournament_id: tournamentId, round: 1, side, match_order: 4, team1_id: teams[6].id, team2_id: teams[7].id });
-    matches.push({ tournament_id: tournamentId, round: 1, side, match_order: 5, team1_id: teams[8].id, team2_id: teams[9].id });
-    matches.push({ tournament_id: tournamentId, round: 1, side, match_order: 6, team1_id: teams[10].id, team2_id: teams[11].id });
-    matches.push({ tournament_id: tournamentId, round: 2, side, match_order: 1, team1_id: null, team2_id: null });
-    matches.push({ tournament_id: tournamentId, round: 2, side, match_order: 2, team1_id: null, team2_id: null });
-    matches.push({ tournament_id: tournamentId, round: 2, side, match_order: 3, team1_id: null, team2_id: null });
-    matches.push({ tournament_id: tournamentId, round: 3, side, match_order: 1, team1_id: null, team2_id: null });
-    matches.push({ tournament_id: tournamentId, round: 4, side, match_order: 1, team1_id: null, team2_id: null });
-  }
-
-  if (n === 24) {
-    for (let i = 0; i < 6; i++) {
-      matches.push({ tournament_id: tournamentId, round: 1, side, match_order: i + 1, team1_id: teams[i * 2].id, team2_id: teams[i * 2 + 1].id });
-    }
-    for (let i = 6; i < 12; i++) {
-      matches.push({ tournament_id: tournamentId, round: 1, side, match_order: i + 1, team1_id: teams[i * 2].id, team2_id: teams[i * 2 + 1].id });
-    }
-    for (let i = 0; i < 6; i++) {
-      matches.push({ tournament_id: tournamentId, round: 2, side, match_order: i + 1, team1_id: null, team2_id: null });
-    }
-    for (let i = 0; i < 3; i++) {
-      matches.push({ tournament_id: tournamentId, round: 3, side, match_order: i + 1, team1_id: null, team2_id: null });
-    }
-    matches.push({ tournament_id: tournamentId, round: 4, side, match_order: 1, team1_id: null, team2_id: null });
-    matches.push({ tournament_id: tournamentId, round: 5, side, match_order: 1, team1_id: null, team2_id: null });
-  }
-
-  return matches;
-}
-
-function generateFinalMatch(tournamentId) {
-  return { tournament_id: tournamentId, round: 99, side: 'final', match_order: 1, team1_id: null, team2_id: null };
-}
 
 function getRoundLabel(round, totalRounds) {
   if (round === 99) return 'Finale';
@@ -115,17 +66,9 @@ module.exports = {
         .setColor('#2ecc71')
         .setTitle(`🏆 Tournoi créé — ${nom}`)
         .setDescription(
-        `✅ Tournoi **${nom}** créé !\n\n` +
-        `**📋 Flow complet :**\n` +
-        `1️⃣ \`/tournoi-participants\` — Inscris les joueurs et récupère leurs elos\n` +
-        `2️⃣ \`/tournoi-composer\` — Génère les équipes équilibrées + le bracket + ouvre les pronos\n` +
-        `3️⃣ \`/tournoi-ajuster\` — Modifie un elo ou échange des membres si besoin\n` +
-        `4️⃣ \`/pronostic\` — Les membres font leurs pronos avant le début\n` +
-        `5️⃣ \`/tournoi-démarrer\` — Verrouille les pronos et démarre officiellement\n` +
-        `6️⃣ \`/tournoi-bracket\` — Entre les résultats match par match\n` +
-        `7️⃣ \`/tournoi-terminer\` — Clôture et affiche le classement des pronos\n\n` +
-        `**💡 Mode manuel :** \`/tournoi-équipes\` pour entrer les équipes à la main au lieu de \`/tournoi-composer\`\n` +
-        `⚠️ Ce tournoi nécessite **${taille / 2} équipes par côté**`
+          `✅ Tournoi **${nom}** créé !\n\n` +
+          `👉 Utilise \`/tournoi-help\` pour voir le guide complet étape par étape.\n\n` +
+          `⚠️ Ce tournoi nécessite **${taille / 2} équipes par côté**`
         )
         .addFields(
           { name: '👥 Taille', value: `${taille} équipes`, inline: true },

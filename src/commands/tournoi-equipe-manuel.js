@@ -1,3 +1,18 @@
+const { fetchRntProfile } = require('../lib/rntapi');
+
+async function getPlayerElo(bsTag) {
+  try {
+    const rnt = await fetchRntProfile(bsTag).catch(() => null);
+    const rntData = rnt?.result || rnt || {};
+    const stats = rntData?.stats || [];
+    const currentRanked = stats.find(s => s.id === 24)?.value ?? 0;
+    const highestRanked = stats.find(s => s.id === 25)?.value ?? 0;
+    return highestRanked || currentRanked || 0;
+  } catch {
+    return 0;
+  }
+}
+
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { supabase } = require('../lib/supabase');
 
@@ -114,6 +129,8 @@ module.exports = {
     // Inscrit les membres de l'équipe
     for (const user of members) {
       const bs = bsMap[user.id];
+      const elo = bs?.brawlstars_tag ? await getPlayerElo(bs.brawlstars_tag) : 0;
+
       const { data: existing } = await supabase.from('tournament_participants').select('id').eq('tournament_id', tournament.id).eq('discord_id', user.id).maybeSingle();
       if (!existing) {
         await supabase.from('tournament_participants').insert({
@@ -121,7 +138,7 @@ module.exports = {
           discord_id: user.id,
           discord_username: bs?.discord_username || user.username,
           bs_tag: bs?.brawlstars_tag || null,
-          elo: 0,
+          elo,
           is_substitute: false,
         });
       }
@@ -131,7 +148,7 @@ module.exports = {
         discord_id: user.id,
         discord_username: bs?.discord_username || user.username,
         bs_tag: bs?.brawlstars_tag || null,
-        elo: 0,
+        elo,
         is_substitute: false,
       });
     }

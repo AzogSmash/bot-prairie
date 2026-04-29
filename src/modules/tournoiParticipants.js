@@ -3,6 +3,7 @@ const { supabase } = require('../lib/supabase');
 const { getPlayer } = require('../lib/brawlapi');
 const { fetchRntProfile } = require('../lib/rntapi');
 const { renderBracket } = require('./bracketRenderer');
+const { generateAndSaveMatches } = require('../modules/bracketGenerator');
 
 const TEAM_NAMES = [
   'Shelly', 'Colt', 'Bull', 'Brock', 'El Primo', 'Barley', 'Poco', 'Rosa',
@@ -119,108 +120,6 @@ function optimizeTeams(teams) {
 // n=6  : R1(seed1vs2, seed3vs4), R2(gagnant1v2 vs gagnant3v4, seed5vs6), R3 finale poule
 // n=12 : R1(4 matchs seeds 1-8), R2(4 matchs + seed9vs10 + seed11vs12), R3(2 matchs), R4 finale poule
 // n=24 : R1(8 matchs seeds 1-16), R2(4+4 matchs), R3(4 matchs), R4(2 matchs), R5 finale poule
-function generateSideMatches(tournamentId, side, teams) {
-  const matches = [];
-  const n = teams.length;
-
-  // ── Modulo 4 — bracket parfait ──────────────────────────────────────────────
-  if (n === 4) {
-    // R1 : 2 matchs
-    matches.push({ tournament_id: tournamentId, round: 1, side, match_order: 1, team1_id: teams[0].id, team2_id: teams[1].id });
-    matches.push({ tournament_id: tournamentId, round: 1, side, match_order: 2, team1_id: teams[2].id, team2_id: teams[3].id });
-    // R2 : finale poule
-    matches.push({ tournament_id: tournamentId, round: 2, side, match_order: 1, team1_id: null, team2_id: null });
-  }
-
-  if (n === 8) {
-    // R1 : 4 matchs
-    for (let i = 0; i < 4; i++) {
-      matches.push({ tournament_id: tournamentId, round: 1, side, match_order: i + 1, team1_id: teams[i * 2].id, team2_id: teams[i * 2 + 1].id });
-    }
-    // R2 : 2 matchs demi
-    matches.push({ tournament_id: tournamentId, round: 2, side, match_order: 1, team1_id: null, team2_id: null });
-    matches.push({ tournament_id: tournamentId, round: 2, side, match_order: 2, team1_id: null, team2_id: null });
-    // R3 : finale poule
-    matches.push({ tournament_id: tournamentId, round: 3, side, match_order: 1, team1_id: null, team2_id: null });
-  }
-
-  if (n === 16) {
-    // R1 : 8 matchs
-    for (let i = 0; i < 8; i++) {
-      matches.push({ tournament_id: tournamentId, round: 1, side, match_order: i + 1, team1_id: teams[i * 2].id, team2_id: teams[i * 2 + 1].id });
-    }
-    // R2 : 4 matchs QF
-    for (let i = 0; i < 4; i++) {
-      matches.push({ tournament_id: tournamentId, round: 2, side, match_order: i + 1, team1_id: null, team2_id: null });
-    }
-    // R3 : 2 matchs demi
-    matches.push({ tournament_id: tournamentId, round: 3, side, match_order: 1, team1_id: null, team2_id: null });
-    matches.push({ tournament_id: tournamentId, round: 3, side, match_order: 2, team1_id: null, team2_id: null });
-    // R4 : finale poule
-    matches.push({ tournament_id: tournamentId, round: 4, side, match_order: 1, team1_id: null, team2_id: null });
-  }
-
-  if (n === 6) {
-    // R1 : seed1vs2, seed3vs4
-    matches.push({ tournament_id: tournamentId, round: 1, side, match_order: 1, team1_id: teams[0].id, team2_id: teams[1].id });
-    matches.push({ tournament_id: tournamentId, round: 1, side, match_order: 2, team1_id: teams[2].id, team2_id: teams[3].id });
-    // R2 : gagnant(1v2) vs gagnant(3v4) [match_order:1], seed5 vs seed6 [match_order:2]
-    matches.push({ tournament_id: tournamentId, round: 2, side, match_order: 1, team1_id: null, team2_id: null });
-    matches.push({ tournament_id: tournamentId, round: 2, side, match_order: 2, team1_id: teams[4].id, team2_id: teams[5].id });
-    // R3 : finale poule — gagnant R2 match1 vs gagnant R2 match2
-    matches.push({ tournament_id: tournamentId, round: 3, side, match_order: 1, team1_id: null, team2_id: null });
-  }
-
-  if (n === 12) {
-    // R1 : seeds 1-8 (4 matchs)
-    for (let i = 0; i < 4; i++) {
-      matches.push({ tournament_id: tournamentId, round: 1, side, match_order: i + 1, team1_id: teams[i * 2].id, team2_id: teams[i * 2 + 1].id });
-    }
-    // R2 : 2 matchs gagnants R1 + seed9vs10 + seed11vs12
-    matches.push({ tournament_id: tournamentId, round: 2, side, match_order: 1, team1_id: null, team2_id: null });
-    matches.push({ tournament_id: tournamentId, round: 2, side, match_order: 2, team1_id: null, team2_id: null });
-    matches.push({ tournament_id: tournamentId, round: 2, side, match_order: 3, team1_id: teams[8].id, team2_id: teams[9].id });
-    matches.push({ tournament_id: tournamentId, round: 2, side, match_order: 4, team1_id: teams[10].id, team2_id: teams[11].id });
-    // R3 : gagnant R2m1 vs gagnant R2m2, gagnant R2m3 vs gagnant R2m4
-    matches.push({ tournament_id: tournamentId, round: 3, side, match_order: 1, team1_id: null, team2_id: null });
-    matches.push({ tournament_id: tournamentId, round: 3, side, match_order: 2, team1_id: null, team2_id: null });
-    // R4 : finale poule
-    matches.push({ tournament_id: tournamentId, round: 4, side, match_order: 1, team1_id: null, team2_id: null });
-  }
-
-  if (n === 24) {
-    // R1 : seeds 1-16 (8 matchs)
-    for (let i = 0; i < 8; i++) {
-      matches.push({ tournament_id: tournamentId, round: 1, side, match_order: i + 1, team1_id: teams[i * 2].id, team2_id: teams[i * 2 + 1].id });
-    }
-    // R2 : 4 matchs gagnants R1 + seeds 17-24 (4 matchs)
-    for (let i = 0; i < 4; i++) {
-      matches.push({ tournament_id: tournamentId, round: 2, side, match_order: i + 1, team1_id: null, team2_id: null });
-    }
-    for (let i = 0; i < 4; i++) {
-      matches.push({ tournament_id: tournamentId, round: 2, side, match_order: i + 5, team1_id: teams[16 + i * 2].id, team2_id: teams[16 + i * 2 + 1].id });
-    }
-    // R3 : 4 matchs
-    for (let i = 0; i < 4; i++) {
-      matches.push({ tournament_id: tournamentId, round: 3, side, match_order: i + 1, team1_id: null, team2_id: null });
-    }
-    // R4 : 2 matchs
-    matches.push({ tournament_id: tournamentId, round: 4, side, match_order: 1, team1_id: null, team2_id: null });
-    matches.push({ tournament_id: tournamentId, round: 4, side, match_order: 2, team1_id: null, team2_id: null });
-    // R5 : finale poule
-    matches.push({ tournament_id: tournamentId, round: 5, side, match_order: 1, team1_id: null, team2_id: null });
-  }
-
-  return matches;
-}
-
-async function generateAndSaveMatches(tournamentId, leftTeams, rightTeams) {
-  await supabase.from('tournament_matches').delete().eq('tournament_id', tournamentId);
-  const leftMatches  = generateSideMatches(tournamentId, 'left', leftTeams);
-  const rightMatches = generateSideMatches(tournamentId, 'right', rightTeams);
-  const finalMatch   = { tournament_id: tournamentId, round: 99, side: 'final', match_order: 1, team1_id: null, team2_id: null };
-  await supabase.from('tournament_matches').insert([...leftMatches, ...rightMatches, finalMatch]);
-}
 
 // ── Envoie ou met à jour l'image du bracket ───────────────────────────────────
 async function sendOrUpdateBracketImage(client, tournament) {
@@ -264,9 +163,9 @@ async function sendOrUpdateBracketImage(client, tournament) {
   }
 }
 
-module.exports.sendOrUpdateBracketImage = sendOrUpdateBracketImage;
-
 module.exports = {
+  sendOrUpdateBracketImage,
+  // ── /tournoi-participants ───
   // ── /tournoi-participants ───────────────────────────────────────────────────
   tournoiParticipants: {
     data: new SlashCommandBuilder()
@@ -422,8 +321,7 @@ module.exports = {
         }
 
         // Supprime les matchs existants et régénère
-        await supabase.from('tournament_matches').delete().eq('tournament_id', tournament.id);
-        await generateAndSaveMatches(tournament.id, leftTeams, rightTeams);
+        await generateAndSaveMatches(supabase, tournament.id, leftTeams, rightTeams);
 
         // Récupère les membres pour l'affichage
         const { data: teamMembers } = await supabase
@@ -512,7 +410,7 @@ module.exports = {
 
         const insertedLeft  = insertedTeams.filter(t => t.side === 'left').sort((a, b) => a.seed - b.seed);
         const insertedRight = insertedTeams.filter(t => t.side === 'right').sort((a, b) => a.seed - b.seed);
-        await generateAndSaveMatches(tournament.id, insertedLeft, insertedRight);
+        await generateAndSaveMatches(supabase, tournament.id, insertedLeft, insertedRight);
 
         const avgDeviation = Math.round(stdDev(teams));
         const leftLines  = leftTeams.map(t  => { const avg = Math.round(teamAvgElo(t));  return `**${t.name}** [~${avg}] — ${t.members.map(m => `${m.discord_username} (${m.elo})`).join(', ')}`; }).join('\n');
@@ -530,12 +428,6 @@ module.exports = {
           .setTimestamp();
 
         await interaction.editReply({ embeds: [embed] });
-      }
-
-      // Génère l'image du bracket dans les deux cas
-      const updatedTournament = await getActiveTournament();
-      if (updatedTournament) {
-        sendOrUpdateBracketImage(interaction.client, updatedTournament).catch(() => {});
       }
     }
   },

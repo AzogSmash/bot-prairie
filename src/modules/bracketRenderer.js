@@ -77,7 +77,6 @@ function getRoundLabel(round, maxRound) {
 
 // ── Faisceau lumineux ─────────────────────────────────────────────────────────
 function drawSingleBeam(ctx, centerX, H, color, intensity, beamW) {
-  // Trait fin et lumineux — très concentré au centre
   const thinW = beamW * 0.15;
   const grad = ctx.createLinearGradient(centerX - thinW, 0, centerX + thinW, 0);
   grad.addColorStop(0,    "rgba(0,0,0,0)");
@@ -88,7 +87,6 @@ function drawSingleBeam(ctx, centerX, H, color, intensity, beamW) {
   ctx.fillStyle = grad;
   ctx.fillRect(centerX - thinW, 0, thinW * 2, H * 0.85);
 
-  // Halo léger autour
   const haloW = beamW * 0.5;
   const halo = ctx.createLinearGradient(centerX - haloW, 0, centerX + haloW, 0);
   halo.addColorStop(0,   "rgba(0,0,0,0)");
@@ -129,7 +127,6 @@ function renderSide(ctx, sideMatches, startX, sideW, areaTop, areaH, teamMap, me
     const totalH = numM * BOX_H + (numM - 1) * GAP;
     const startY = areaTop + (areaH - totalH) / 2;
 
-    // Label du round — mis en valeur si c'est le round actif
     const isActive = round === activeRound;
     const labelSize = isActive ? 24 : 18;
     const labelFill = isActive ? LABEL_ACTIVE : LABEL_COL;
@@ -138,7 +135,6 @@ function renderSide(ctx, sideMatches, startX, sideW, areaTop, areaH, teamMap, me
     ctx.font = `700 ${labelSize}px Arial`;
 
     if (isActive) {
-      // Halo violet derrière le label actif
       ctx.save();
       ctx.shadowColor = "rgba(180, 100, 255, 0.9)";
       ctx.shadowBlur  = 18;
@@ -155,24 +151,27 @@ function renderSide(ctx, sideMatches, startX, sideW, areaTop, areaH, teamMap, me
     });
   });
 
-  // Connecteurs
-  for (let ri = 0; ri < rounds.length - 1; ri++) {
-    const cur  = sideMatches.filter(m => m.round === rounds[ri]).sort((a, b) => a.match_order - b.match_order);
-    const next = sideMatches.filter(m => m.round === rounds[ri + 1]).sort((a, b) => a.match_order - b.match_order);
-    next.forEach((nm, ni) => {
-      const dp = positions[nm.id];
-      if (!dp) return;
-      [cur[ni * 2], cur[ni * 2 + 1]].forEach(src => {
-        if (!src || !positions[src.id]) return;
-        const sp = positions[src.id];
-        const fx = direction === 1 ? sp.x + sp.w : sp.x;
-        const tx = direction === 1 ? dp.x        : dp.x + dp.w;
-        const mx = (fx + tx) / 2;
-        ctx.beginPath(); ctx.moveTo(fx, sp.cy);
-        ctx.bezierCurveTo(mx, sp.cy, mx, dp.cy, tx, dp.cy);
-        ctx.strokeStyle = CONNECTOR; ctx.lineWidth = 2; ctx.setLineDash([]); ctx.stroke();
-      });
-    });
+  // ── Connecteurs via next_match_id ─────────────────────────────────────────
+  // On trace une ligne de chaque match vers son match suivant (next_match_id)
+  // Ça gère naturellement les byes — un match sans source dans le round précédent
+  // n'aura simplement pas de connecteur entrant
+  for (const match of sideMatches) {
+    if (!match.next_match_id) continue;
+    const sp = positions[match.id];
+    const dp = positions[match.next_match_id];
+    if (!sp || !dp) continue;
+
+    const fx = direction === 1 ? sp.x + sp.w : sp.x;
+    const tx = direction === 1 ? dp.x        : dp.x + dp.w;
+    const mx = (fx + tx) / 2;
+
+    ctx.beginPath();
+    ctx.moveTo(fx, sp.cy);
+    ctx.bezierCurveTo(mx, sp.cy, mx, dp.cy, tx, dp.cy);
+    ctx.strokeStyle = CONNECTOR;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);
+    ctx.stroke();
   }
 
   return positions;
@@ -300,7 +299,7 @@ async function renderBracket(tournament, matches, teams, teamMembers) {
   const rightMatches = matches.filter(m => m.side === "right").sort((a, b) => a.round - b.round || a.match_order - b.match_order);
   const finalMatch   = matches.find(m => m.side === "final");
 
-  // Calcul du round actif gauche et droite
+  // Calcul du round actif
   const leftPlayable  = leftMatches.filter(m => m.team1_id && m.team2_id);
   const rightPlayable = rightMatches.filter(m => m.team1_id && m.team2_id);
   const leftRounds    = [...new Set(leftPlayable.map(m => m.round))].sort((a, b) => a - b);
@@ -311,15 +310,14 @@ async function renderBracket(tournament, matches, teams, teamMembers) {
   const isFinalRound   = leftPlayable.every(m => m.status === 'finished') && rightPlayable.every(m => m.status === 'finished');
 
   if (!isFinalRound) {
-  for (const r of leftRounds) {
+    for (const r of leftRounds) {
       if (leftPlayable.filter(m => m.round === r).some(m => m.status !== 'finished')) { activeLeftRound = r; break; }
-   }
-  for (const r of rightRounds) {
+    }
+    for (const r of rightRounds) {
       if (rightPlayable.filter(m => m.round === r).some(m => m.status !== 'finished')) { activeRightRound = r; break; }
-   }
+    }
   }
 
-// Calcul centerX avant renderSide
   const numRoundsCalc = [...new Set(leftMatches.map(m => m.round))].length || 1;
   const roundWCalc    = SIDE_W / numRoundsCalc;
   const BOX_W_CALC    = Math.min(380, Math.max(220, Math.floor(roundWCalc * 0.84)));
@@ -339,7 +337,6 @@ async function renderBracket(tournament, matches, teams, teamMembers) {
 
   drawSingleBeam(ctx, FINAL_X + FINAL_W / 2, H, GOLD, isFinalRound ? 0.95 : 0.30, BEAM_W * 1.4);
 
-  // Rendu des côtés PAR-DESSUS les faisceaux
   const leftPos  = renderSide(ctx, leftMatches,  LEFT_X,  SIDE_W, AREA_TOP, AREA_H, teamMap, membersMap, 1,  isFinalRound ? -1 : activeLeftRound);
   const rightPos = renderSide(ctx, rightMatches, RIGHT_X, SIDE_W, AREA_TOP, AREA_H, teamMap, membersMap, -1, isFinalRound ? -1 : activeRightRound);
 
@@ -390,8 +387,10 @@ async function renderBracket(tournament, matches, teams, teamMembers) {
     if (isFin && wId) { ctx.save(); ctx.shadowColor = FINAL_GOLD; ctx.shadowBlur = 22; ctx.stroke(); ctx.restore(); }
     else ctx.stroke();
 
-    const lastLeft  = leftMatches.filter(m => m.round === Math.max(...leftMatches.map(x => x.round))).find(m => m.match_order === 1);
-    const lastRight = rightMatches.filter(m => m.round === Math.max(...rightMatches.map(x => x.round))).find(m => m.match_order === 1);
+    // Connecteurs finale de poule → grande finale via next_match_id
+    const lastLeft  = leftMatches.find(m => m.next_match_id === finalMatch.id);
+    const lastRight = rightMatches.find(m => m.next_match_id === finalMatch.id);
+
     if (lastLeft && leftPos[lastLeft.id]) {
       const p = leftPos[lastLeft.id];
       ctx.beginPath(); ctx.moveTo(p.x + p.w, p.cy);

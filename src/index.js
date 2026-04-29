@@ -6,6 +6,7 @@ const { buildProfileEmbed } = require('./commands/profil');
 const { updateClubsPanel } = require('./modules/clubsPanel');
 const { updateSnapshots } = require('./jobs/snapshots');
 const { registerFonts } = require('./services/registerFonts');
+const { handleSanctionInteraction } = require('./commands/mod');
 
 const {
   handleSettingsButton,
@@ -26,14 +27,10 @@ client.commands = new Collection();
 
 // Chargement des commandes
 const commandsPath = path.join(__dirname, 'commands');
-const DISABLED_COMMANDS = [
-  'pronostic.js',
-];
 
 const commandFiles = fs
   .readdirSync(commandsPath)
-  .filter(f => f.endsWith('.js'))
-  .filter(f => !DISABLED_COMMANDS.includes(f));
+  .filter(f => f.endsWith('.js'));
 const commandsData = [];
 
 for (const file of commandFiles) {
@@ -113,6 +110,9 @@ client.on('interactionCreate', async interaction => {
     if (interaction.customId.startsWith('absence_modal')) {
       const absenceCmd = require('./commands/absence');
       await absenceCmd.handleModal(interaction);
+    }
+      if (interaction.customId.startsWith('s_modal:')) {
+    await handleSanctionInteraction(interaction);
     }
     return;
   }
@@ -209,9 +209,21 @@ client.on('interactionCreate', async interaction => {
       await pronosticCmd.handleButton(interaction);
       return;
     }
+    if (interaction.customId.startsWith('bracket_reset_')) {
+      const resetCmd = require('./commands/tournoi-bracket-reset');
+      await resetCmd.handleButton(interaction);
+      return;
+    }
     if (interaction.customId.startsWith('bracket_')) {
       const bracketCmd = require('./commands/tournoi-bracket');
       await bracketCmd.handleButton(interaction);
+      return;
+    }
+    if (interaction.customId.startsWith('s_prev:') ||
+        interaction.customId.startsWith('s_next:') ||
+        interaction.customId.startsWith('s_edit:') ||
+        interaction.customId.startsWith('s_del:')) {
+      await handleSanctionInteraction(interaction);
       return;
     }
     return;
