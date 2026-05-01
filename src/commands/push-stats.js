@@ -17,30 +17,34 @@ function buildTodayPoints(rows) {
   }));
 }
 
-// Semaine : TOUS les points horaires, label seulement aux changements de jour et toutes les 6h
+// Semaine : 1 point toutes les 3h (≈ 56 pts sur 7 jours) → dots visibles, courbe lisible
 function buildWeekPoints(rows) {
-  return rows.map(r => {
-    const dt = DateTime.fromISO(r.snapshot_at).setZone("Europe/Paris");
-    let label = "";
-    if (dt.hour === 0)          label = DAYS_FR[dt.weekday];
-    else if (dt.hour % 6 === 0) label = `${String(dt.hour).padStart(2, "0")}h`;
-    return { value: r.trophies, label };
-  });
+  return rows
+    .filter(r => DateTime.fromISO(r.snapshot_at).setZone("Europe/Paris").hour % 3 === 0)
+    .map(r => {
+      const dt = DateTime.fromISO(r.snapshot_at).setZone("Europe/Paris");
+      let label = "";
+      if (dt.hour === 0)          label = DAYS_FR[dt.weekday];
+      else if (dt.hour % 6 === 0) label = `${String(dt.hour).padStart(2, "0")}h`;
+      return { value: r.trophies, label };
+    });
 }
 
-// Saison : daily (historique) + horaire (7 derniers jours)
+// Saison : daily (historique) + 1 point toutes les 6h pour les 7 derniers jours
 // rows portent un flag isDaily pour distinguer les deux types
 function buildSeasonPoints(rows) {
-  return rows.map(r => {
-    const dt = DateTime.fromISO(r.snapshot_at).setZone("Europe/Paris");
-    let label = "";
-    if (r.isDaily || dt.hour === 0) {
-      label = `${dt.day} ${MONTHS_FR[dt.month]}`;
-    } else if (dt.hour % 6 === 0) {
-      label = `${String(dt.hour).padStart(2, "0")}h`;
-    }
-    return { value: r.trophies, label };
-  });
+  return rows
+    .filter(r => r.isDaily || DateTime.fromISO(r.snapshot_at).setZone("Europe/Paris").hour % 6 === 0)
+    .map(r => {
+      const dt = DateTime.fromISO(r.snapshot_at).setZone("Europe/Paris");
+      let label = "";
+      if (r.isDaily || dt.hour === 0) {
+        label = `${dt.day} ${MONTHS_FR[dt.month]}`;
+      } else if (dt.hour % 6 === 0) {
+        label = `${String(dt.hour).padStart(2, "0")}h`;
+      }
+      return { value: r.trophies, label };
+    });
 }
 
 // Ajoute la valeur courante en dernier point si elle est plus récente

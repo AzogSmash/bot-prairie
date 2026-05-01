@@ -227,9 +227,9 @@ function drawChart(ctx, { px, py, pw, ph, title, subtitle, points, color, icTrop
   ctx.stroke();
   ctx.restore();
 
-  // Points de données (adaptatifs)
-  const showDots = pts.length <= 60;
-  const dotR     = pts.length <= 30 ? 4.5 : 3;
+  // Points de données (adaptatifs selon densité)
+  const showDots = pts.length <= 90;
+  const dotR     = pts.length <= 25 ? 4.5 : pts.length <= 60 ? 3.5 : 2.5;
   if (showDots) {
     for (const pt of pts) {
       ctx.beginPath();
@@ -242,36 +242,44 @@ function drawChart(ctx, { px, py, pw, ph, title, subtitle, points, color, icTrop
     }
   }
 
-  // Étiquettes axe X — uniquement les labels non vides
+  // Étiquettes axe X — espacement minimum garanti pour éviter les chevauchements
   ctx.font         = FONT(10, 700);
   ctx.textAlign    = "center";
   ctx.textBaseline = "top";
   ctx.fillStyle    = "rgba(255,255,255,0.72)";
 
+  const MIN_LABEL_PX      = 58;
+  const drawnLabelIdxs    = new Set();
   const hasExplicitLabels = points.some((p, i) => i > 0 && i < points.length - 1 && p.label !== "");
+  let lastLabelX = -Infinity;
+
   if (hasExplicitLabels) {
-    // Labels explicites (semaine/saison avec labels clairsemés)
     for (let i = 0; i < points.length; i++) {
-      if (points[i].label) {
-        ctx.fillText(String(points[i].label), S(toX(i)), S(ay + ah + 5));
-      }
+      if (!points[i].label) continue;
+      const lx = toX(i);
+      if (lastLabelX !== -Infinity && lx - lastLabelX < MIN_LABEL_PX) continue;
+      ctx.fillText(String(points[i].label), S(lx), S(ay + ah + 5));
+      drawnLabelIdxs.add(i);
+      lastLabelX = lx;
     }
   } else {
-    // Labels uniformes (aujourd'hui, toutes les heures)
     const maxLbls = Math.max(2, Math.floor(aw / 68));
     const step    = Math.max(1, Math.ceil(points.length / maxLbls));
     const lblSet  = new Set([0, points.length - 1]);
     for (let i = step; i < points.length - 1; i += step) lblSet.add(i);
     for (const i of [...lblSet].sort((a, b) => a - b)) {
-      ctx.fillText(String(points[i].label), S(toX(i)), S(ay + ah + 5));
+      const lx = toX(i);
+      if (i !== 0 && i !== points.length - 1 && lastLabelX !== -Infinity && lx - lastLabelX < MIN_LABEL_PX) continue;
+      ctx.fillText(String(points[i].label), S(lx), S(ay + ah + 5));
+      drawnLabelIdxs.add(i);
+      lastLabelX = lx;
     }
   }
 
-  // Petite graduation sur l'axe X pour les labels
+  // Graduations uniquement aux positions effectivement affichées
   ctx.strokeStyle = "rgba(255,255,255,0.30)";
   ctx.lineWidth   = S(1);
-  for (let i = 0; i < points.length; i++) {
-    if (!points[i].label) continue;
+  for (const i of drawnLabelIdxs) {
     const tx = toX(i);
     ctx.beginPath();
     ctx.moveTo(S(tx), S(ay + ah));
