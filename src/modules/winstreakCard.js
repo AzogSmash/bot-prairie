@@ -23,15 +23,15 @@ function FONT(size, weight = 700) {
 
 // Palette vive arc-en-ciel : gris → vert → jaune-vert → or → ambre → orange → rouge-rose → magenta → violet
 const STREAK_THRESHOLDS = [
-  { min: 0,  bg: "#28243a", border: "rgba(130,115,200,0.55)", tint: "#a090f0" },
-  { min: 1,  bg: "#1a5c12", border: "#44ee24", tint: "#66ff40" },
-  { min: 3,  bg: "#4e7200", border: "#aaee00", tint: "#ccff10" },
-  { min: 5,  bg: "#888000", border: "#ffee00", tint: "#ffff22" },
-  { min: 8,  bg: "#a06000", border: "#ffaa00", tint: "#ffc820" },
-  { min: 12, bg: "#aa3800", border: "#ff6820", tint: "#ff8a40" },
-  { min: 18, bg: "#aa1038", border: "#ff1858", tint: "#ff3878" },
-  { min: 25, bg: "#980080", border: "#ff10cc", tint: "#ff40ee" },
-  { min: 35, bg: "#7200a8", border: "#cc40ff", tint: "#e060ff" },
+  { min: 0,  bg: "#908f98", border: "#86858d", tint: "#86858d" },
+  { min: 1,  bg: "#ebf5af", border: "#c5ce93", tint: "#c5ce93" },
+  { min: 5,  bg: "#fdf405", border: "#d9d206", tint: "#d9d206" },
+  { min: 10,  bg: "#f8595c", border: "#d04a4c", tint: "#d04a4c" },
+  { min: 20,  bg: "#fa88e3", border: "#d170bd", tint: "#d170bd" },
+  { min: 30, bg: "#b3fb9d", border: "#9fdc8d", tint: "#9fdc8d" },
+  { min: 50, bg: "#7df2fb", border: "#67c5cb", tint: "#67c5cb" },
+  { min: 60, bg: "#ba029f", border: "#8a0276", tint: "#8a0276" },
+  { min: 70, bg: "#faf8fa", border: "#a5a3a5", tint: "#a5a3a5" },
 ];
 
 function getStreakTier(streak) {
