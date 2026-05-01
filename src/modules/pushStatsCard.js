@@ -96,12 +96,12 @@ function smoothPath(ctx, pts) {
 // ── Dessin d'un graphique ─────────────────────────────────────────────────────
 
 function drawChart(ctx, { px, py, pw, ph, title, subtitle, points, color, icTrophies }) {
-  // Panneau
+  // Panneau — fond sombre opaque + bordure visible
   rrPath(ctx, px, py, pw, ph, 14);
-  ctx.fillStyle = "rgba(0,0,0,0.44)";
+  ctx.fillStyle = "rgba(8,4,28,0.92)";
   ctx.fill();
   rrPath(ctx, px, py, pw, ph, 14);
-  ctx.strokeStyle = "rgba(255,255,255,0.11)";
+  ctx.strokeStyle = "rgba(255,255,255,0.28)";
   ctx.lineWidth   = S(1.5);
   ctx.stroke();
 
@@ -114,13 +114,13 @@ function drawChart(ctx, { px, py, pw, ph, title, subtitle, points, color, icTrop
   // Sous-titre
   if (subtitle) {
     ctx.font = FONT(11, 700);
-    outlined(ctx, subtitle, px + 16, py + 35, "rgba(200,210,255,0.55)", "#000000", 2.5);
+    outlined(ctx, subtitle, px + 16, py + 35, "rgba(200,215,255,0.72)", "#000000", 2.5);
   }
 
   const TITLE_H   = subtitle ? 60 : 42;
-  const XLABEL_H  = 28;
-  const YLABEL_W  = 54;
-  const RPAD      = 12;
+  const XLABEL_H  = 30;
+  const YLABEL_W  = 58;
+  const RPAD      = 14;
   const PANEL_PAD = 14;
 
   const ax = px + PANEL_PAD + YLABEL_W;
@@ -133,17 +133,17 @@ function drawChart(ctx, { px, py, pw, ph, title, subtitle, points, color, icTrop
     ctx.font         = FONT(13, 700);
     ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle    = "rgba(255,255,255,0.30)";
+    ctx.fillStyle    = "rgba(255,255,255,0.35)";
     ctx.fillText("Pas encore assez de données", S(px + pw / 2), S(ay + ah / 2));
     return;
   }
 
   // Plage Y
-  const vals    = points.map(p => p.value);
-  const minV    = Math.min(...vals);
-  const maxV    = Math.max(...vals);
+  const vals     = points.map(p => p.value);
+  const minV     = Math.min(...vals);
+  const maxV     = Math.max(...vals);
   const rawRange = maxV - minV;
-  const pad     = Math.max(rawRange * 0.18, 30);
+  const pad      = Math.max(rawRange * 0.18, 30);
   let yMin = Math.floor((minV - pad) / 50) * 50;
   let yMax = Math.ceil((maxV  + pad) / 50) * 50;
   if (yMax - yMin < 200) {
@@ -156,30 +156,41 @@ function drawChart(ctx, { px, py, pw, ph, title, subtitle, points, color, icTrop
   const toY = v => ay + ah * (1 - (v - yMin) / yRange);
   const toX = i => ax + (points.length > 1 ? (i / (points.length - 1)) * aw : aw / 2);
 
-  // Grille horizontale
+  // Ligne verticale axe Y
+  ctx.beginPath();
+  ctx.moveTo(S(ax), S(ay));
+  ctx.lineTo(S(ax), S(ay + ah));
+  ctx.strokeStyle = "rgba(255,255,255,0.20)";
+  ctx.lineWidth   = S(1);
+  ctx.stroke();
+
+  // Grille horizontale (5 lignes)
   const GRID = 4;
   for (let g = 0; g <= GRID; g++) {
-    const gy  = ay + g * ah / GRID;
-    const yv  = yMax - g * yRange / GRID;
+    const gy = ay + g * ah / GRID;
+    const yv = yMax - g * yRange / GRID;
+
     ctx.beginPath();
     ctx.moveTo(S(ax), S(gy));
     ctx.lineTo(S(ax + aw), S(gy));
-    ctx.strokeStyle = g === 0 || g === GRID ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.07)";
-    ctx.lineWidth   = S(1);
+    ctx.strokeStyle = g === 0 || g === GRID
+      ? "rgba(255,255,255,0.28)"
+      : "rgba(255,255,255,0.12)";
+    ctx.lineWidth   = S(g === 0 || g === GRID ? 1.5 : 1);
     ctx.stroke();
 
     ctx.font         = FONT(10, 700);
     ctx.textAlign    = "right";
     ctx.textBaseline = "middle";
-    ctx.fillStyle    = "rgba(255,255,255,0.42)";
-    ctx.fillText(fmtY(yv), S(ax - 5), S(gy));
+    ctx.fillStyle    = "rgba(255,255,255,0.65)";
+    ctx.fillText(fmtY(yv), S(ax - 6), S(gy));
   }
 
   // Points canvas
   const pts = points.map((p, i) => ({ x: toX(i), y: toY(p.value) }));
   const [r, g, b] = hexRgb(color);
 
-  // Remplissage dégradé
+  // Remplissage dégradé — bien opaque
   ctx.save();
   ctx.beginPath();
   smoothPath(ctx, pts);
@@ -187,74 +198,100 @@ function drawChart(ctx, { px, py, pw, ph, title, subtitle, points, color, icTrop
   ctx.lineTo(S(pts[0].x), S(ay + ah));
   ctx.closePath();
   const fillGrad = ctx.createLinearGradient(0, S(ay), 0, S(ay + ah));
-  fillGrad.addColorStop(0, `rgba(${r},${g},${b},0.40)`);
-  fillGrad.addColorStop(1, `rgba(${r},${g},${b},0.00)`);
+  fillGrad.addColorStop(0,    `rgba(${r},${g},${b},0.62)`);
+  fillGrad.addColorStop(0.65, `rgba(${r},${g},${b},0.22)`);
+  fillGrad.addColorStop(1,    `rgba(${r},${g},${b},0.05)`);
   ctx.fillStyle = fillGrad;
   ctx.fill();
   ctx.restore();
 
-  // Halo de la courbe
+  // Halo large (glow)
   ctx.save();
   ctx.beginPath();
   smoothPath(ctx, pts);
-  ctx.strokeStyle = `rgba(${r},${g},${b},0.30)`;
-  ctx.lineWidth   = S(8);
+  ctx.strokeStyle = `rgba(${r},${g},${b},0.50)`;
+  ctx.lineWidth   = S(12);
   ctx.lineJoin    = "round";
   ctx.lineCap     = "round";
   ctx.stroke();
   ctx.restore();
 
-  // Courbe principale
+  // Courbe principale — épaisse et lumineuse
   ctx.save();
   ctx.beginPath();
   smoothPath(ctx, pts);
   ctx.strokeStyle = color;
-  ctx.lineWidth   = S(3);
+  ctx.lineWidth   = S(4.5);
   ctx.lineJoin    = "round";
   ctx.lineCap     = "round";
   ctx.stroke();
   ctx.restore();
 
-  // Points (seulement si pas trop nombreux)
-  if (pts.length <= 32) {
+  // Points de données (adaptatifs)
+  const showDots = pts.length <= 60;
+  const dotR     = pts.length <= 30 ? 4.5 : 3;
+  if (showDots) {
     for (const pt of pts) {
       ctx.beginPath();
-      ctx.arc(S(pt.x), S(pt.y), S(4), 0, Math.PI * 2);
+      ctx.arc(S(pt.x), S(pt.y), S(dotR), 0, Math.PI * 2);
       ctx.fillStyle   = color;
       ctx.fill();
-      ctx.strokeStyle = "rgba(0,0,0,0.75)";
+      ctx.strokeStyle = "rgba(0,0,0,0.85)";
       ctx.lineWidth   = S(1.5);
       ctx.stroke();
     }
   }
 
-  // Étiquettes axe X (espacement intelligent)
-  const maxLbls = Math.max(2, Math.floor(aw / 68));
-  const step    = Math.max(1, Math.ceil(points.length / maxLbls));
-  const lblSet  = new Set([0, points.length - 1]);
-  for (let i = step; i < points.length - 1; i += step) lblSet.add(i);
-
+  // Étiquettes axe X — uniquement les labels non vides
   ctx.font         = FONT(10, 700);
   ctx.textAlign    = "center";
   ctx.textBaseline = "top";
-  ctx.fillStyle    = "rgba(255,255,255,0.52)";
-  for (const i of [...lblSet].sort((a, b) => a - b)) {
-    ctx.fillText(String(points[i].label), S(toX(i)), S(ay + ah + 5));
+  ctx.fillStyle    = "rgba(255,255,255,0.72)";
+
+  const hasExplicitLabels = points.some((p, i) => i > 0 && i < points.length - 1 && p.label !== "");
+  if (hasExplicitLabels) {
+    // Labels explicites (semaine/saison avec labels clairsemés)
+    for (let i = 0; i < points.length; i++) {
+      if (points[i].label) {
+        ctx.fillText(String(points[i].label), S(toX(i)), S(ay + ah + 5));
+      }
+    }
+  } else {
+    // Labels uniformes (aujourd'hui, toutes les heures)
+    const maxLbls = Math.max(2, Math.floor(aw / 68));
+    const step    = Math.max(1, Math.ceil(points.length / maxLbls));
+    const lblSet  = new Set([0, points.length - 1]);
+    for (let i = step; i < points.length - 1; i += step) lblSet.add(i);
+    for (const i of [...lblSet].sort((a, b) => a - b)) {
+      ctx.fillText(String(points[i].label), S(toX(i)), S(ay + ah + 5));
+    }
   }
 
-  // Badge delta (haut droite du panneau)
-  const delta     = vals[vals.length - 1] - vals[0];
-  const deltaStr  = (delta >= 0 ? "+" : "") + fmt(delta);
-  const deltaClr  = delta > 0 ? "#4cde7a" : delta < 0 ? "#ff6b6b" : "#ffffff";
+  // Petite graduation sur l'axe X pour les labels
+  ctx.strokeStyle = "rgba(255,255,255,0.30)";
+  ctx.lineWidth   = S(1);
+  for (let i = 0; i < points.length; i++) {
+    if (!points[i].label) continue;
+    const tx = toX(i);
+    ctx.beginPath();
+    ctx.moveTo(S(tx), S(ay + ah));
+    ctx.lineTo(S(tx), S(ay + ah + 4));
+    ctx.stroke();
+  }
+
+  // Badge delta (haut droite)
+  const delta    = vals[vals.length - 1] - vals[0];
+  const deltaStr = (delta >= 0 ? "+" : "") + fmt(delta);
+  const deltaClr = delta > 0 ? "#4cde7a" : delta < 0 ? "#ff6b6b" : "#ffffff";
 
   ctx.font         = FONT(14, 900);
   ctx.textAlign    = "right";
   ctx.textBaseline = "top";
 
   if (icTrophies) {
-    const icSz    = 20;
-    const tw      = ctx.measureText(deltaStr).width / SCALE;
-    const iconX   = px + pw - PANEL_PAD - tw - 5 - icSz;
+    const icSz  = 20;
+    const tw    = ctx.measureText(deltaStr).width / SCALE;
+    const iconX = px + pw - PANEL_PAD - tw - 5 - icSz;
     ctx.drawImage(icTrophies, S(iconX), S(py + 11), S(icSz), S(icSz));
   }
   outlined(ctx, deltaStr, px + pw - PANEL_PAD, py + 14, deltaClr, "#000000", 3);
@@ -263,11 +300,11 @@ function drawChart(ctx, { px, py, pw, ph, title, subtitle, points, color, icTrop
 // ── Génération finale ─────────────────────────────────────────────────────────
 
 async function generatePushStatsCard(bsPlayer, extra, { todayPoints, weekPoints, seasonPoints, seasonLabel }) {
-  const data   = normalizeRankCardData(bsPlayer, extra);
+  normalizeRankCardData(bsPlayer, extra); // valide les données
   const canvas = createCanvas(S(W), S(H));
   const ctx    = canvas.getContext("2d");
 
-  // Fond
+  // Fond — très sombre pour faire ressortir les graphiques
   const bgImg = await tryLoad(path.join(BG_DIR, "rank_bg.png"));
   if (bgImg) {
     const sc = Math.max(S(W) / bgImg.width, S(H) / bgImg.height);
@@ -279,26 +316,25 @@ async function generatePushStatsCard(bsPlayer, extra, { todayPoints, weekPoints,
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, S(W), S(H));
   }
-  ctx.fillStyle = "rgba(0,0,0,0.25)";
+  // Voile sombre fort pour maximiser le contraste des panels
+  ctx.fillStyle = "rgba(0,0,0,0.58)";
   ctx.fillRect(0, 0, S(W), S(H));
 
   // Header commun
   const headerEndY = await drawHeader(ctx, bsPlayer, extra);
 
-  ctx.fillStyle = "rgba(255,255,255,0.10)";
+  ctx.fillStyle = "rgba(255,255,255,0.14)";
   ctx.fillRect(S(MARGIN), S(headerEndY - 4), S(W - MARGIN * 2), S(2));
 
-  // Icône trophées pour les badges
   const icTrophies = await tryLoad(path.join(ICONS_DIR, "trophies.png"));
 
-  // Sous-titres contextuels
   const now       = DateTime.now().setZone("Europe/Paris");
   const DAYS_LONG = ["", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam.", "Dim."];
   const MONTHS_FR = ["", "jan", "fév", "mar", "avr", "mai", "juin", "juil", "aoû", "sep", "oct", "nov", "déc"];
   const weekStart = now.startOf("week");
 
   const todaySub  = `${DAYS_LONG[now.weekday]} ${now.day} ${MONTHS_FR[now.month]}`;
-  const weekSub   = `Sem. du ${weekStart.day} ${MONTHS_FR[weekStart.month]}`;
+  const weekSub   = `Sem. du ${weekStart.day} ${MONTHS_FR[weekStart.month]} — points toutes les heures`;
   const seasonSub = seasonLabel || "Saison en cours";
 
   const pw = W - MARGIN * 2;
@@ -324,11 +360,10 @@ async function generatePushStatsCard(bsPlayer, extra, { todayPoints, weekPoints,
     points: seasonPoints, color: "#c57af0", icTrophies,
   });
 
-  // Date
   ctx.font         = FONT(10, 700);
   ctx.textBaseline = "bottom";
   ctx.textAlign    = "right";
-  ctx.fillStyle    = "rgba(255,255,255,0.28)";
+  ctx.fillStyle    = "rgba(255,255,255,0.30)";
   ctx.fillText(now.toFormat("dd/MM/yyyy"), S(W - 6), S(H - 4));
 
   return canvas.toBuffer("image/png");
