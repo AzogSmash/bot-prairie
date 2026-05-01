@@ -22,24 +22,25 @@ function FONT(size, weight = 700) {
   return `${weight} ${S(size)}px "Lilita One", "Lilita", sans-serif`;
 }
 
+// Palette feu : sombre (0) → ambre → orange → rouge → cramoisi → grenat → violet profond
 const STREAK_THRESHOLDS = [
-  { min: 0,  color: "#4a4a5a" },
-  { min: 1,  color: "#815b40" },
-  { min: 5,  color: "#b3b5d5" },
-  { min: 10, color: "#dec745" },
-  { min: 15, color: "#b377e4" },
-  { min: 20, color: "#ed599e" },
-  { min: 25, color: "#f3cb66" },
+  { min: 0,  bg: "#1e1b2e", border: "rgba(110,100,160,0.38)" },
+  { min: 1,  bg: "#4a3d05", border: "#c8a000" },
+  { min: 5,  bg: "#6b3200", border: "#f07800" },
+  { min: 10, bg: "#7d1d00", border: "#f04400" },
+  { min: 15, bg: "#720010", border: "#f01540" },
+  { min: 20, bg: "#580025", border: "#d00055" },
+  { min: 25, bg: "#420038", border: "#b000a0" },
 ];
 
-function getStreakColor(streak) {
+function getStreakTier(streak) {
   const n = Number(streak || 0);
   let result = STREAK_THRESHOLDS[0];
   for (const t of STREAK_THRESHOLDS) {
     if (n >= t.min) result = t;
     else break;
   }
-  return result.color;
+  return result;
 }
 
 function rrPath(ctx, x, y, w, h, r) {
@@ -105,22 +106,22 @@ async function drawWinstreakGrid(ctx, brawlers, startY) {
   }));
 
   for (let i = 0; i < sorted.length; i++) {
-    const { streak, id, brawler_id } = sorted[i];
-    const portrait = portraits[i];
+    const { streak } = sorted[i];
+    const portrait   = portraits[i];
     const col  = i % COLS;
     const row  = Math.floor(i / COLS);
     const cx   = MARGIN + col * (CELL_W + GAP);
     const cy   = startY + row * (ACTUAL_H + GAP);
-    const color = getStreakColor(streak);
+    const tier = getStreakTier(streak);
 
-    if (streak === 0) ctx.globalAlpha = 0.55;
+    if (streak === 0) ctx.globalAlpha = 0.50;
 
-    // Fond
-    rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 14);
-    ctx.fillStyle = `${color}dd`;
+    // Fond plein (couleur du tier)
+    rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 12);
+    ctx.fillStyle = tier.bg;
     ctx.fill();
 
-    // Portrait
+    // Portrait (clippé)
     if (portrait) {
       ctx.save();
       rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 8);
@@ -130,37 +131,51 @@ async function drawWinstreakGrid(ctx, brawlers, startY) {
       ctx.restore();
     }
 
-    // Bordure
+    // Gradient vertical : léger reflet en haut, ombre marquée en bas
+    ctx.save();
     rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 8);
-    ctx.strokeStyle = streak > 0 ? "rgba(255,255,255,0.92)" : "rgba(180,180,200,0.40)";
-    ctx.lineWidth   = S(streak > 0 ? 4 : 2);
+    ctx.clip();
+    const cellGrad = ctx.createLinearGradient(0, S(cy), 0, S(cy + ACTUAL_H));
+    cellGrad.addColorStop(0,    "rgba(255,255,255,0.10)");
+    cellGrad.addColorStop(0.35, "rgba(0,0,0,0)");
+    cellGrad.addColorStop(1,    "rgba(0,0,0,0.55)");
+    ctx.fillStyle = cellGrad;
+    ctx.fillRect(S(cx), S(cy), S(CELL_W), S(ACTUAL_H));
+    ctx.restore();
+
+    // Bordure colorée (hue du tier)
+    rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 8);
+    ctx.strokeStyle = tier.border;
+    ctx.lineWidth   = S(streak > 0 ? 3.5 : 2);
     ctx.stroke();
 
-    // Overlay label bas
+    // Label bas : overlay sombre + icône + nombre
     const labelY = cy + ACTUAL_H - LABEL_H;
     ctx.save();
     rrPath(ctx, cx, labelY, CELL_W, LABEL_H, 8);
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.fillStyle = "rgba(0,0,0,0.72)";
     ctx.fill();
     ctx.restore();
 
-    // Icône + numéro
-    const iconH  = Math.round(LABEL_H * 0.70);
-    const fSize  = Math.max(8, Math.round(LABEL_H * 0.52));
-    ctx.font = FONT(fSize, 900);
-    ctx.textAlign    = "center";
+    const iconH = Math.round(LABEL_H * 0.68);
+    const fSize = Math.max(8, Math.round(LABEL_H * 0.50));
+    ctx.font         = FONT(fSize, 900);
     ctx.textBaseline = "middle";
 
     if (streak > 0 && wsIcon) {
-      const totalW = iconH + S(fSize * 0.6 * String(streak).length) / SCALE + 4;
-      const startX = cx + CELL_W / 2 - totalW / 2;
-      ctx.drawImage(wsIcon, S(startX), S(labelY + (LABEL_H - iconH) / 2), S(iconH), S(iconH));
+      const numStr = String(streak);
       ctx.textAlign = "left";
-      outlined(ctx, String(streak), startX + iconH + 3, labelY + LABEL_H / 2, "#ffb15f", "#000000", 2.5);
+      const tw      = ctx.measureText(numStr).width / SCALE;
+      const totalW  = iconH + 3 + tw;
+      const startX  = cx + (CELL_W - totalW) / 2;
+      ctx.drawImage(wsIcon, S(startX), S(labelY + (LABEL_H - iconH) / 2), S(iconH), S(iconH));
+      outlined(ctx, numStr, startX + iconH + 3, labelY + LABEL_H / 2, "#ffffff", "#000000", 2.5);
     } else if (streak > 0) {
-      outlined(ctx, String(streak), cx + CELL_W / 2, labelY + LABEL_H / 2, "#ffb15f", "#000000", 2.5);
+      ctx.textAlign = "center";
+      outlined(ctx, String(streak), cx + CELL_W / 2, labelY + LABEL_H / 2, "#ffffff", "#000000", 2.5);
     } else {
-      outlined(ctx, "—", cx + CELL_W / 2, labelY + LABEL_H / 2, "#aaaaaa", "#000000", 2);
+      ctx.textAlign = "center";
+      outlined(ctx, "0", cx + CELL_W / 2, labelY + LABEL_H / 2, "rgba(160,150,180,0.80)", "#000000", 2);
     }
 
     ctx.globalAlpha = 1.0;
