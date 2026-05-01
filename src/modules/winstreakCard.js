@@ -17,22 +17,21 @@ const H      = 1250;
 const MARGIN = 14;
 
 function S(v) { return Math.round(v * SCALE); }
-
 function FONT(size, weight = 700) {
   return `${weight} ${S(size)}px "Lilita One", "Lilita", sans-serif`;
 }
 
-// Palette arc-en-ciel : ardoise (0) → vert → jaune-vert → or → ambre → orange-rouge → rouge-rose → magenta → violet
+// Palette vive arc-en-ciel : gris → vert → jaune-vert → or → ambre → orange → rouge-rose → magenta → violet
 const STREAK_THRESHOLDS = [
-  { min: 0,  bg: "#1e1c30", border: "rgba(105,95,150,0.40)", tint: "#7060b0" },
-  { min: 1,  bg: "#0d2c12", border: "#2ea038", tint: "#44c050" },
-  { min: 3,  bg: "#263800", border: "#74b800", tint: "#98d820" },
-  { min: 5,  bg: "#3a3000", border: "#c8a800", tint: "#e8cc30" },
-  { min: 8,  bg: "#3a2000", border: "#d87800", tint: "#f09820" },
-  { min: 12, bg: "#3a1000", border: "#d84000", tint: "#f06030" },
-  { min: 18, bg: "#350015", border: "#d01050", tint: "#f03070" },
-  { min: 25, bg: "#2e0042", border: "#b808c8", tint: "#de30f0" },
-  { min: 35, bg: "#180050", border: "#7018e0", tint: "#9840f8" },
+  { min: 0,  bg: "#28243a", border: "rgba(130,115,200,0.55)", tint: "#a090f0" },
+  { min: 1,  bg: "#1a5c12", border: "#44ee24", tint: "#66ff40" },
+  { min: 3,  bg: "#4e7200", border: "#aaee00", tint: "#ccff10" },
+  { min: 5,  bg: "#888000", border: "#ffee00", tint: "#ffff22" },
+  { min: 8,  bg: "#a06000", border: "#ffaa00", tint: "#ffc820" },
+  { min: 12, bg: "#aa3800", border: "#ff6820", tint: "#ff8a40" },
+  { min: 18, bg: "#aa1038", border: "#ff1858", tint: "#ff3878" },
+  { min: 25, bg: "#980080", border: "#ff10cc", tint: "#ff40ee" },
+  { min: 35, bg: "#7200a8", border: "#cc40ff", tint: "#e060ff" },
 ];
 
 function getStreakTier(streak) {
@@ -45,22 +44,27 @@ function getStreakTier(streak) {
   return result;
 }
 
-// Crée une version teintée de l'icône flamme pour chaque palier
+function hexToRgb(hex) {
+  const h = hex.replace("#", "");
+  return {
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16),
+  };
+}
+
+// Crée une version teintée de l'icône flamme pour chaque palier via source-atop
 async function buildTintedFlames(wsIcon) {
   if (!wsIcon) return new Map();
   const map = new Map();
   for (const tier of STREAK_THRESHOLDS) {
-    const iw = wsIcon.width;
-    const ih = wsIcon.height;
-    const off = createCanvas(iw, ih);
+    const off  = createCanvas(wsIcon.width, wsIcon.height);
     const octx = off.getContext("2d");
-    // Dessin de l'icône originale
-    octx.drawImage(wsIcon, 0, 0, iw, ih);
-    // Superposition de la teinte en mode source-atop (colore les pixels opaques)
+    octx.drawImage(wsIcon, 0, 0);
     octx.globalCompositeOperation = "source-atop";
-    octx.fillStyle = tier.tint;
-    octx.globalAlpha = 0.78;
-    octx.fillRect(0, 0, iw, ih);
+    octx.fillStyle  = tier.tint;
+    octx.globalAlpha = 0.82;
+    octx.fillRect(0, 0, wsIcon.width, wsIcon.height);
     octx.globalAlpha = 1.0;
     octx.globalCompositeOperation = "source-over";
     map.set(tier.min, off);
@@ -72,33 +76,23 @@ function rrPath(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(S(x + r), S(y));
   ctx.lineTo(S(x + w - r), S(y));
-  ctx.arcTo(S(x + w), S(y), S(x + w), S(y + r), S(r));
+  ctx.arcTo(S(x + w), S(y),     S(x + w), S(y + r),     S(r));
   ctx.lineTo(S(x + w), S(y + h - r));
   ctx.arcTo(S(x + w), S(y + h), S(x + w - r), S(y + h), S(r));
   ctx.lineTo(S(x + r), S(y + h));
-  ctx.arcTo(S(x), S(y + h), S(x), S(y + h - r), S(r));
+  ctx.arcTo(S(x),      S(y + h), S(x), S(y + h - r),    S(r));
   ctx.lineTo(S(x), S(y + r));
-  ctx.arcTo(S(x), S(y), S(x + r), S(y), S(r));
+  ctx.arcTo(S(x),      S(y),     S(x + r), S(y),         S(r));
   ctx.closePath();
 }
 
 function outlined(ctx, text, x, y, fill, stroke, sw) {
   ctx.strokeStyle = stroke;
-  ctx.lineWidth = S(sw);
-  ctx.lineJoin = "round";
+  ctx.lineWidth   = S(sw);
+  ctx.lineJoin    = "round";
   ctx.strokeText(String(text), S(x), S(y));
-  ctx.fillStyle = fill;
+  ctx.fillStyle   = fill;
   ctx.fillText(String(text), S(x), S(y));
-}
-
-// Parse un hex #rrggbb en composantes r,g,b
-function hexToRgb(hex) {
-  const h = hex.replace("#", "");
-  return {
-    r: parseInt(h.slice(0, 2), 16),
-    g: parseInt(h.slice(2, 4), 16),
-    b: parseInt(h.slice(4, 6), 16),
-  };
 }
 
 async function tryLoad(localPath, remote = null) {
@@ -120,11 +114,12 @@ async function drawWinstreakGrid(ctx, brawlers, startY) {
   const GRID_W  = W - MARGIN * 2;
   const GAP     = 15;
   const CELL_W  = Math.floor((GRID_W - GAP * (COLS - 1)) / COLS);
-  const CELL_H  = Math.round(CELL_W * 0.6);
+  const CELL_H  = Math.round(CELL_W * 0.62);
   const ROWS    = Math.max(1, Math.ceil(sorted.length / COLS));
   const GRID_H  = H - startY - MARGIN;
   const ACTUAL_H = Math.min(CELL_H, Math.floor(GRID_H / ROWS));
-  const LABEL_H  = Math.round(ACTUAL_H * 0.30);
+  // Zone label élargie pour accueillir flamme + nombre + MAX
+  const LABEL_H  = Math.round(ACTUAL_H * 0.38);
 
   const wsIcon = await tryLoad(path.join(ICONS_DIR, "borderless", "winstreak.png"))
     ?? await tryLoad(path.join(ICONS_DIR, "winstreak.png"));
@@ -150,74 +145,80 @@ async function drawWinstreakGrid(ctx, brawlers, startY) {
     const cx   = MARGIN + col * (CELL_W + GAP);
     const cy   = startY + row * (ACTUAL_H + GAP);
     const tier = getStreakTier(streak);
+    const { r, g, b } = hexToRgb(tier.bg);
 
-    if (streak === 0) ctx.globalAlpha = 0.48;
+    if (streak === 0) ctx.globalAlpha = 0.50;
 
-    // Fond plein
+    // ── Fond coloré vif ─────────────────────────────────────────────────────
     rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 12);
     ctx.fillStyle = tier.bg;
     ctx.fill();
 
-    // Portrait clippé
+    // ── Portrait clippé ─────────────────────────────────────────────────────
     if (portrait) {
       ctx.save();
       rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 8);
       ctx.clip();
+      // Zoom x2 sur le portrait pour remplir la case
       const sc = (ACTUAL_H / portrait.height) * 2;
       ctx.drawImage(portrait, S(cx), S(cy), portrait.width * sc, portrait.height * sc);
       ctx.restore();
     }
 
-    // Gradient vertical
+    // ── Gradient léger pour conserver la vivacité ────────────────────────────
     ctx.save();
     rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 8);
     ctx.clip();
     const cellGrad = ctx.createLinearGradient(0, S(cy), 0, S(cy + ACTUAL_H));
-    cellGrad.addColorStop(0,    "rgba(255,255,255,0.08)");
-    cellGrad.addColorStop(0.35, "rgba(0,0,0,0)");
-    cellGrad.addColorStop(1,    "rgba(0,0,0,0.52)");
+    cellGrad.addColorStop(0,    "rgba(255,255,255,0.14)");
+    cellGrad.addColorStop(0.28, "rgba(0,0,0,0)");
+    cellGrad.addColorStop(1,    "rgba(0,0,0,0.38)");
     ctx.fillStyle = cellGrad;
     ctx.fillRect(S(cx), S(cy), S(CELL_W), S(ACTUAL_H));
     ctx.restore();
 
-    // Bordure colorée
+    // ── Bordure vive ────────────────────────────────────────────────────────
     rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 8);
     ctx.strokeStyle = tier.border;
     ctx.lineWidth   = S(streak > 0 ? 3.5 : 2);
     ctx.stroke();
 
-    // Overlay label bas : teinte sombre du fond du palier
-    const { r, g, b } = hexToRgb(tier.bg);
+    // ── Overlay label bas : teinte sombre du palier ─────────────────────────
     const labelY = cy + ACTUAL_H - LABEL_H;
     ctx.save();
     rrPath(ctx, cx, labelY, CELL_W, LABEL_H, 8);
-    ctx.fillStyle = `rgba(${Math.round(r * 0.6)},${Math.round(g * 0.6)},${Math.round(b * 0.6)},0.90)`;
+    ctx.fillStyle = `rgba(${Math.round(r * 0.30)},${Math.round(g * 0.30)},${Math.round(b * 0.30)},0.90)`;
     ctx.fill();
     ctx.restore();
 
-    const iconH = Math.round(LABEL_H * 0.68);
-    const fSize = Math.max(8, Math.round(LABEL_H * 0.50));
-    ctx.font         = FONT(fSize, 900);
+    // ── Flamme teintée à gauche du label ────────────────────────────────────
+    const FLAME_PAD = Math.max(4, Math.round(CELL_W * 0.04));
+    const flameH    = Math.max(10, Math.round(LABEL_H * 0.82));
+    const flameW    = flameH;
+    const flameX    = cx + FLAME_PAD;
+    const flameY    = labelY + (LABEL_H - flameH) / 2;
+    const flameCX   = flameX + flameW / 2;
+
+    const flameImg = tintedFlames.get(tier.min) ?? wsIcon;
+    if (flameImg) {
+      ctx.drawImage(flameImg, S(flameX), S(flameY), S(flameW), S(flameH));
+    }
+
+    // ── Nombre DE VICTOIRES sur la flamme ────────────────────────────────────
+    const numFSize = Math.max(6, Math.round(flameH * 0.52));
+    ctx.font         = FONT(numFSize, 900);
+    ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
 
-    // Flamme teintée du palier
-    const flameImg = tintedFlames.get(tier.min) ?? wsIcon;
+    const numStr   = String(streak);
+    const numColor = streak > 0 ? "#ffffff" : "rgba(210,200,240,0.80)";
+    outlined(ctx, numStr, flameCX, flameY + flameH * 0.50, numColor, "#000000", streak > 0 ? 2.5 : 2);
 
-    if (streak > 0 && flameImg) {
-      const numStr = String(streak);
-      ctx.textAlign = "left";
-      const tw      = ctx.measureText(numStr).width / SCALE;
-      const totalW  = iconH + 3 + tw;
-      const startX  = cx + (CELL_W - totalW) / 2;
-      ctx.drawImage(flameImg, S(startX), S(labelY + (LABEL_H - iconH) / 2), S(iconH), S(iconH));
-      outlined(ctx, numStr, startX + iconH + 3, labelY + LABEL_H / 2, "#ffffff", "#000000", 2.5);
-    } else if (streak > 0) {
-      ctx.textAlign = "center";
-      outlined(ctx, String(streak), cx + CELL_W / 2, labelY + LABEL_H / 2, "#ffffff", "#000000", 2.5);
-    } else {
-      ctx.textAlign = "center";
-      outlined(ctx, "0", cx + CELL_W / 2, labelY + LABEL_H / 2, "rgba(160,150,180,0.80)", "#000000", 2);
-    }
+    // ── "MAX" sous la flamme ─────────────────────────────────────────────────
+    const maxFSize = Math.max(5, Math.round(LABEL_H * 0.27));
+    ctx.font         = FONT(maxFSize, 700);
+    ctx.textBaseline = "bottom";
+    outlined(ctx, "MAX", flameCX, labelY + LABEL_H - 2, "rgba(255,255,255,0.82)", "#000000", 1.5);
 
     ctx.globalAlpha = 1.0;
   }
@@ -242,20 +243,20 @@ async function generateWinstreakCard(bsPlayer, extra = {}) {
     ctx.fillRect(0, 0, S(W), S(H));
   }
 
-  ctx.fillStyle = "rgba(0,0,0,0.25)";
+  ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.fillRect(0, 0, S(W), S(H));
 
   const headerEndY = await drawHeader(ctx, bsPlayer, extra);
 
-  ctx.fillStyle = "rgba(255,255,255,0.1)";
+  ctx.fillStyle = "rgba(255,255,255,0.10)";
   ctx.fillRect(S(MARGIN), S(headerEndY - 4), S(W - MARGIN * 2), S(2));
 
   await drawWinstreakGrid(ctx, data.brawlers, headerEndY);
 
-  ctx.font = FONT(10, 700);
+  ctx.font         = FONT(10, 700);
   ctx.textBaseline = "bottom";
   ctx.textAlign    = "right";
-  ctx.fillStyle    = "rgba(255,255,255,0.3)";
+  ctx.fillStyle    = "rgba(255,255,255,0.30)";
   ctx.fillText(new Date().toLocaleDateString("fr-FR"), S(W - 6), S(H - 4));
 
   return canvas.toBuffer("image/png");
