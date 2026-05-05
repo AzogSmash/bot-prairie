@@ -187,7 +187,7 @@ module.exports = {
       .addStringOption(o => o.setName('remplaçants').setDescription('Mentions des remplaçants (@user1 @user2 ...)').setRequired(false)),
 
     async execute(interaction) {
-      await interaction.deferReply({ flags: 64 });
+      await interaction.deferReply();
 
       const tournament = await getActiveTournament();
       if (!tournament) return interaction.editReply({ content: '❌ Aucun tournoi en cours.' });
@@ -300,7 +300,7 @@ module.exports = {
       ),
 
     async execute(interaction) {
-      await interaction.deferReply({ flags: 64 });
+      await interaction.deferReply();
 
       const tournament = await getActiveTournament();
       if (!tournament) return interaction.editReply({ content: '❌ Aucun tournoi en cours.' });
@@ -451,7 +451,7 @@ module.exports = {
       .addIntegerOption(o => o.setName('elo').setDescription('Nouvel elo pour membre1 (uniquement si membre2 non fourni)').setRequired(false).setMinValue(0)),
 
     async execute(interaction) {
-      await interaction.deferReply({ flags: 64 });
+      await interaction.deferReply();
 
       const tournament = await getActiveTournament();
       if (!tournament) return interaction.editReply({ content: '❌ Aucun tournoi en cours.' });

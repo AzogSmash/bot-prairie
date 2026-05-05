@@ -61,7 +61,7 @@ module.exports = {
     ),
 
   async execute(interaction) {
-    await interaction.deferReply({ flags: 64 });
+    await interaction.deferReply();
 
     const tournament = await getActiveTournament();
     if (!tournament) return interaction.editReply({ content: '❌ Aucun tournoi en cours.' });

@@ -47,7 +47,7 @@ module.exports = {
       ),
 
     async execute(interaction) {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply();
 
       const nom = interaction.options.getString('nom');
       const taille = interaction.options.getInteger('taille');
@@ -92,7 +92,7 @@ module.exports = {
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
 
     async execute(interaction) {
-      await interaction.deferReply({ flags: 64 });
+      await interaction.deferReply();
 
       const tournament = await getActiveTournament(['open']);
       if (!tournament) return interaction.editReply({ content: '❌ Aucun tournoi ouvert trouvé.' });
@@ -163,7 +163,7 @@ module.exports = {
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
 
     async execute(interaction) {
-      await interaction.deferReply({ flags: 64 });
+      await interaction.deferReply();
 
       const tournament = await getActiveTournament(['started']);
       if (!tournament) return interaction.editReply({ content: '❌ Aucun tournoi en cours.' });
