@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { supabase } = require('../lib/supabase');
 const { generateAndSaveMatches } = require('./bracketGenerator');
+const { recalculateScores } = require('../lib/tournoiScores');
 
 // ── Tournoi actif ─────────────────────────────────────────────────────────────
 async function getActiveTournament(statusFilter = ['open', 'started']) {
@@ -212,50 +213,3 @@ module.exports = {
   },
 };
 
-// ── Recalcul des scores ───────────────────────────────────────────────────────
-async function recalculateScores(tournamentId) {
-  const { data: allMatches } = await supabase
-    .from('tournament_matches')
-    .select('*')
-    .eq('tournament_id', tournamentId);
-
-  if (!allMatches?.length) return;
-
-  const allLeftMatches = allMatches.filter(m => m.side === 'left');
-  const allRightMatches = allMatches.filter(m => m.side === 'right');
-  const finalMatch = allMatches.find(m => m.side === 'final');
-
-  const leftComplete = allLeftMatches.every(m => m.status === 'finished');
-  const rightComplete = allRightMatches.every(m => m.status === 'finished');
-  const finalComplete = finalMatch?.status === 'finished';
-
-  const { data: predictions } = await supabase
-    .from('tournament_predictions')
-    .select('*')
-    .eq('tournament_id', tournamentId);
-
-  if (!predictions?.length) return;
-
-  for (const prediction of predictions) {
-    const preds = prediction.predictions || {};
-
-    const leftCorrect = leftComplete
-      ? allLeftMatches.every(m => preds[m.id] === m.winner_id)
-      : false;
-
-    const rightCorrect = rightComplete
-      ? allRightMatches.every(m => preds[m.id] === m.winner_id)
-      : false;
-
-    const finalCorrect = finalComplete && finalMatch
-      ? preds[finalMatch.id] === finalMatch.winner_id
-      : false;
-
-    const score = (leftCorrect ? 1 : 0) + (rightCorrect ? 1 : 0) + (finalCorrect ? 1 : 0);
-
-    await supabase
-      .from('tournament_predictions')
-      .update({ score, left_correct: leftCorrect, right_correct: rightCorrect, final_correct: finalCorrect })
-      .eq('id', prediction.id);
-  }
-}
