@@ -127,8 +127,10 @@ module.exports = {
     for (const m of (bsMembers || [])) bsMap[m.discord_id] = m;
 
     // Inscrit les membres de l'équipe
+    const noAccount = [];
     for (const user of members) {
       const bs = bsMap[user.id];
+      if (!bs?.brawlstars_tag) noAccount.push(user.username);
       const elo = bs?.brawlstars_tag ? await getPlayerElo(bs.brawlstars_tag) : 0;
 
       const { data: existing } = await supabase.from('tournament_participants').select('id').eq('tournament_id', tournament.id).eq('discord_id', user.id).maybeSingle();
@@ -195,6 +197,7 @@ module.exports = {
         { name: '👥 Membres',     value: memberList,    inline: false },
         { name: '📊 Progression', value: `${totalCount}/${tournament.size} équipes au total`, inline: true },
         ...(subCount > 0 ? [{ name: '🔄 Remplaçants inscrits', value: `${subCount}`, inline: true }] : []),
+        ...(noAccount.length > 0 ? [{ name: '⚠️ Sans compte BS lié (elo = 0)', value: noAccount.map(n => `**${n}** — utilise \`/lier\` pour lier son compte`, ).join('\n'), inline: false }] : []),
       )
       .setFooter({
         text: totalCount >= tournament.size

@@ -496,29 +496,49 @@ module.exports = {
 
         // Cas remplaçant (m2 pas dans une équipe)
         if (!m2) {
-          const { data: sub } = await supabase
-            .from('tournament_participants')
-            .select('*')
-            .eq('tournament_id', tournament.id)
-            .eq('discord_id', user2.id)
-            .maybeSingle();
+          if (!m1) return interaction.editReply({ content: `❌ **${user1.username}** n'est dans aucune équipe.` });
 
-          if (!sub) return interaction.editReply({ content: `❌ **${user2.username}** n'est pas inscrit au tournoi.` });
-          if (!m1)  return interaction.editReply({ content: `❌ **${user1.username}** n'est dans aucune équipe.` });
+          // Cherche d'abord dans les participants inscrits
+          let sub = null;
+          { const { data } = await supabase.from('tournament_participants').select('*').eq('tournament_id', tournament.id).eq('discord_id', user2.id).maybeSingle(); sub = data; }
 
-          const { data: subMember } = await supabase.from('members').select('discord_username, brawlstars_tag').eq('discord_id', user2.id).maybeSingle();
+          let subUsername = user2.username;
+          let subBsTag = null;
+          let subElo = 0;
+
+          if (sub) {
+            // Déjà inscrit — on utilise ses données
+            subUsername = sub.discord_username;
+            subBsTag    = sub.bs_tag;
+            subElo      = sub.elo;
+          } else {
+            // Pas inscrit — on le cherche dans la base membres
+            const { data: linked } = await supabase.from('members').select('discord_username, brawlstars_tag').eq('discord_id', user2.id).maybeSingle();
+            if (!linked?.brawlstars_tag) {
+              return interaction.editReply({ content: `❌ **${user2.username}** n'a pas de compte Brawl Stars lié. Il doit d'abord utiliser \`/lier\` avant de pouvoir être inscrit.` });
+            }
+            subUsername = linked.discord_username || user2.username;
+            subBsTag    = linked.brawlstars_tag;
+            const fetched = await getPlayerElo(subBsTag);
+            subElo = fetched.elo;
+            // Inscrit le remplaçant à la volée
+            await supabase.from('tournament_participants').insert({
+              tournament_id: tournament.id, discord_id: user2.id,
+              discord_username: subUsername, bs_tag: subBsTag, elo: subElo, is_substitute: true,
+            });
+          }
 
           // Retire m1, ajoute m2
           await supabase.from('tournament_team_members').delete().eq('id', m1.id);
           await supabase.from('tournament_team_members').insert({
             team_id: m1.team_id, tournament_id: tournament.id,
-            discord_id: user2.id, discord_username: subMember?.discord_username || user2.username,
-            bs_tag: subMember?.brawlstars_tag || null, elo: sub.elo, is_substitute: false,
+            discord_id: user2.id, discord_username: subUsername,
+            bs_tag: subBsTag, elo: subElo, is_substitute: false,
           });
           await supabase.from('tournament_participants').update({ is_substitute: true }).eq('tournament_id', tournament.id).eq('discord_id', user1.id);
 
           return interaction.editReply({
-            content: `✅ **${user1.username}** remplacé par **${user2.username}** dans l'équipe **${m1.team?.name}**.`,
+            content: `✅ **${user1.username}** remplacé par **${subUsername}** dans l'équipe **${m1.team?.name}**.`,
           });
         }
 
