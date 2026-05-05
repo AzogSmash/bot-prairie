@@ -289,7 +289,7 @@ module.exports = {
   tournoiComposer: {
     data: new SlashCommandBuilder()
       .setName('tournoi-composer')
-      .setDescription('Mode auto : compose les équipes et génère le bracket. Mode manuel : génère uniquement le bracket (staff only)')
+      .setDescription('Compose les équipes (auto) ou génère le bracket (manuel) — staff only')
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
       .addIntegerOption(o =>
         o.setName('membres_par_equipe')
