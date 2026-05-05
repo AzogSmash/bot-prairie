@@ -7,7 +7,7 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
 
   async execute(interaction) {
-    await interaction.deferReply({ flags: 64 });
+    await interaction.deferReply();
 
     const embed = new EmbedBuilder()
       .setColor('#9b59b6')
@@ -36,8 +36,7 @@ module.exports = {
         {
           name: '3️⃣ Ajuster les équipes si besoin',
           value:
-            '`/tournoi-ajuster` — En phase de **préparation** : modifie l\'elo d\'un membre, échange deux membres entre équipes, ou place un remplaçant.\n' +
-            '`/tournoi-remplacer` — **Pendant le tournoi** : substitution officielle (annonce automatique dans le salon staff).\n\n' +
+            '`/tournoi-ajuster` — Modifie l\'elo d\'un membre, échange deux membres entre équipes, ou place un remplaçant.\n\n' +
             'Après toute modification, relance `/tournoi-composer` pour régénérer le bracket.\n' +
             '→ Les équipes sont **conservées** — seule la structure des matchs est recréée.',
           inline: false,
