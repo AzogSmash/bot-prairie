@@ -270,11 +270,14 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor('#2ecc71')
         .setTitle(`✅ Participants inscrits — ${tournament.name}`)
-        .setDescription(`Utilise \`/tournoi-composer\` pour générer les équipes automatiquement.`)
+        .setDescription(
+          `**Prochaine étape :** \`/tournoi-composer\` pour générer les équipes et le bracket automatiquement.\n` +
+          `⚠️ Relancer \`/tournoi-participants\` effacera et réinscrira toute cette liste.`
+        )
         .addFields(
           { name: `👥 Participants (${rows.filter(r => !r.is_substitute).length})`, value: participantLines || 'Aucun', inline: false },
           { name: `🔄 Remplaçants (${rows.filter(r => r.is_substitute).length})`, value: substituteLines || 'Aucun', inline: false },
-          { name: '⚠️ Sans compte BS', value: noAccount.length ? noAccount.join(', ') : 'Aucun', inline: false },
+          { name: '⚠️ Sans compte BS lié', value: noAccount.length ? noAccount.join(', ') : 'Aucun', inline: false },
         )
         .setTimestamp();
 
@@ -286,7 +289,7 @@ module.exports = {
   tournoiComposer: {
     data: new SlashCommandBuilder()
       .setName('tournoi-composer')
-      .setDescription('Génère le bracket et ouvre les pronos (staff only)')
+      .setDescription('Mode auto : compose les équipes et génère le bracket. Mode manuel : génère uniquement le bracket (staff only)')
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
       .addIntegerOption(o =>
         o.setName('membres_par_equipe')
@@ -340,13 +343,17 @@ module.exports = {
 
         const embed = new EmbedBuilder()
           .setColor('#2ecc71')
-          .setTitle(`✅ Bracket généré — ${tournament.name}`)
-          .setDescription(`**${existingTeams.length} équipes** — mode manuel\nLe bracket et les pronos sont maintenant disponibles !`)
-          .addFields(
-            { name: '⬅️ Tableau Gauche', value: leftLines  || 'Aucune', inline: false },
-            { name: '➡️ Tableau Droit',  value: rightLines || 'Aucune', inline: false },
+          .setTitle(`✅ Bracket généré — mode manuel — ${tournament.name}`)
+          .setDescription(
+            `Structure des matchs créée à partir des **${existingTeams.length} équipes** existantes.\n` +
+            `Les équipes n'ont **pas** été modifiées — seuls les matchs ont été (re)générés.\n\n` +
+            `**Prochaine étape :** \`/tournoi-bracket\` pour envoyer l'image dans le salon.`
           )
-          .setFooter({ text: 'Utilise /tournoi-démarrer pour verrouiller les pronos' })
+          .addFields(
+            { name: '⬅️ Poule Gauche', value: leftLines  || 'Aucune', inline: false },
+            { name: '➡️ Poule Droite',  value: rightLines || 'Aucune', inline: false },
+          )
+          .setFooter({ text: 'Utilise /tournoi-ajuster pour modifier une équipe, puis relance /tournoi-composer' })
           .setTimestamp();
 
         await interaction.editReply({ embeds: [embed] });
@@ -418,13 +425,16 @@ module.exports = {
 
         const embed = new EmbedBuilder()
           .setColor('#2ecc71')
-          .setTitle(`✅ Équipes composées — ${tournament.name}`)
-          .setDescription(`**${totalTeams} équipes** de **${membersPerTeam} membres** • Écart moyen : **${avgDeviation} elo**\nLe bracket et les pronos sont maintenant disponibles !`)
-          .addFields(
-            { name: '⬅️ Tableau Gauche', value: leftLines  || 'Aucune', inline: false },
-            { name: '➡️ Tableau Droit',  value: rightLines || 'Aucune', inline: false },
+          .setTitle(`✅ Équipes composées — mode auto — ${tournament.name}`)
+          .setDescription(
+            `**${totalTeams} équipes** de **${membersPerTeam} membres** • Écart moyen : **${avgDeviation} elo**\n\n` +
+            `**Prochaine étape :** \`/tournoi-bracket\` pour envoyer l'image dans le salon.`
           )
-          .setFooter({ text: 'Utilise /tournoi-ajuster pour modifier une équipe' })
+          .addFields(
+            { name: '⬅️ Poule Gauche', value: leftLines  || 'Aucune', inline: false },
+            { name: '➡️ Poule Droite',  value: rightLines || 'Aucune', inline: false },
+          )
+          .setFooter({ text: 'Utilise /tournoi-ajuster pour modifier une équipe, puis relance /tournoi-composer' })
           .setTimestamp();
 
         await interaction.editReply({ embeds: [embed] });
@@ -436,9 +446,9 @@ module.exports = {
       .setName('tournoi-ajuster')
       .setDescription('Ajuste un elo ou échange deux membres (staff only)')
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
-      .addUserOption(o => o.setName('membre1').setDescription('Le membre à modifier').setRequired(true))
-      .addUserOption(o => o.setName('membre2').setDescription('Membre à échanger avec membre1 (ou remplaçant)').setRequired(false))
-      .addIntegerOption(o => o.setName('elo').setDescription('Nouvel elo pour membre1').setRequired(false).setMinValue(0)),
+      .addUserOption(o => o.setName('membre1').setDescription('Le membre à modifier ou à sortir').setRequired(true))
+      .addUserOption(o => o.setName('membre2').setDescription('Membre à échanger avec membre1 — laisser vide pour ajuster uniquement l\'elo').setRequired(false))
+      .addIntegerOption(o => o.setName('elo').setDescription('Nouvel elo pour membre1 (uniquement si membre2 non fourni)').setRequired(false).setMinValue(0)),
 
     async execute(interaction) {
       await interaction.deferReply({ flags: 64 });

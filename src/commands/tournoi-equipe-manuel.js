@@ -198,8 +198,8 @@ module.exports = {
       )
       .setFooter({
         text: totalCount >= tournament.size
-          ? '✅ Toutes les équipes sont là — utilise /tournoi-démarrer'
-          : `⏳ Il manque encore ${tournament.size - totalCount} équipe(s)`
+          ? '✅ Toutes les équipes sont créées — utilise /tournoi-composer pour générer le bracket'
+          : `⏳ Il manque encore ${tournament.size - totalCount} équipe(s) — continue avec /tournoi-equipe-manuel`
       })
       .setTimestamp();
 

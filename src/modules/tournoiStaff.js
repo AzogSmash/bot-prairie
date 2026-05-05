@@ -66,9 +66,11 @@ module.exports = {
         .setColor('#2ecc71')
         .setTitle(`🏆 Tournoi créé — ${nom}`)
         .setDescription(
-          `✅ Tournoi **${nom}** créé !\n\n` +
-          `👉 Utilise \`/tournoi-help\` pour voir le guide complet étape par étape.\n\n` +
-          `⚠️ Ce tournoi nécessite **${taille / 2} équipes par côté**`
+          `✅ Tournoi **${nom}** créé avec **${taille} équipes** (${taille / 2} par côté).\n\n` +
+          `**Prochaine étape — choisis ton mode :**\n` +
+          `• **Auto** → \`/tournoi-participants\` puis \`/tournoi-composer\`\n` +
+          `• **Manuel** → \`/tournoi-equipe-manuel\` (répéter ${taille} fois) puis \`/tournoi-composer\`\n\n` +
+          `👉 \`/tournoi-help\` pour le guide complet.`
         )
         .addFields(
           { name: '👥 Taille', value: `${taille} équipes`, inline: true },
