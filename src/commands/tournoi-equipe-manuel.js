@@ -111,7 +111,7 @@ module.exports = {
     // Crée l'équipe
     const { data: team, error: teamError } = await supabase
       .from('tournament_teams')
-      .insert({ tournament_id: tournament.id, name: availableName, side, seed })
+      .insert({ tournament_id: tournament.id, name: availableName, side, seed, captain_discord_id: members[0].id })
       .select()
       .single();
 

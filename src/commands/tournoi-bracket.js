@@ -37,21 +37,38 @@ function getSideLabel(side) {
   return '🏆 Finale';
 }
 
-// ── Top elo par équipe ────────────────────────────────────────────────────────
-async function buildTopEloMap(tournamentId) {
+// ── Label par équipe (captain si manuel, top elo si auto) ─────────────────────
+async function buildLabelMap(tournamentId) {
+  const { data: teams } = await supabase
+    .from('tournament_teams')
+    .select('id, captain_discord_id')
+    .eq('tournament_id', tournamentId);
+
   const { data: members } = await supabase
     .from('tournament_team_members')
-    .select('team_id, discord_username, elo')
+    .select('team_id, discord_id, discord_username, elo')
     .eq('tournament_id', tournamentId)
     .eq('is_substitute', false);
 
-  const topMap = {};
-  for (const m of (members || [])) {
-    if (!topMap[m.team_id] || m.elo > topMap[m.team_id].elo) {
-      topMap[m.team_id] = { username: m.discord_username, elo: m.elo };
-    }
+  const captainMap = {};
+  for (const t of (teams || [])) {
+    if (t.captain_discord_id) captainMap[t.id] = t.captain_discord_id;
   }
-  return topMap;
+
+  const topEloMap = {};
+  const captainLabelMap = {};
+  for (const m of (members || [])) {
+    if (!topEloMap[m.team_id] || m.elo > topEloMap[m.team_id].elo)
+      topEloMap[m.team_id] = { username: m.discord_username, elo: m.elo };
+    if (captainMap[m.team_id] === m.discord_id)
+      captainLabelMap[m.team_id] = { username: m.discord_username, elo: m.elo };
+  }
+
+  const labelMap = {};
+  for (const id of new Set([...Object.keys(topEloMap), ...Object.keys(captainLabelMap)])) {
+    labelMap[id] = captainLabelMap[id] ?? topEloMap[id];
+  }
+  return labelMap;
 }
 
 function getTeamLabel(teamId, teamMap, topEloMap) {
@@ -135,7 +152,7 @@ module.exports = {
 
     if (!matches?.length) return interaction.editReply({ content: '❌ Le bracket n\'est pas encore généré.' });
 
-    const topEloMap = await buildTopEloMap(tournament.id);
+    const topEloMap = await buildLabelMap(tournament.id);
     const embed = await buildBracketEmbed(tournament, matches, teams, topEloMap);
     const components = buildComponents(tournament, matches, teams, topEloMap, interaction.member);
 
@@ -161,7 +178,7 @@ module.exports = {
       const { data: teams } = await supabase
         .from('tournament_teams').select('*').eq('tournament_id', tournament.id);
 
-      const topEloMap = await buildTopEloMap(tournament.id);
+      const topEloMap = await buildLabelMap(tournament.id);
       const embed = await buildBracketEmbed(tournament, matches, teams, topEloMap);
       const components = buildComponents(tournament, matches, teams, topEloMap, interaction.member);
       await interaction.editReply({ embeds: [embed], components });
@@ -180,7 +197,7 @@ module.exports = {
       const { data: teams } = await supabase
         .from('tournament_teams').select('*').eq('tournament_id', tournament.id);
 
-      const topEloMap = await buildTopEloMap(tournament.id);
+      const topEloMap = await buildLabelMap(tournament.id);
       const finishedMatches = matches.filter(m => m.status === 'finished' && m.team1_id && m.team2_id);
       const maxRound = Math.max(...matches.filter(m => m.side !== 'final').map(m => m.round));
 
@@ -281,7 +298,7 @@ async function handleMatchSelect(interaction) {
   const { data: teams } = await supabase
     .from('tournament_teams').select('*').eq('tournament_id', tournamentId);
 
-  const topEloMap = await buildTopEloMap(tournamentId);
+  const topEloMap = await buildLabelMap(tournamentId);
   const t1name = getTeamLabel(match.team1_id, {}, topEloMap);
   const t2name = getTeamLabel(match.team2_id, {}, topEloMap);
 
@@ -355,7 +372,7 @@ async function handleWinnerSelect(interaction) {
   const { data: teams } = await supabase
     .from('tournament_teams').select('*').eq('tournament_id', tournamentId);
 
-  const topEloMap  = await buildTopEloMap(tournamentId);
+  const topEloMap  = await buildLabelMap(tournamentId);
   const winnerName = getTeamLabel(winnerId, {}, topEloMap);
 
   const embed = await buildBracketEmbed(tournament, matches, teams, topEloMap);
