@@ -1,13 +1,13 @@
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
-const { getPlayer, getBattleLog } = require('../lib/brawlapi');
+const { getPlayer } = require('../lib/brawlapi');
 const { fetchRntProfile } = require('../lib/rntapi');
 const { getPreferredBsTag } = require('../lib/brawlAccounts');
-const { renderBattlesCard } = require('../modules/battlesCard');
+const { renderTrophiesCard } = require('../modules/trophiesCard');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('image-battles')
-    .setDescription('Génère la carte de tes dernières parties Brawl Stars')
+    .setName('image-trophies')
+    .setDescription('Génère la carte des trophées par brawler')
     .addUserOption(o =>
       o.setName('membre').setDescription('Le membre (toi par défaut)').setRequired(false)
     ),
@@ -25,16 +25,10 @@ module.exports = {
     }
 
     try {
-      const [player, rnt, log] = await Promise.all([
+      const [player, rnt] = await Promise.all([
         getPlayer(bsTag),
         fetchRntProfile(bsTag).catch(() => null),
-        getBattleLog(bsTag),
       ]);
-
-      const battles = log?.items;
-      if (!battles?.length) {
-        return interaction.editReply({ content: '❌ Aucune partie trouvée pour ce compte.' });
-      }
 
       const rntData = rnt?.result || rnt || {};
       const stats   = rntData?.stats || [];
@@ -50,11 +44,11 @@ module.exports = {
         totalPrestige:     player.totalPrestigeLevel ?? 0,
       };
 
-      const buffer = await renderBattlesCard(bsTag, player, extra, battles);
-      const attachment = new AttachmentBuilder(buffer, { name: 'battles.png' });
+      const buffer     = await renderTrophiesCard(bsTag, player, extra);
+      const attachment = new AttachmentBuilder(buffer, { name: 'trophies.png' });
       await interaction.editReply({ files: [attachment] });
     } catch (err) {
-      console.error('[ImageBattles]', err);
+      console.error('[ImageTrophies]', err);
       await interaction.editReply({ content: `❌ Erreur lors de la génération : ${err.message}` });
     }
   },
