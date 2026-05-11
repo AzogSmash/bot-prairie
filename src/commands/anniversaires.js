@@ -26,7 +26,7 @@ module.exports = {
     .setDescription('Consulte les anniversaires du serveur'),
 
   async execute(interaction) {
-    await interaction.deferReply({ flags: 64 });
+    await interaction.deferReply();
 
     const now = DateTime.now().setZone('Europe/Paris');
     let view       = 'prochains'; // 'prochains' | 'mois'
