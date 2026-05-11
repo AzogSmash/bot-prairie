@@ -23,11 +23,15 @@ module.exports = {
     )
     .addIntegerOption(o =>
       o.setName('mois').setDescription('Mois (1-12)').setMinValue(1).setMaxValue(12).setRequired(false)
+    )
+    .addIntegerOption(o =>
+      o.setName('année').setDescription('Année de naissance (optionnel, pour afficher l\'âge)').setMinValue(1900).setMaxValue(new Date().getFullYear()).setRequired(false)
     ),
 
   async execute(interaction) {
     const day   = interaction.options.getInteger('jour');
     const month = interaction.options.getInteger('mois');
+    const year  = interaction.options.getInteger('année');
 
     // ── Vue / suppression ────────────────────────────────────────────────────
     if (day === null && month === null) {
@@ -35,7 +39,7 @@ module.exports = {
 
       const { data } = await supabase
         .from('birthdays')
-        .select('day, month')
+        .select('day, month, year')
         .eq('discord_id', interaction.user.id)
         .maybeSingle();
 
@@ -45,10 +49,14 @@ module.exports = {
         });
       }
 
+      const ageStr = data.year
+        ? ` (${DateTime.now().setZone('Europe/Paris').year - data.year} ans)`
+        : '';
+
       const embed = new EmbedBuilder()
         .setColor('#FF69B4')
         .setTitle('🎂 Ton anniversaire')
-        .setDescription(`Ton anniversaire est enregistré le **${data.day} ${MONTH_NAMES[data.month - 1]}**.`)
+        .setDescription(`Ton anniversaire est enregistré le **${data.day} ${MONTH_NAMES[data.month - 1]}**${ageStr}.`)
         .setFooter({ text: 'Prairie Brawl Stars • Anniversaires' });
 
       const row = new ActionRowBuilder().addComponents(
@@ -95,23 +103,27 @@ module.exports = {
     const now = DateTime.now().setZone('Europe/Paris');
     const isToday = day === now.day && month === now.month;
 
-    const { error } = await supabase.from('birthdays').upsert({
+    const upsertData = {
       discord_id:       interaction.user.id,
       discord_username: interaction.user.username,
       day,
       month,
       last_wished_year: isToday ? now.year : null,
-    }, { onConflict: 'discord_id' });
+    };
+    if (year !== null) upsertData.year = year;
+
+    const { error } = await supabase.from('birthdays').upsert(upsertData, { onConflict: 'discord_id' });
 
     if (error) {
       console.error('[Anniversaire] Erreur Supabase:', error);
       return interaction.editReply({ content: '❌ Erreur lors de l\'enregistrement. Réessaie plus tard.' });
     }
 
+    const ageStr = year ? ` (${now.year - year} ans)` : '';
     const embed = new EmbedBuilder()
       .setColor('#FF69B4')
       .setTitle('🎂 Anniversaire enregistré !')
-      .setDescription(`Ton anniversaire a été enregistré le **${day} ${MONTH_NAMES[month - 1]}**.\nLe bot te souhaitera bonne fête dans le général à minuit ! 🎉`)
+      .setDescription(`Ton anniversaire a été enregistré le **${day} ${MONTH_NAMES[month - 1]}**${ageStr}.\nLe bot te souhaitera bonne fête dans le général à minuit ! 🎉`)
       .setFooter({ text: 'Prairie Brawl Stars • Anniversaires' });
 
     await interaction.editReply({ embeds: [embed] });
