@@ -95,13 +95,18 @@ module.exports = {
     const now = DateTime.now().setZone('Europe/Paris');
     const isToday = day === now.day && month === now.month;
 
-    await supabase.from('birthdays').upsert({
+    const { error } = await supabase.from('birthdays').upsert({
       discord_id:       interaction.user.id,
       discord_username: interaction.user.username,
       day,
       month,
       last_wished_year: isToday ? now.year : null,
     }, { onConflict: 'discord_id' });
+
+    if (error) {
+      console.error('[Anniversaire] Erreur Supabase:', error);
+      return interaction.editReply({ content: '❌ Erreur lors de l\'enregistrement. Réessaie plus tard.' });
+    }
 
     const embed = new EmbedBuilder()
       .setColor('#FF69B4')
