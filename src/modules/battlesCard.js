@@ -5,9 +5,11 @@ const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const { getCachedOrFetch } = require('../services/imageCache');
 const { drawHeader } = require('./rankCard');
 
-const ASSETS   = path.resolve(__dirname, '..', 'assets');
-const BG_FILE  = path.join(ASSETS, 'backgrounds', 'rank_bg.png');
-const ICONS_DIR = path.join(ASSETS, 'icons');
+const ASSETS        = path.resolve(__dirname, '..', 'assets');
+const BG_FILE       = path.join(ASSETS, 'backgrounds', 'rank_bg.png');
+const ICONS_DIR     = path.join(ASSETS, 'icons');
+const PORTRAITS_DIR = path.join(ASSETS, 'brawlers', 'portrait');
+const RANKED_DIR    = path.join(ASSETS, 'ranked', 'tiered');
 
 const SCALE  = 2;
 const W      = 1500;
@@ -19,7 +21,7 @@ function FONT(size, weight = 700) {
 
 const COLS   = 5;
 const GRID_W = W - MARGIN * 2;
-const GAP    = 10;
+const GAP    = 15;
 const CELL_W = Math.floor((GRID_W - GAP * (COLS - 1)) / COLS);
 const CELL_H = 158;
 
@@ -54,15 +56,16 @@ function parseBattle(item, playerTag) {
   const b   = item.battle || {};
 
   let brawler = null;
+  let player  = null;
   if (b.teams) {
     for (const team of b.teams) {
       const p = team.find(p => p.tag === tag);
-      if (p) { brawler = p.brawler; break; }
+      if (p) { player = p; brawler = p.brawler ?? p.brawlers?.[0] ?? null; break; }
     }
   }
   if (!brawler && b.players) {
     const p = b.players.find(p => p.tag === tag);
-    if (p) brawler = p.brawler;
+    if (p) { player = p; brawler = p.brawler ?? p.brawlers?.[0] ?? null; }
   }
 
   let result = b.result || null;
@@ -73,10 +76,18 @@ function parseBattle(item, playerTag) {
   const mapRaw   = item.event?.map ?? '';
   const cleanMap = /^(Match\s*)?\d+$/.test(mapRaw.trim()) ? '' : mapRaw;
 
+  // trophyChange : battle > somme des brawlers (duel) > brawler unique
+  let trophyChange = b.trophyChange ?? null;
+  if (trophyChange == null && player?.brawlers?.length) {
+    const sum = player.brawlers.reduce((s, bw) => s + (bw.trophyChange ?? 0), 0);
+    if (player.brawlers.some(bw => bw.trophyChange != null)) trophyChange = sum;
+  }
+  if (trophyChange == null) trophyChange = brawler?.trophyChange ?? null;
+
   return {
     brawler,
     result,
-    trophyChange : b.trophyChange ?? null,
+    trophyChange,
     modeId       : item.event?.modeId ?? null,
     mapName      : cleanMap,
     duration     : b.duration ?? null,
@@ -87,6 +98,17 @@ function parseBattle(item, playerTag) {
 
 async function fetchImg(key, url) {
   try { return await getCachedOrFetch(key, url); } catch { return null; }
+}
+
+async function loadPortrait(brawlerId) {
+  const local = path.join(PORTRAITS_DIR, `${brawlerId}.png`);
+  if (fs.existsSync(local)) {
+    try { return await loadImage(local); } catch {}
+  }
+  return fetchImg(
+    `portrait_${brawlerId}.png`,
+    `https://raw.githubusercontent.com/Brawlify/CDN/master/brawlers/portraits/${brawlerId}.png`
+  );
 }
 
 function rrPath(ctx, x, y, w, h, r) {
@@ -122,7 +144,7 @@ async function renderBattlesCard(playerTag, bsPlayer, extra, battles) {
   const losses = parsed.filter(p => p.result === 'defeat').length;
   const net    = parsed.reduce((s, p) => s + (p.trophyChange ?? 0), 0);
 
-  const SUMMARY_H  = 48;
+  const SUMMARY_H  = 68;
   const GRID_TOTAL = rows * CELL_H + (rows - 1) * GAP;
   const H = 208 + SUMMARY_H + GRID_TOTAL + MARGIN + 16;
 
@@ -153,34 +175,38 @@ async function renderBattlesCard(playerTag, bsPlayer, extra, battles) {
   ctx.fillRect(S(MARGIN), S(headerEndY - 4), S(W - MARGIN * 2), S(2));
 
   // ── Bande résumé ─────────────────────────────────────────────────────────
-  const sy      = headerEndY + 10;
-  const netStr  = (net >= 0 ? '+' : '') + net;
+  const netStr   = (net >= 0 ? '+' : '') + net;
   const netColor = net >= 0 ? '#f1c40f' : '#e74c3c';
 
-  const trophyIcon = await loadImage(path.join(ICONS_DIR, 'trophies.png')).catch(() => null);
+  const trophyIcon  = await loadImage(path.join(ICONS_DIR, 'trophies.png')).catch(() => null);
+  const rankedIcon  = await loadImage(path.join(RANKED_DIR, '58000000.png')).catch(() => null);
+
+  // Fond semi-transparent derrière le résumé
+  ctx.fillStyle = 'rgba(0,0,0,0.30)';
+  ctx.fillRect(S(MARGIN), S(headerEndY + 2), S(W - MARGIN * 2), S(SUMMARY_H - 4));
+
+  const ICON_SZ = 34;
+  const MID_Y   = headerEndY + SUMMARY_H / 2 + 2;
 
   const summaryItems = [
-    { label: `${items.length} parties`, color: 'rgba(200,200,230,0.9)' },
+    { label: `${items.length} parties`, color: '#ffffff' },
     { label: `${wins}V`,               color: '#2ecc71' },
     { label: `${losses}D`,             color: '#e74c3c' },
     { label: netStr,                   color: netColor, icon: trophyIcon },
   ];
 
   ctx.textBaseline = 'middle';
-  let sx = MARGIN;
-  const ICON_SZ = 18;
-  const MID_Y   = sy + ICON_SZ / 2;
+  ctx.font = FONT(28, 700);
+  let sx = MARGIN + 10;
 
   for (const item of summaryItems) {
-    ctx.font      = FONT(13);
-    ctx.fillStyle = item.color;
     if (item.icon) {
       ctx.drawImage(item.icon, S(sx), S(MID_Y - ICON_SZ / 2), S(ICON_SZ), S(ICON_SZ));
-      ctx.fillText(item.label, S(sx + ICON_SZ + 4), S(MID_Y));
-      sx += ICON_SZ + 4 + ctx.measureText(item.label).width / SCALE + 20;
+      outlined(ctx, item.label, sx + ICON_SZ + 6, MID_Y, item.color, 'rgba(0,0,0,0.8)', 4);
+      sx += ICON_SZ + 6 + ctx.measureText(item.label).width / SCALE + 30;
     } else {
-      ctx.fillText(item.label, S(sx), S(MID_Y));
-      sx += ctx.measureText(item.label).width / SCALE + 20;
+      outlined(ctx, item.label, sx, MID_Y, item.color, 'rgba(0,0,0,0.8)', 4);
+      sx += ctx.measureText(item.label).width / SCALE + 30;
     }
   }
 
@@ -188,10 +214,14 @@ async function renderBattlesCard(playerTag, bsPlayer, extra, battles) {
   const gridY = headerEndY + SUMMARY_H + 4;
 
   const COLORS = {
-    victory : { border: '#27ae60', trophy: '#2ecc71', strip: 'rgba(39,174,96,0.80)' },
-    defeat  : { border: '#c0392b', trophy: '#e74c3c', strip: 'rgba(192,57,43,0.80)' },
-    draw    : { border: '#4a5568', trophy: '#95a5a6', strip: 'rgba(74,85,104,0.75)' },
+    victory : { bg: '#43d35b', rgb: '67,211,91'   },
+    defeat  : { bg: '#e84855', rgb: '232,72,85'   },
+    draw    : { bg: '#8899aa', rgb: '136,153,170'  },
   };
+
+  // Largeur réservée au portrait (gauche) vs texte (droite)
+  const PORTRAIT_W = Math.round(CELL_W * 0.52);
+  const TEXT_X     = cx => cx + PORTRAIT_W + 8;
 
   for (let i = 0; i < parsed.length; i++) {
     const p   = parsed[i];
@@ -201,96 +231,105 @@ async function renderBattlesCard(playerTag, bsPlayer, extra, battles) {
     const cy  = gridY + row * (CELL_H + GAP);
     const c   = COLORS[p.result] || COLORS.draw;
 
-    // Fond de base sombre
-    rrPath(ctx, cx, cy, CELL_W, CELL_H, 12);
-    ctx.fillStyle = 'rgba(8,5,22,0.92)';
+    // Fond coloré vif + bordure (avant le portrait)
+    rrPath(ctx, cx, cy, CELL_W, CELL_H, 10);
+    ctx.fillStyle = c.bg;
     ctx.fill();
+    rrPath(ctx, cx, cy, CELL_W, CELL_H, 10);
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = S(2);
+    ctx.stroke();
 
-    // Portrait brawler (pleine hauteur, calé à droite)
+    // Portrait détouré par-dessus (clip arrondi seulement, pas de clip de largeur)
     if (p.brawler?.id) {
-      const img = await fetchImg(
-        `brawler_bl_${p.brawler.id}.png`,
-        `https://cdn.brawlify.com/brawlers/borderless/${p.brawler.id}.png`
-      );
+      const img = await loadPortrait(p.brawler.id);
       if (img) {
         ctx.save();
-        rrPath(ctx, cx, cy, CELL_W, CELL_H, 12);
+        rrPath(ctx, cx, cy, CELL_W, CELL_H, 10);
         ctx.clip();
-        const scale = (CELL_H + 24) / img.height;
-        const iw = img.width  * scale;
-        const ih = img.height * scale;
-        ctx.drawImage(img, S(cx + CELL_W - iw * 0.86), S(cy - 12), S(iw), S(ih));
-        ctx.restore();
-
-        // Gradient texte (gauche opaque → droite transparent)
-        ctx.save();
-        rrPath(ctx, cx, cy, CELL_W, CELL_H, 12);
-        ctx.clip();
-        const grad = ctx.createLinearGradient(S(cx), 0, S(cx + CELL_W), 0);
-        grad.addColorStop(0,    'rgba(8,5,22,0.97)');
-        grad.addColorStop(0.48, 'rgba(8,5,22,0.80)');
-        grad.addColorStop(0.72, 'rgba(8,5,22,0.20)');
-        grad.addColorStop(1,    'rgba(8,5,22,0.0)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(S(cx), S(cy), S(CELL_W), S(CELL_H));
+        const sc = (CELL_H + 16) / img.height;
+        const iw = img.width * sc;
+        const ih = img.height * sc;
+        ctx.drawImage(img, S(cx - (iw - PORTRAIT_W) * 0.25), S(cy - 8), S(iw), S(ih));
         ctx.restore();
       }
     }
 
-    // Bande colorée top (résultat)
-    ctx.save();
-    rrPath(ctx, cx, cy, CELL_W, CELL_H, 12);
-    ctx.clip();
-    ctx.fillStyle = c.strip;
-    ctx.fillRect(S(cx), S(cy), S(CELL_W), S(5));
-    ctx.restore();
+    // Temps (top-left, font 33)
+    ctx.textBaseline = 'top';
+    ctx.textAlign    = 'left';
+    ctx.font         = FONT(33, 400);
+    outlined(ctx, timeAgo(p.time), cx + 7, cy + 6, '#ffffff', 'rgba(0,0,0,0.7)', 4);
 
-    // Bordure colorée
-    rrPath(ctx, cx, cy, CELL_W, CELL_H, 12);
-    ctx.strokeStyle = c.border;
-    ctx.lineWidth   = S(2);
-    ctx.stroke();
+    // Trophy change / icône ranked (top-right)
+    if (p.type === 'soloRanked') {
+      // Icône ranked à la place du trophyChange
+      if (rankedIcon) {
+        const RSZ = 52;
+        ctx.drawImage(rankedIcon, S(cx + CELL_W - RSZ - 6), S(cy + 4), S(RSZ), S(RSZ));
+      }
+    } else {
+      const tStr = p.trophyChange != null
+        ? (p.trophyChange >= 0 ? '+' : '') + p.trophyChange
+        : '–';
+      ctx.font         = FONT(39, 700);
+      ctx.textAlign    = 'right';
+      ctx.textBaseline = 'top';
+      outlined(ctx, tStr, cx + CELL_W - 7, cy + 5, '#ffffff', 'rgba(0,0,0,0.7)', 4);
+      if (trophyIcon) {
+        const tw   = ctx.measureText(tStr).width / SCALE;
+        const TRSZ = 42;
+        ctx.drawImage(trophyIcon,
+          S(cx + CELL_W - 7 - tw - TRSZ - 4), S(cy + 6),
+          S(TRSZ), S(TRSZ)
+        );
+      }
+      ctx.textAlign = 'left';
+    }
 
-    const tx = cx + 10;
-    ctx.textBaseline = 'alphabetic';
-
-    // Temps (top-left)
-    ctx.font      = FONT(11, 400);
-    ctx.fillStyle = 'rgba(200,200,230,0.65)';
-    ctx.fillText(timeAgo(p.time), S(tx), S(cy + 20));
-
-    // Icône mode (top-right)
+    // Icône mode (top-right sous trophy, 3x = 60px)
     if (p.modeId != null) {
       const mImg = await fetchImg(
         `mode_${48000000 + p.modeId}.png`,
         `https://cdn.brawlify.com/game-modes/regular/${48000000 + p.modeId}.png`
       );
-      if (mImg) ctx.drawImage(mImg, S(cx + CELL_W - 32), S(cy + 7), S(26), S(26));
+      if (mImg) ctx.drawImage(mImg, S(cx + CELL_W - 66), S(cy + 50), S(60), S(60));
     }
 
-    // Trophées (gros, avec contour)
-    const tStr = p.trophyChange != null
-      ? (p.trophyChange >= 0 ? '+' : '') + p.trophyChange
-      : '–';
-    ctx.font = FONT(34, 900);
-    outlined(ctx, tStr, tx, cy + 75, c.trophy, 'rgba(0,0,0,0.9)', 4);
+    // Badge power (radius 20 = 27×0.75) + trophées (font 22, icon 29)
+    const BADGE_R = 20;
+    const badgeCX = cx + 8 + BADGE_R;
+    const badgeCY = cy + CELL_H - BADGE_R - 4;
 
-    // Nom brawler
-    ctx.font = FONT(12);
-    outlined(ctx, trunc(p.brawler?.name ?? '?', 14), tx, cy + 96, '#ffffff', 'rgba(0,0,0,0.8)', 3);
+    if (p.brawler?.power) {
+      ctx.beginPath();
+      ctx.arc(S(badgeCX), S(badgeCY), S(BADGE_R), 0, Math.PI * 2);
+      ctx.fillStyle = '#7c3aed';
+      ctx.fill();
+      ctx.textBaseline = 'middle';
+      ctx.textAlign    = 'center';
+      ctx.font         = FONT(14, 700);
+      outlined(ctx, String(p.brawler.power), badgeCX, badgeCY, '#ffffff', 'rgba(0,0,0,0.5)', 2);
+      ctx.textAlign = 'left';
 
-    // Map
-    if (p.mapName) {
-      ctx.font      = FONT(10, 400);
-      ctx.fillStyle = 'rgba(180,180,210,0.75)';
-      ctx.fillText(trunc(p.mapName, 20), S(tx), S(cy + 114));
+      if (p.brawler.trophies != null && trophyIcon && p.type !== 'soloRanked') {
+        const trX  = badgeCX + BADGE_R + 5;
+        const TRSZ = 29;
+        ctx.drawImage(trophyIcon, S(trX), S(badgeCY - TRSZ / 2), S(TRSZ), S(TRSZ));
+        ctx.textBaseline = 'middle';
+        ctx.font         = FONT(22, 400);
+        outlined(ctx, String(p.brawler.trophies), trX + TRSZ + 4, badgeCY, '#ffffff', 'rgba(0,0,0,0.6)', 3);
+      }
     }
 
-    // Durée
+    // Durée (bas-droite, font 28)
     if (p.duration) {
-      ctx.font      = FONT(10, 400);
-      ctx.fillStyle = 'rgba(140,140,170,0.55)';
-      ctx.fillText(fmtDuration(p.duration), S(tx), S(cy + 131));
+      ctx.font         = FONT(28, 400);
+      ctx.textBaseline = 'bottom';
+      ctx.textAlign    = 'right';
+      ctx.fillStyle    = 'rgba(255,255,255,0.65)';
+      ctx.fillText(fmtDuration(p.duration), S(cx + CELL_W - 7), S(cy + CELL_H - 4));
+      ctx.textAlign = 'left';
     }
   }
 

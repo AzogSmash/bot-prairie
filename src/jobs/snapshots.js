@@ -246,6 +246,66 @@ async function updateRolesAndNotify(client, options = {}) {
   console.log(`[Roles] ✅ ${linkedMembers.length} membres, ${notifications.length} palier(s)`);
 }
 
+// ── Anniversaires ────────────────────────────────────────────────────────────
+async function checkBirthdays(client) {
+  const now = DateTime.now().setZone('Europe/Paris');
+  if (now.hour !== 0) return;
+
+  const { data: birthdays } = await supabase
+    .from('birthdays')
+    .select('discord_id, discord_username, day, month, last_wished_year')
+    .eq('day', now.day)
+    .eq('month', now.month);
+
+  if (!birthdays?.length) return;
+
+  const guild = await client.guilds.fetch(process.env.GUILD_ID).catch(() => null);
+  if (!guild) return;
+
+  await guild.members.fetch({ limit: 1000 }).catch(() => {});
+
+  const generalChannel = await guild.channels.fetch(GENERAL_CHANNEL_ID).catch(() => null);
+
+  for (const bday of birthdays) {
+    const member = guild.members.cache.get(bday.discord_id);
+
+    if (!member) {
+      await supabase.from('birthdays').delete().eq('discord_id', bday.discord_id);
+      console.log(`[Anniversaires] Supprimé : ${bday.discord_username} (a quitté le serveur)`);
+      continue;
+    }
+
+    if (bday.last_wished_year === now.year) continue;
+
+    await supabase
+      .from('birthdays')
+      .update({ last_wished_year: now.year })
+      .eq('discord_id', bday.discord_id);
+
+    if (!generalChannel) continue;
+
+    const embed = new EmbedBuilder()
+      .setColor('#FF69B4')
+      .setTitle('🎂 Joyeux anniversaire !')
+      .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+      .setDescription(
+        `Aujourd'hui c'est l'anniversaire de **${member.displayName}** ! 🎉\n\n` +
+        `Souhaitez-lui un joyeux anniversaire ! 🥳`
+      )
+      .setFooter({ text: 'Prairie Brawl Stars • Anniversaires' })
+      .setTimestamp();
+
+    await generalChannel.send({
+      content: `🎊 ${member} fête son anniversaire aujourd'hui !`,
+      embeds: [embed],
+    });
+
+    await new Promise(r => setTimeout(r, 1000));
+  }
+
+  console.log(`[Anniversaires] ✅ Check terminé (${birthdays.length} fête(s) aujourd'hui)`);
+}
+
 // ── Reset automatique des saisons ────────────────────────────────────────────
 async function checkSeasonResets(client) {
   const nowUtc = DateTime.now().setZone('UTC');
@@ -348,6 +408,7 @@ async function updateSnapshots(client) {
   if (client) {
     await updateRolesAndNotify(client);
     await checkSeasonResets(client);
+    await checkBirthdays(client);
   }
 }
 
@@ -355,6 +416,7 @@ module.exports = {
   updateSnapshots,
   updateRolesAndNotify,
   checkSeasonResets,
+  checkBirthdays,
   CLUB_ROLES,
   TROPHY_ROLES,
   getTrophyRole,

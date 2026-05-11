@@ -291,13 +291,14 @@ function fitText(ctx, text, maxWidth, startSize, weight = 900) {
 }
 
 function drawMiniStatChip(ctx, { x, y, w, h, img, value }) {
-  drawPanel(ctx, x, y, w, h, 8, "rgba(0,0,0,0.42)", "rgba(255,255,255,0.12)");
-  const iconSize = h - 4;
-  if (img) ctx.drawImage(img, S(x + 2), S(y + (h - iconSize) / 2), S(iconSize), S(iconSize));
-  const tx = x + iconSize + 5;
-  ctx.textAlign = "left";
+  drawPanel(ctx, x, y, w, h, 8, "rgba(8,4,22,0.82)", "rgba(255,255,255,0.22)");
+  const iconSize = h;
+  const iconY    = y - (iconSize - h) / 2;
+  if (img) ctx.drawImage(img, S(x - iconSize / 2), S(iconY), S(iconSize), S(iconSize));
+  const tx = x + iconSize / 2 + 5;
+  ctx.textAlign    = "left";
   ctx.textBaseline = "middle";
-  const size = fitText(ctx, String(value), Math.max(28, w - iconSize - 8), 15, 900);
+  const size = fitText(ctx, String(value), Math.max(20, w - iconSize / 2 - 10), 15, 900);
   ctx.font = FONT(size, 900);
   outlined(ctx, value, tx, y + h / 2, "#ffffff", "#000000", 3);
 }
@@ -305,7 +306,6 @@ function drawMiniStatChip(ctx, { x, y, w, h, img, value }) {
 // ── Blocs header ──────────────────────────────────────────────────────────────
 
 function drawIdentityBlock(ctx, data, assets, x, y, w, h) {
-  drawPanel(ctx, x, y, w, h, 14, "rgba(0,0,0,0.30)", "rgba(255,255,255,0.13)");
   const avatarSize = 150;
   const avX = x + 12;
   const avY = y + (h - avatarSize) / 2;
@@ -339,54 +339,61 @@ function drawIdentityBlock(ctx, data, assets, x, y, w, h) {
     outlined(ctx, `★ ${data.clubName}`, textX, y + 76, "#a8cfff", "#000000", 3);
   }
 
-  const pillY = y + h - 46;
-  const pillH = 32;
-  const pillGap = 10;
-  const pillW = Math.floor((textW - pillGap) / 2);
+  const P_SZ  = 72; // prestige
+  const WS_SZ = 62; // flamme (un peu plus petite)
+  const iconY = y + h - Math.max(P_SZ, WS_SZ) - 16;
 
-  drawPanel(ctx, textX, pillY, pillW, pillH, 8, "rgba(0,0,0,0.42)", "rgba(255,255,255,0.08)");
-  if (assets.icPrestige) ctx.drawImage(assets.icPrestige, S(textX + 2), S(pillY + 2), S(28), S(28));
-  ctx.textBaseline = "middle";
-  outlined(ctx, String(data.prestigeTotal), textX + 34, pillY + pillH / 2, "#ffffff", "#000000", 3);
+  if (assets.icPrestige) {
+    ctx.drawImage(assets.icPrestige, S(textX), S(iconY), S(P_SZ), S(P_SZ));
+    ctx.textBaseline = "middle";
+    ctx.textAlign    = "center";
+    ctx.font = FONT(18, 900);
+    // centre visuel du shield légèrement au-dessus du centre géométrique
+    outlined(ctx, String(data.prestigeTotal), textX + P_SZ / 2 - 2, iconY + P_SZ * 0.44, "#ffffff", "#000000", 4);
+    ctx.textAlign = "left";
+  }
 
-  const wsX = textX + pillW + pillGap;
-  drawPanel(ctx, wsX, pillY, pillW, pillH, 8, "rgba(0,0,0,0.42)", "rgba(255,255,255,0.08)");
-  if (assets.icWinStreak) ctx.drawImage(assets.icWinStreak, S(wsX + 2), S(pillY + 2), S(28), S(28));
-  outlined(ctx, String(data.winStreak), wsX + 34, pillY + pillH / 2, "#ffb15f", "#000000", 3);
+  const wsIconX = textX + P_SZ + 18;
+  if (assets.icWinStreak) {
+    ctx.drawImage(assets.icWinStreak, S(wsIconX), S(iconY), S(WS_SZ), S(WS_SZ));
+    ctx.textBaseline = "middle";
+    ctx.textAlign    = "center";
+    ctx.font = FONT(18, 900);
+    // centre visuel de la flamme légèrement sous le centre géométrique
+    outlined(ctx, String(data.winStreak), wsIconX + WS_SZ / 2, iconY + WS_SZ * 0.58, "#ffb15f", "#000000", 4);
+    ctx.textAlign = "left";
+  }
 }
 
 function drawProgressBlock(ctx, data, assets, x, y, w, h) {
-  drawPanel(ctx, x, y, w, h, 14, "rgba(0,0,0,0.26)", "rgba(255,255,255,0.12)");
-  const line1Y = y + 24;
-  const line2Y = y + 92;
-  const iconSize = 56;
-  const barX = x + 18 + iconSize + 6;
-  const barW = w - 18 - 14 - iconSize - 6;
-  const barH = 26;
+  const iconSize = 58;
+  const barH    = 34;
+  const barX    = x - 6 + Math.round(iconSize / 2);
+  const barW    = w - (barX - x) - 14;
+  const textOff = Math.round(iconSize / 2) + 16;
+  const line1Y  = y + Math.round(h / 2) - barH - 12;
+  const line2Y  = y + Math.round(h / 2) + 17;
+  const iconOff = Math.round((iconSize - barH) / 2);
 
-  if (assets.icTrophies) ctx.drawImage(assets.icTrophies, S(x + 10), S(line1Y - 5), S(iconSize), S(iconSize));
+  // Barre en premier, icône par-dessus
   drawProgressBar(ctx, barX, line1Y, barW, barH, data.trophies / Math.max(data.highestTrophies, 1));
-  ctx.font = FONT(14, 900);
-  ctx.textAlign = "left";
+  if (assets.icTrophies)
+    ctx.drawImage(assets.icTrophies, S(x - 6), S(line1Y - iconOff), S(iconSize), S(iconSize));
+  ctx.font = FONT(16, 900);
+  ctx.textAlign    = "left";
   ctx.textBaseline = "middle";
-  outlined(ctx, `${fmt(data.trophies)} / ${fmt(data.highestTrophies)}`, barX + 8, line1Y + barH / 2, "#ffffff", "#000000", 3);
+  outlined(ctx, `${fmt(data.trophies)} / ${fmt(data.highestTrophies)}`, barX + textOff, line1Y + barH / 2, "#ffffff", "#000000", 3);
 
-  if (assets.icRecord) ctx.drawImage(assets.icRecord, S(x + 10), S(line2Y - 5), S(iconSize), S(iconSize));
   drawProgressBar(ctx, barX, line2Y, barW, barH, data.recordPoints / Math.max(data.recordMax, 1));
-  outlined(ctx, `${fmt(data.recordPoints)} / ${fmt(data.recordMax)}`, barX + 8, line2Y + barH / 2, "#ffffff", "#000000", 3);
-
-  ctx.font = FONT(11, 900);
-  ctx.textAlign = "left";
-  ctx.textBaseline = "bottom";
-  outlined(ctx, "TROPHÉES", barX, line1Y - 5, "#d9e3ff", "#000000", 3);
-  outlined(ctx, "RECORD",   barX, line2Y - 5, "#d9e3ff", "#000000", 3);
+  if (assets.icRecord)
+    ctx.drawImage(assets.icRecord, S(x - 6), S(line2Y - iconOff), S(iconSize), S(iconSize));
+  outlined(ctx, `${fmt(data.recordPoints)} / ${fmt(data.recordMax)}`, barX + textOff, line2Y + barH / 2, "#ffffff", "#000000", 3);
 }
 
 function drawMiniStatsBlock(ctx, data, assets, x, y, w, h) {
-  drawPanel(ctx, x, y, w, h, 14, "rgba(0,0,0,0.24)", "rgba(255,255,255,0.12)");
 
   const cols = 5;
-  const gap = 10;
+  const gap = 26;
   const sidePad = 12;
   const cellW = Math.floor((w - gap * (cols - 1) - sidePad * 2) / cols);
   const cellH = 44;
@@ -482,7 +489,7 @@ async function drawHeader(ctx, bsPlayer, extra = {}) {
   const headerX = MARGIN;
   const headerY = MARGIN;
   const headerW = W - MARGIN * 2;
-  const headerH = 178;
+  const headerH = 196;
   const leftW   = 430;
   const midW    = 390;
   const gap     = 12;
