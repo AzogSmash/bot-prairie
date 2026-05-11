@@ -246,6 +246,81 @@ async function updateRolesAndNotify(client, options = {}) {
   console.log(`[Roles] ✅ ${linkedMembers.length} membres, ${notifications.length} palier(s)`);
 }
 
+// ── Reset automatique des saisons ────────────────────────────────────────────
+async function checkSeasonResets(client) {
+  const nowUtc = DateTime.now().setZone('UTC');
+  if (nowUtc.weekday !== 4 || nowUtc.hour !== 9) return; // jeudi 9h UTC uniquement
+
+  const isFirstThursday = nowUtc.day <= 7;
+  const isThirdThursday = nowUtc.day >= 15 && nowUtc.day <= 21;
+  if (!isFirstThursday && !isThirdThursday) return;
+
+  const type = isFirstThursday ? 'classique' : 'classée';
+  const todayUtc = nowUtc.startOf('day').toISO();
+
+  // Dédup — ne rien faire si déjà inséré aujourd'hui
+  const { data: existing } = await supabase
+    .from('season_starts')
+    .select('id')
+    .eq('type', type)
+    .gte('started_at', todayUtc)
+    .maybeSingle();
+  if (existing) return;
+
+  // Calcul du prochain numéro
+  const { data: last } = await supabase
+    .from('season_starts')
+    .select('number')
+    .eq('type', type)
+    .order('started_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const lastNumber = last?.number ?? 0;
+  let number, label;
+
+  if (type === 'classique') {
+    number = lastNumber + 1;
+    label  = `Saison ${number}`;
+  } else {
+    number = (lastNumber % 4) + 1;
+    label  = `Saison classée mois ${number}/4`;
+  }
+
+  await supabase.from('season_starts').insert({
+    started_at: nowUtc.toISO(),
+    label,
+    type,
+    number,
+  });
+
+  console.log(`[Saison] ✅ Nouveau reset automatique : ${label}`);
+
+  if (client && process.env.STAFF_CHANNEL_ID) {
+    try {
+      const guild   = await client.guilds.fetch(process.env.GUILD_ID);
+      const channel = await guild.channels.fetch(process.env.STAFF_CHANNEL_ID);
+      const { EmbedBuilder } = require('discord.js');
+      await channel.send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(type === 'classique' ? '#3498db' : '#9b59b6')
+            .setTitle(`🔄 Nouvelle saison — ${label}`)
+            .setDescription(
+              type === 'classique'
+                ? `La saison classique vient de se réinitialiser.\nLes trophées ont été remis à zéro dans le jeu.`
+                : `La saison classée vient de se réinitialiser.\nLes elos ranked ont été remis à zéro dans le jeu.`
+            )
+            .setFooter({ text: 'Reset automatique • Prairie Brawl Stars' })
+            .setTimestamp(),
+        ],
+      });
+    } catch (err) {
+      console.error('[Saison] Erreur notification staff :', err);
+    }
+  }
+}
+
 async function updateSnapshots(client) {
   const { clubMembersCache } = getCache();
   if (!clubMembersCache.length) {
@@ -272,12 +347,14 @@ async function updateSnapshots(client) {
 
   if (client) {
     await updateRolesAndNotify(client);
+    await checkSeasonResets(client);
   }
 }
 
 module.exports = {
   updateSnapshots,
   updateRolesAndNotify,
+  checkSeasonResets,
   CLUB_ROLES,
   TROPHY_ROLES,
   getTrophyRole,
