@@ -1,8 +1,8 @@
-const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const { getPlayer } = require('../lib/brawlapi');
 const { fetchRntProfile } = require('../lib/rntapi');
 const { getPreferredBsTag } = require('../lib/brawlAccounts');
-const { renderTrophiesCard } = require('../modules/trophiesCard');
+const { setupImageNav } = require('../services/imageNav');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -44,9 +44,7 @@ module.exports = {
         totalPrestige:     player.totalPrestigeLevel ?? 0,
       };
 
-      const buffer     = await renderTrophiesCard(bsTag, player, extra);
-      const attachment = new AttachmentBuilder(buffer, { name: 'trophies.png' });
-      await interaction.editReply({ files: [attachment] });
+      await setupImageNav(interaction, bsTag, player, extra, 'trophies');
     } catch (err) {
       console.error('[ImageTrophies]', err);
       await interaction.editReply({ content: `❌ Erreur lors de la génération : ${err.message}` });

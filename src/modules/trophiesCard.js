@@ -70,11 +70,14 @@ async function loadPortrait(id) {
 }
 
 // ── Rendu ─────────────────────────────────────────────────────────────────────
-async function renderTrophiesCard(playerTag, bsPlayer, extra) {
+async function renderTrophiesCard(playerTag, bsPlayer, extra, mode = 'current') {
+  const trophyField = mode === 'highest' ? 'highestTrophies' : 'trophies';
+
   const ownedMap = new Map();
   for (const b of (bsPlayer.brawlers || [])) ownedMap.set(b.id, b);
 
-  const ownedSorted = [...ownedMap.values()].sort((a, b) => (b.trophies ?? 0) - (a.trophies ?? 0));
+  const ownedSorted = [...ownedMap.values()].sort((a, b) =>
+    ((b[trophyField] ?? b.trophies ?? 0) - (a[trophyField] ?? a.trophies ?? 0)));
   const unowned     = BRAWLERS_META
     .filter(b => !ownedMap.has(b.id))
     .map(b => ({ id: b.id, name: b.name, trophies: 0, _unowned: true }));
@@ -130,8 +133,9 @@ async function renderTrophiesCard(playerTag, bsPlayer, extra) {
     const row     = Math.floor(i / COLS);
     const cx      = MARGIN + col * (CELL_W + GAP);
     const cy      = gridY  + row * (CELL_H + GAP);
-    const unowned = !!b._unowned;
-    const color   = getPrestigeColor(b.trophies ?? 0);
+    const unowned   = !!b._unowned;
+    const bTrophies = b[trophyField] ?? b.trophies ?? 0;
+    const color     = getPrestigeColor(bTrophies);
     const portrait = portraits[i];
 
     if (unowned) ctx.globalAlpha = 0.45;
@@ -171,8 +175,8 @@ async function renderTrophiesCard(playerTag, bsPlayer, extra) {
     ctx.globalAlpha = 1.0;
 
     // ── Nombre de trophées (droite, gros, avec icône derrière) ───────────
-    if (!unowned && (b.trophies ?? 0) > 0) {
-      const tStr   = String(b.trophies);
+    if (!unowned && bTrophies > 0) {
+      const tStr   = String(bTrophies);
       const rightX = cx + CELL_W - 8;
       const midY   = cy + CELL_H * 0.80;
 

@@ -1,8 +1,8 @@
-const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const { getPlayer, getBattleLog } = require('../lib/brawlapi');
 const { fetchRntProfile } = require('../lib/rntapi');
 const { getPreferredBsTag } = require('../lib/brawlAccounts');
-const { renderBattlesCard } = require('../modules/battlesCard');
+const { setupImageNav } = require('../services/imageNav');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -31,8 +31,7 @@ module.exports = {
         getBattleLog(bsTag),
       ]);
 
-      const battles = log?.items;
-      if (!battles?.length) {
+      if (!log?.items?.length) {
         return interaction.editReply({ content: '❌ Aucune partie trouvée pour ce compte.' });
       }
 
@@ -50,9 +49,10 @@ module.exports = {
         totalPrestige:     player.totalPrestigeLevel ?? 0,
       };
 
-      const buffer = await renderBattlesCard(bsTag, player, extra, battles);
-      const attachment = new AttachmentBuilder(buffer, { name: 'battles.png' });
-      await interaction.editReply({ files: [attachment] });
+      // Pré-cache le battle log dans extra pour éviter un double appel si on reste sur ce mode
+      extra._cachedBattles = log.items;
+
+      await setupImageNav(interaction, bsTag, player, extra, 'battles');
     } catch (err) {
       console.error('[ImageBattles]', err);
       await interaction.editReply({ content: `❌ Erreur lors de la génération : ${err.message}` });

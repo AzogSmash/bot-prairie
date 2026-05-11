@@ -105,9 +105,10 @@ async function tryLoad(localPath, remote = null) {
   return null;
 }
 
-async function drawWinstreakGrid(ctx, brawlers, startY) {
+async function drawWinstreakGrid(ctx, brawlers, startY, mode = 'max') {
+  const streakField = mode === 'current' ? 'currentWinStreak' : 'maxWinStreak';
   const sorted = [...brawlers]
-    .map(b => ({ ...b, streak: Number(b.maxWinStreak ?? 0) }))
+    .map(b => ({ ...b, streak: Number(b[streakField] ?? 0) }))
     .sort((a, b) => b.streak - a.streak);
 
   const COLS    = 10;
@@ -118,8 +119,6 @@ async function drawWinstreakGrid(ctx, brawlers, startY) {
   const ROWS    = Math.max(1, Math.ceil(sorted.length / COLS));
   const GRID_H  = H - startY - MARGIN;
   const ACTUAL_H = Math.min(CELL_H, Math.floor(GRID_H / ROWS));
-  // Zone label élargie pour accueillir flamme + nombre + MAX
-  const LABEL_H  = Math.round(ACTUAL_H * 0.38);
 
   const wsIcon = await tryLoad(path.join(ICONS_DIR, "borderless", "winstreak.png"))
     ?? await tryLoad(path.join(ICONS_DIR, "winstreak.png"));
@@ -165,66 +164,48 @@ async function drawWinstreakGrid(ctx, brawlers, startY) {
       ctx.restore();
     }
 
-    // ── Gradient léger pour conserver la vivacité ────────────────────────────
+    // ── Dégradé horizontal droite pour lisibilité flamme ────────────────────
     ctx.save();
     rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 8);
     ctx.clip();
-    const cellGrad = ctx.createLinearGradient(0, S(cy), 0, S(cy + ACTUAL_H));
-    cellGrad.addColorStop(0,    "rgba(255,255,255,0.14)");
-    cellGrad.addColorStop(0.28, "rgba(0,0,0,0)");
-    cellGrad.addColorStop(1,    "rgba(0,0,0,0.38)");
+    const cellGrad = ctx.createLinearGradient(S(cx + CELL_W * 0.28), 0, S(cx + CELL_W), 0);
+    cellGrad.addColorStop(0, "rgba(0,0,0,0)");
+    cellGrad.addColorStop(1, "rgba(0,0,0,0.72)");
     ctx.fillStyle = cellGrad;
     ctx.fillRect(S(cx), S(cy), S(CELL_W), S(ACTUAL_H));
     ctx.restore();
 
-    // ── Bordure vive ────────────────────────────────────────────────────────
+    // ── Bordure vive ─────────────────────────────────────────────────────────
     rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 8);
     ctx.strokeStyle = tier.border;
     ctx.lineWidth   = S(streak > 0 ? 3.5 : 2);
     ctx.stroke();
 
-    // ── Overlay label bas : teinte sombre du palier ─────────────────────────
-    const labelY = cy + ACTUAL_H - LABEL_H;
-    ctx.save();
-    rrPath(ctx, cx, labelY, CELL_W, LABEL_H, 8);
-    ctx.fillStyle = `rgba(${Math.round(r * 0.30)},${Math.round(g * 0.30)},${Math.round(b * 0.30)},0.90)`;
-    ctx.fill();
-    ctx.restore();
-
-    // ── Flamme teintée à gauche du label ────────────────────────────────────
-    const FLAME_PAD = Math.max(4, Math.round(CELL_W * 0.04));
-    const flameH    = Math.max(10, Math.round(LABEL_H * 0.82));
-    const flameW    = flameH;
-    const flameX    = cx + FLAME_PAD;
-    const flameY    = labelY + (LABEL_H - flameH) / 2;
-    const flameCX   = flameX + flameW / 2;
+    // ── Flamme au milieu-droit, nombre centré dedans ─────────────────────────
+    const flameH  = Math.round(ACTUAL_H * 0.72);
+    const flameW  = flameH;
+    const flameX  = cx + CELL_W - flameW - 5;
+    const midY    = cy + ACTUAL_H * 0.62;
+    const flameCX = flameX + flameW / 2;
 
     const flameImg = tintedFlames.get(tier.min) ?? wsIcon;
     if (flameImg) {
-      ctx.drawImage(flameImg, S(flameX), S(flameY), S(flameW), S(flameH));
+      ctx.drawImage(flameImg, S(flameX), S(midY - flameH / 2), S(flameW), S(flameH));
     }
 
-    // ── Nombre DE VICTOIRES sur la flamme ────────────────────────────────────
-    const numFSize = Math.max(6, Math.round(flameH * 0.52));
+    const numFSize = Math.max(8, Math.round(flameH * 0.46));
+    const numStr   = String(streak);
+    const numColor = streak > 0 ? "#ffffff" : "rgba(210,200,240,0.80)";
     ctx.font         = FONT(numFSize, 900);
     ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
-
-    const numStr   = String(streak);
-    const numColor = streak > 0 ? "#ffffff" : "rgba(210,200,240,0.80)";
-    outlined(ctx, numStr, flameCX, flameY + flameH * 0.50, numColor, "#000000", streak > 0 ? 2.5 : 2);
-
-    // ── "MAX" sous la flamme ─────────────────────────────────────────────────
-    const maxFSize = Math.max(5, Math.round(LABEL_H * 0.27));
-    ctx.font         = FONT(maxFSize, 700);
-    ctx.textBaseline = "bottom";
-    outlined(ctx, "MAX", flameCX, labelY + LABEL_H - 2, "rgba(255,255,255,0.82)", "#000000", 1.5);
+    outlined(ctx, numStr, flameCX, midY, numColor, "#000000", streak > 0 ? 3 : 2);
 
     ctx.globalAlpha = 1.0;
   }
 }
 
-async function generateWinstreakCard(bsPlayer, extra = {}) {
+async function generateWinstreakCard(bsPlayer, extra = {}, mode = 'max') {
   const data   = normalizeRankCardData(bsPlayer, extra);
   const canvas = createCanvas(S(W), S(H));
   const ctx    = canvas.getContext("2d");
@@ -251,7 +232,7 @@ async function generateWinstreakCard(bsPlayer, extra = {}) {
   ctx.fillStyle = "rgba(255,255,255,0.10)";
   ctx.fillRect(S(MARGIN), S(headerEndY - 4), S(W - MARGIN * 2), S(2));
 
-  await drawWinstreakGrid(ctx, data.brawlers, headerEndY);
+  await drawWinstreakGrid(ctx, data.brawlers, headerEndY, mode);
 
   ctx.font         = FONT(10, 700);
   ctx.textBaseline = "bottom";

@@ -1,8 +1,8 @@
-const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const { getPlayer } = require('../lib/brawlapi');
-const { generateRankCard } = require('../modules/rankCard');
 const { fetchRntProfile } = require('../lib/rntapi');
 const { getPreferredBsTag } = require('../lib/brawlAccounts');
+const { setupImageNav } = require('../services/imageNav');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -18,7 +18,7 @@ module.exports = {
     await interaction.deferReply();
 
     const target = interaction.options.getUser('membre') || interaction.user;
-    const bsTag = await getPreferredBsTag(target.id);
+    const bsTag  = await getPreferredBsTag(target.id);
 
     if (!bsTag) {
       return interaction.editReply({
@@ -33,9 +33,8 @@ module.exports = {
       ]);
 
       const rntData = rnt?.result || rnt || {};
-      const stats = rntData?.stats || [];
-
-      const extra = {
+      const stats   = rntData?.stats || [];
+      const extra   = {
         currentRankedPts:  stats.find(s => s.id === 24)?.value ?? 0,
         currentRankedName: player.rankedRankName ?? '',
         highestRankedPts:  stats.find(s => s.id === 25)?.value ?? 0,
@@ -47,9 +46,7 @@ module.exports = {
         totalPrestige:     player.totalPrestigeLevel ?? 0,
       };
 
-      const buffer = await generateRankCard(player, extra);
-      await interaction.editReply({ files: [new AttachmentBuilder(buffer, { name: 'image-prestige.png' })] });
-
+      await setupImageNav(interaction, bsTag, player, extra, 'prestige');
     } catch (err) {
       console.error('[ImagePrestige]', err);
       await interaction.editReply({ content: `❌ Erreur lors de la génération : ${err.message}` });
