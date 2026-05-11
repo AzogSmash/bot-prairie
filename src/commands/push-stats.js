@@ -11,10 +11,10 @@ const MONTHS_FR = ["", "jan", "fév", "mar", "avr", "mai", "juin", "juil", "aoû
 
 // Aujourd'hui : un point par heure, label "HHh"
 function buildTodayPoints(rows) {
-  return rows.map(r => ({
-    value: r.trophies,
-    label: DateTime.fromISO(r.snapshot_at).setZone("Europe/Paris").toFormat("HH") + "h",
-  }));
+  return rows.map(r => {
+    const dt = DateTime.fromISO(r.snapshot_at).setZone("Europe/Paris");
+    return { value: r.trophies, label: dt.toFormat("HH") + "h", time: dt.toMillis() };
+  });
 }
 
 // Semaine : 1 point toutes les 3h (≈ 56 pts sur 7 jours) → dots visibles, courbe lisible
@@ -26,7 +26,7 @@ function buildWeekPoints(rows) {
       let label = "";
       if (dt.hour === 0)          label = DAYS_FR[dt.weekday];
       else if (dt.hour % 6 === 0) label = `${String(dt.hour).padStart(2, "0")}h`;
-      return { value: r.trophies, label };
+      return { value: r.trophies, label, time: dt.toMillis() };
     });
 }
 
@@ -40,21 +40,17 @@ function buildSeasonPoints(rows) {
       let label = "";
       if (r.isDaily || dt.hour === 0) {
         label = `${dt.day} ${MONTHS_FR[dt.month]}`;
-      } else if (dt.hour % 6 === 0) {
-        label = `${String(dt.hour).padStart(2, "0")}h`;
       }
-      return { value: r.trophies, label };
+      // pas de label pour 06h/12h/18h : trop dense sur 7+ jours
+      return { value: r.trophies, label, time: dt.toMillis() };
     });
 }
 
-// Ajoute la valeur courante en dernier point si elle est plus récente
-function appendCurrent(points, trophies, label) {
-  if (!points.length) return [{ value: trophies, label }];
-  if (points[points.length - 1].label === label) {
-    points[points.length - 1].value = trophies;
-    return points;
-  }
-  return [...points, { value: trophies, label }];
+// Ajoute la valeur courante en dernier point avec son timestamp
+function appendCurrent(points, trophies, label, nowMs) {
+  if (!points.length) return [{ value: trophies, label, time: nowMs }];
+  const lastLabel = points[points.length - 1].label;
+  return [...points, { value: trophies, label: lastLabel === label ? "" : label, time: nowMs }];
 }
 
 module.exports = {
@@ -150,15 +146,17 @@ module.exports = {
         ...(seasonRecentRes.data ?? []).map(r => ({ ...r, isDaily: false })),
       ];
 
-      const todayPoints  = appendCurrent(buildTodayPoints(todayRes.data ?? []), currentTrophies, nowHLabel);
-      const weekPoints   = appendCurrent(buildWeekPoints(weekRes.data ?? []),   currentTrophies, nowDayLbl);
-      const seasonPoints = appendCurrent(buildSeasonPoints(seasonRows),          currentTrophies, nowDateLbl);
+      const nowMs        = now.toMillis();
+      const todayPoints  = appendCurrent(buildTodayPoints(todayRes.data ?? []), currentTrophies, nowHLabel,  nowMs);
+      const weekPoints   = appendCurrent(buildWeekPoints(weekRes.data ?? []),   currentTrophies, nowDayLbl,  nowMs);
+      const seasonPoints = appendCurrent(buildSeasonPoints(seasonRows),          currentTrophies, nowDateLbl, nowMs);
 
       const buffer = await generatePushStatsCard(player, extra, {
         todayPoints,
         weekPoints,
         seasonPoints,
         seasonLabel: seasonRow?.label ?? null,
+        seasonStartDate,
       });
 
       await interaction.editReply({
