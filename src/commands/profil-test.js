@@ -11,6 +11,18 @@ const TOTAL_BRAWLERS = BRAWLERS_META.length;
 const MAX_GADGETS    = BRAWLERS_META.reduce((s, b) => s + b.totalGadgets, 0);
 const MAX_SP         = BRAWLERS_META.reduce((s, b) => s + b.totalSP, 0);
 
+const B1 = '<:Text1:1483310643611439215>';
+const B2 = '<:Text2:1483310738297847849>';
+const ARROW_DN = '<:i_arrowdown:1481364567501176995>';
+const ARROW_UP = '<:i_arrowup:1481364573650030789>';
+
+function arrow(val) { return (val !== null && val > 0) ? ARROW_UP : ARROW_DN; }
+function arrowRate(val) { return (val !== null && val >= 50) ? ARROW_UP : ARROW_DN; }
+
+function fmtPush(val) {
+  if (val === null) return '—';
+  return (val >= 0 ? '+' : '') + val.toLocaleString('fr-FR');
+}
 
 const PRAIRIE_CLUBS = [
   { tag: '#29UPLG8QQ', emoji: '🌟' },
@@ -61,6 +73,42 @@ function progressBar(current, max, length = 10) {
   return '█'.repeat(filled) + '░'.repeat(length - filled);
 }
 
+const MODE_EMOJIS = {
+  48000037: '<:gm_48000037:1478934858670542950>',
+  48000038: '<:gm_48000038:1478934864496693399>',
+  48000039: '<:gm_48000039:1478934870854996088>',
+  48000040: '<:gm_48000040:1478934876018184233>',
+  48000041: '<:gm_48000041:1478934882041466880>',
+  48000042: '<:gm_48000042:1478934887556976773>',
+  48000043: '<:gm_48000043:1478934893772804137>',
+  48000044: '<:gm_48000044:1478934901578272779>',
+  48000045: '<:gm_48000045:1478934909975531692>',
+  48000046: '<:gm_48000046:1478934916111536129>',
+  48000047: '<:gm_48000047:1478934922113843211>',
+  48000048: '<:gm_48000048:1478934928312762571>',
+  48000049: '<:gm_48000049:1478934934478520507>',
+  48000050: '<:gm_48000050:1478934939989971032>',
+  48000051: '<:gm_48000051:1478934945610207245>',
+  48000052: '<:gm_48000052:1478934952358973581>',
+  48000053: '<:gm_48000053:1478934958864072755>',
+  48000054: '<:gm_48000054:1478934964446822531>',
+  48000055: '<:gm_48000055:1478934969903743047>',
+  48000056: '<:gm_48000056:1478934976719491115>',
+  48000057: '<:gm_48000057:1478934983833030729>',
+  48000058: '<:gm_48000058:1478934989872562218>',
+  48000059: '<:gm_48000059:1478934995547455569>',
+  48000060: '<:gm_48000060:1478935001117495487>',
+  48000061: '<:gm_48000061:1478935006549377167>',
+  48000062: '<:gm_48000062:1478935011909435555>',
+  48000063: '<:gm_48000063:1478935018964521101>',
+  48000064: '<:gm_48000064:1478935025801105598>',
+  48000065: '<:gm_48000065:1478935031693971518>',
+  48000066: '<:gm_48000066:1478935038320967690>',
+  48000067: '<:gm_48000067:1478935043715109007>',
+};
+
+const LOCKED_EMOJI = '<:2b_locked:1478963121082204221>';
+
 function modeLabel(mode) {
   const modes = {
     gemGrab: 'Gem Grab', brawlBall: 'Brawl Ball',
@@ -72,17 +120,48 @@ function modeLabel(mode) {
   return modes[mode] || mode;
 }
 
+function getModeEmoji(modeId) {
+  if (!modeId) return '';
+  return MODE_EMOJIS[48000000 + modeId] || MODE_EMOJIS[modeId] || '';
+}
+
+const RANKED_EMOJIS = [
+  '<:rt_58000000:1479579378844172301>', // Bronze I
+  '<:rt_58000001:1479579384313675877>', // Bronze II
+  '<:rt_58000002:1479579391347654836>', // Bronze III
+  '<:rt_58000003:1479579399694057492>', // Silver I
+  '<:rt_58000004:1479579405176012840>', // Silver II
+  '<:rt_58000005:1479579969838518434>', // Silver III
+  '<:rt_58000006:1479579975639109712>', // Gold I
+  '<:rt_58000007:1479579982371094679>', // Gold II
+  '<:rt_58000008:1479579988641714237>', // Gold III
+  '<:rt_58000009:1479579994194968728>', // Diamond I
+  '<:rt_58000010:1479580000150618374>', // Diamond II
+  '<:rt_58000011:1479580005867585647>', // Diamond III
+  '<:rt_58000012:1479580011450073349>', // Mythic I
+  '<:rt_58000013:1479580017188147330>', // Mythic II
+  '<:rt_58000014:1479580022703390790>', // Mythic III
+  '<:rt_58000015:1479580027979960352>', // Legendary I
+  '<:rt_58000016:1479580033520500882>', // Legendary II
+  '<:rt_58000017:1479580039317033030>', // Legendary III
+  '<:rt_58000018:1479580044853772461>', // Masters I
+  '<:rt_58000019:1479580050746507406>', // Masters II
+  '<:rt_58000020:1479580056727588916>', // Masters III
+  '<:rt_58000021:1479580062515855483>', // Pro
+];
+
 function getRankedEmoji(rankName) {
-  if (!rankName) return 'X';
+  if (!rankName) return RANKED_EMOJIS[0];
   const n = rankName.toLowerCase();
-  if (n.includes('pro'))       return 'X'; // emoji_ranked_pro
-  if (n.includes('masters'))   return 'X'; // emoji_ranked_masters
-  if (n.includes('legendary')) return 'X'; // emoji_ranked_legendary
-  if (n.includes('mythic'))    return 'X'; // emoji_ranked_mythic
-  if (n.includes('diamond'))   return 'X'; // emoji_ranked_diamond
-  if (n.includes('gold'))      return 'X'; // emoji_ranked_gold
-  if (n.includes('silver'))    return 'X'; // emoji_ranked_silver
-  return 'X'; // emoji_ranked_bronze
+  const sub = n.includes('iii') ? 2 : n.includes('ii') ? 1 : 0;
+  if (n.includes('pro'))       return RANKED_EMOJIS[21];
+  if (n.includes('masters'))   return RANKED_EMOJIS[18 + sub];
+  if (n.includes('legendary')) return RANKED_EMOJIS[15 + sub];
+  if (n.includes('mythic'))    return RANKED_EMOJIS[12 + sub];
+  if (n.includes('diamond'))   return RANKED_EMOJIS[9 + sub];
+  if (n.includes('gold'))      return RANKED_EMOJIS[6 + sub];
+  if (n.includes('silver'))    return RANKED_EMOJIS[3 + sub];
+  return RANKED_EMOJIS[sub];
 }
 
 async function getPushSnapshots(bsTag) {
@@ -112,8 +191,7 @@ async function getPushSnapshots(bsTag) {
       .gte('snapshot_at', since.toISOString())
       .order('snapshot_at', { ascending: true }).limit(1).maybeSingle();
     if (!data) return null;
-    const diff = currentTrophies - data.trophies;
-    return diff > 0 ? diff : 0;
+    return currentTrophies - data.trophies;
   }
 
   const [daily, weekly, seasonPush] = await Promise.all([
@@ -171,18 +249,17 @@ async function buildProfileEmbed(target, client) {
   const rankedName     = player.rankedRankName || 'Bronze I';
   const highestElo     = player.highestAllTimeRankedElo || 0;
   const highestName    = player.highestAllTimeRankedRankName || 'Bronze I';
-  const rankedEmoji    = getRankedEmoji(rankedName);
-  const highestEmoji   = getRankedEmoji(highestName);
 
   // ── Battle log ──────────────────────────────────────────────────────────
-  let winRate = null, lastMode = null, lastBrawler = null;
+  let winRate = null, lastMode = null, lastModeId = null, lastBrawler = null;
   if (battleLogData?.items?.length > 0) {
     const battles = battleLogData.items.slice(0, 25);
     const results = battles.filter(b => b.battle?.result);
     const wins    = results.filter(b => b.battle.result === 'victory').length;
     winRate = results.length > 0 ? Math.round((wins / results.length) * 100) : null;
     const last = battles[0];
-    lastMode = last?.event?.mode || null;
+    lastMode   = last?.event?.mode || null;
+    lastModeId = last?.event?.modeId ?? null;
     if (last?.battle?.teams) {
       const me = last.battle.teams.flat().find(p => p.tag === player.tag);
       lastBrawler = me?.brawler?.name || null;
@@ -206,11 +283,10 @@ async function buildProfileEmbed(target, client) {
     ? `${rankEmoji} **#${rankInFamily}** / ${totalInFamily}`
     : 'Hors Prairie';
 
-  const pushStr = [
-    `🔥 Aujourd'hui : **${pushData.daily !== null ? '+' + pushData.daily.toLocaleString('fr-FR') : '—'}**`,
-    `📅 Cette semaine : **${pushData.weekly !== null ? '+' + pushData.weekly.toLocaleString('fr-FR') : '—'}**`,
-    `🏆 Cette saison : **${pushData.season !== null ? '+' + pushData.season.toLocaleString('fr-FR') : '—'}**`,
-  ].join('\n');
+  const statusStr = data.status === 'staff' ? '🛡️ Staff'
+    : data.status === 'inactif' ? '⚠️ Inactif'
+    : data.status === 'nouveau' ? '🆕 Nouveau'
+    : '<:Yes:1479588620297044042> Actif';
 
   const embed = new EmbedBuilder()
     .setColor(color)
@@ -220,72 +296,69 @@ async function buildProfileEmbed(target, client) {
     })
     .setThumbnail(bsIconUrl || target.displayAvatarURL({ dynamic: true, size: 256 }))
 
-    // ── Identité ─────────────────────────────────────────────────────────
     .addFields({
-      name: `X ${player.club?.name || 'Sans club'}`,
+      name: player.club?.name ? `${player.club.name}` : 'Sans club',
+      value: `${B2} ${rangStr}  •  ${statusStr}`,
+      inline: false,
+    })
+
+    .addFields({
+      name: 'Trophées',
       value: [
-        `${rangStr}  •  ${data.status === 'staff' ? '🛡️ Staff' : data.status === 'inactif' ? '⚠️ Inactif' : data.status === 'nouveau' ? '🆕 Nouveau' : '✅ Actif'}`,
+        `${B1} X **${player.trophies.toLocaleString('fr-FR')}** / ${player.highestTrophies?.toLocaleString('fr-FR') || '?'}`,
       ].join('\n'),
       inline: false,
     })
 
-    // ── Trophées ─────────────────────────────────────────────────────────
     .addFields({
-      name: 'X Trophées',
+      name: `Classé`,
       value: [
-        `X **${player.trophies.toLocaleString('fr-FR')}** / X ${player.highestTrophies?.toLocaleString('fr-FR') || '?'}`,
-        `\`${progress}\` ${player.trophies.toLocaleString('fr-FR')} / ${nextMilestone?.toLocaleString('fr-FR') || 'MAX'}`,
+        `${B1} ${getRankedEmoji(rankedName)} — ${rankedElo.toLocaleString('fr-FR')} pts`,
+        `${B2} ${getRankedEmoji(highestName)} — ${highestElo.toLocaleString('fr-FR')} pts`,
       ].join('\n'),
       inline: false,
     })
 
-    // ── Classé ───────────────────────────────────────────────────────────
     .addFields({
-      name: 'X Classé',
+      name: 'Victoires',
       value: [
-        `${rankedEmoji} **${rankedName}** — ${rankedElo.toLocaleString('fr-FR')} pts`,
-        `${highestEmoji} **${highestName}** — ${highestElo.toLocaleString('fr-FR')} pts`,
+        `${B1} X **${player['3vs3Victories']?.toLocaleString('fr-FR') || '?'}** victoires 3v3`,
+        `${B2} X **${player.soloVictories?.toLocaleString('fr-FR') || '?'}** solo  •  X **${player.duoVictories?.toLocaleString('fr-FR') || '?'}** duo`,
       ].join('\n'),
       inline: false,
     })
 
-    // ── Victoires ────────────────────────────────────────────────────────
     .addFields({
-      name: 'X Victoires',
-      value: `X **${player['3vs3Victories']?.toLocaleString('fr-FR') || '?'}**  •  X **${player.soloVictories?.toLocaleString('fr-FR') || '?'}**  •  X **${player.duoVictories?.toLocaleString('fr-FR') || '?'}**`,
-      inline: false,
-    })
-
-    // ── Collection ───────────────────────────────────────────────────────
-    .addFields({
-      name: 'X Collection',
+      name: 'Collection',
       value: [
-        `X **${totalBrawlers}** / ${TOTAL_BRAWLERS} brawlers  •  X **${maxedBrawlers}** max  •  X **${hypercharges}** HC`,
-        `X **${totalGadgets}** / ${maxGadgets}  •  X **${totalSP}** / ${maxSP}  •  X **${totalGears}** / ${maxGears}`,
-        `X Niv. **${player.expLevel}**  •  X Prestige **${player.totalPrestigeLevel || 0}**`,
+        `${B1} ${LOCKED_EMOJI} **${totalBrawlers}** / ${TOTAL_BRAWLERS} brawlers  •  **${maxedBrawlers}** max  •  **${hypercharges}** HC`,
+        `${B1} X **${totalGadgets}** / ${maxGadgets}  •  **${totalSP}** / ${maxSP}  •  **${totalGears}** / ${maxGears}`,
+        `${B2} X Niv. **${player.expLevel}**  •  Prestige **${player.totalPrestigeLevel || 0}**`,
       ].join('\n'),
       inline: false,
     })
 
-    // ── Push ─────────────────────────────────────────────────────────────
     .addFields({
-      name: 'X Push',
+      name: 'Push',
       value: [
-        `X Aujourd'hui : **${pushData.daily !== null ? '+' + pushData.daily.toLocaleString('fr-FR') : '—'}**`,
-        `X Cette semaine : **${pushData.weekly !== null ? '+' + pushData.weekly.toLocaleString('fr-FR') : '—'}**`,
-        `X Cette saison : **${pushData.season !== null ? '+' + pushData.season.toLocaleString('fr-FR') : '—'}**`,
+        `${B1} ${arrow(pushData.season)} Saison : **${fmtPush(pushData.season)}**`,
+        `${B1} ${arrow(pushData.weekly)} Semaine : **${fmtPush(pushData.weekly)}**`,
+        `${B2} ${arrow(pushData.daily)} Aujourd'hui : **${fmtPush(pushData.daily)}**`,
       ].join('\n'),
       inline: false,
     })
 
-    // ── Dernières parties ────────────────────────────────────────────────
     .addFields({
-      name: 'X 25 dernières parties',
-      value: [
-        winRate !== null ? `X Win rate : **${winRate}%**` : null,
-        lastMode         ? `X Dernier mode : **${modeLabel(lastMode)}**` : null,
-        lastBrawler      ? `X Dernier brawler : **${lastBrawler}**` : null,
-      ].filter(Boolean).join('\n') || 'Aucune partie récente',
+      name: '25 dernières parties',
+      value: (() => {
+        const lines = [
+          winRate !== null ? `${arrowRate(winRate)} Win rate : **${winRate}%**` : null,
+          lastMode         ? `${getModeEmoji(lastModeId)} **${modeLabel(lastMode)}**` : null,
+          lastBrawler      ? `Dernier brawler : **${lastBrawler}**` : null,
+        ].filter(Boolean);
+        if (!lines.length) return 'Aucune partie récente';
+        return lines.map((l, i) => `${i < lines.length - 1 ? B1 : B2} ${l}`).join('\n');
+      })(),
       inline: false,
     })
 

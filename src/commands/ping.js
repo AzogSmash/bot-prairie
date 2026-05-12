@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const os  = require('os');
 const fsp = require('fs').promises;
 
@@ -24,16 +24,15 @@ function getCpuPercent() {
   });
 }
 
-function bar(ratio, width = 22) {
+function bar(ratio, width = 14) {
   const filled = Math.round(Math.max(0, Math.min(1, ratio)) * width);
-  return `\`${'█'.repeat(filled)}${'░'.repeat(width - filled)}\``;
+  return '🟩'.repeat(filled) + '⬛'.repeat(width - filled);
 }
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ping')
-    .setDescription('Statut et performances du bot')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+    .setDescription('Statut et performances du bot'),
 
   async execute(interaction) {
     await interaction.deferReply({ flags: 64 });
