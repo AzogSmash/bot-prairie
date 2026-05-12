@@ -4,9 +4,12 @@ const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const { getCachedOrFetch } = require('../services/imageCache');
 const { drawHeader } = require('./rankCard');
 
+const fs = require('node:fs');
+
 const ASSETS        = path.resolve(__dirname, '..', 'assets');
-const BG_FILE       = path.join(ASSETS, 'backgrounds', 'rank_bg.png');
+const BG_FILE       = path.join(ASSETS, 'backgrounds', 'background_prestige.png');
 const PORTRAITS_DIR = path.join(ASSETS, 'brawlers', 'portrait');
+const EMOJI_DIR     = path.join(ASSETS, 'brawlers', 'emoji');
 const BRAWLERS_META = require('../assets/brawlers-meta.json');
 
 const SCALE  = 2;
@@ -17,22 +20,21 @@ function FONT(size, weight = 700) {
   return `${weight} ${S(size)}px "Lilita One", "Lilita", sans-serif`;
 }
 
-// ── Mêmes seuils et couleurs que rankCard ─────────────────────────────────────
 const PRESTIGE_THRESHOLDS = [
-  { min: 0,     color: '#815b40' },
-  { min: 250,   color: '#f5aa4d' },
-  { min: 500,   color: '#b3b5d5' },
-  { min: 750,   color: '#dec745' },
-  { min: 1000,  color: '#b377e4' },
-  { min: 2000,  color: '#ed599e' },
-  { min: 3000,  color: '#f3cb66' },
-  { min: 4000,  color: '#DAA520' },
-  { min: 5000,  color: '#f3cb66' },
-  { min: 6000,  color: '#f3cb66' },
-  { min: 7000,  color: '#f3cb66' },
-  { min: 8000,  color: '#f3cb66' },
-  { min: 9000,  color: '#f3cb66' },
-  { min: 10000, color: '#f3cb66' },
+  { min: 0,     color: '#c49060' },
+  { min: 250,   color: '#ffb84a' },
+  { min: 500,   color: '#b8c4f4' },
+  { min: 750,   color: '#ffe454' },
+  { min: 1000,  color: '#bf6eff' },
+  { min: 2000,  color: '#ff5090' },
+  { min: 3000,  color: '#ffd940' },
+  { min: 4000,  color: '#ffc830' },
+  { min: 5000,  color: '#ffd940' },
+  { min: 6000,  color: '#ffd940' },
+  { min: 7000,  color: '#ffd940' },
+  { min: 8000,  color: '#ffd940' },
+  { min: 9000,  color: '#ffd940' },
+  { min: 10000, color: '#ffd940' },
 ];
 
 function getPrestigeColor(trophies) {
@@ -42,6 +44,16 @@ function getPrestigeColor(trophies) {
     else break;
   }
   return color;
+}
+
+function hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+
+function darkenHex(hex, amt = 50) {
+  const [r, g, b] = hexToRgb(hex);
+  return `rgb(${Math.max(0,r-amt)},${Math.max(0,g-amt)},${Math.max(0,b-amt)})`;
 }
 
 function rrPath(ctx, x, y, w, h, r) {
@@ -58,14 +70,13 @@ function rrPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-async function loadPortrait(id) {
-  try { return await loadImage(path.join(PORTRAITS_DIR, `${id}.png`)); } catch {}
-  try {
-    return await getCachedOrFetch(
-      `portrait_${id}.png`,
-      `https://raw.githubusercontent.com/Brawlify/CDN/master/brawlers/portraits/${id}.png`,
-    );
-  } catch {}
+async function loadBrawlerImage(id) {
+  const localEmoji    = path.join(EMOJI_DIR,    `${id}.png`);
+  const localPortrait = path.join(PORTRAITS_DIR, `${id}.png`);
+  if (fs.existsSync(localEmoji))    { try { return await loadImage(localEmoji);    } catch {} }
+  if (fs.existsSync(localPortrait)) { try { return await loadImage(localPortrait); } catch {} }
+  try { return await getCachedOrFetch(`brawlers/emoji/${id}.png`,    `https://cdn.brawlify.com/brawler-bs/regular/${id}.png`); }    catch {}
+  try { return await getCachedOrFetch(`brawlers/portrait/${id}.png`, `https://raw.githubusercontent.com/Brawlify/CDN/master/brawlers/portraits/${id}.png`); } catch {}
   return null;
 }
 
@@ -87,6 +98,10 @@ async function renderTrophiesCard(playerTag, bsPlayer, extra, mode = 'current') 
   const GAP    = 10;
   const CELL_W = Math.floor((W - MARGIN * 2 - GAP * (COLS - 1)) / COLS);
   const CELL_H = Math.round(CELL_W * 0.62);
+
+  // Compléter la dernière ligne avec des cases placeholder
+  const remCols = allBrawlers.length % COLS;
+  if (remCols !== 0) for (let i = 0; i < COLS - remCols; i++) allBrawlers.push({ _placeholder: true });
 
   const rows       = Math.ceil(allBrawlers.length / COLS);
   const GRID_TOTAL = rows * CELL_H + (rows - 1) * GAP;
@@ -120,7 +135,7 @@ async function renderTrophiesCard(playerTag, bsPlayer, extra, mode = 'current') 
 
   // ── Assets communs ────────────────────────────────────────────────────────
   const [portraits, trophyIcon] = await Promise.all([
-    Promise.all(allBrawlers.map(b => loadPortrait(b.id))),
+    Promise.all(allBrawlers.map(b => loadBrawlerImage(b.id))),
     loadImage(path.join(ASSETS, 'icons', 'trophies.png')).catch(() => null),
   ]);
 
@@ -128,11 +143,25 @@ async function renderTrophiesCard(playerTag, bsPlayer, extra, mode = 'current') 
   const gridY = headerEndY + 14;
 
   for (let i = 0; i < allBrawlers.length; i++) {
-    const b       = allBrawlers[i];
-    const col     = i % COLS;
-    const row     = Math.floor(i / COLS);
-    const cx      = MARGIN + col * (CELL_W + GAP);
-    const cy      = gridY  + row * (CELL_H + GAP);
+    const b   = allBrawlers[i];
+    const col = i % COLS;
+    const row = Math.floor(i / COLS);
+    const cx  = MARGIN + col * (CELL_W + GAP);
+    const cy  = gridY  + row * (CELL_H + GAP);
+
+    if (b._placeholder) {
+      ctx.globalAlpha = 0.30;
+      rrPath(ctx, cx, cy, CELL_W, CELL_H, 12);
+      ctx.fillStyle = '#1a1030';
+      ctx.fill();
+      rrPath(ctx, cx, cy, CELL_W, CELL_H, 12);
+      ctx.strokeStyle = 'rgba(120,100,180,0.3)';
+      ctx.lineWidth   = S(1.5);
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+      continue;
+    }
+
     const unowned   = !!b._unowned;
     const bTrophies = b[trophyField] ?? b.trophies ?? 0;
     const color     = getPrestigeColor(bTrophies);
@@ -140,74 +169,85 @@ async function renderTrophiesCard(playerTag, bsPlayer, extra, mode = 'current') 
 
     if (unowned) ctx.globalAlpha = 0.45;
 
-    // ── Fond couleur prestige (identique à rankCard) ──────────────────────
-    rrPath(ctx, cx, cy, CELL_W, CELL_H, 12);
-    ctx.fillStyle = unowned ? '#2a2040' : `${color}dd`;
+    const R = 12;
+    // ── Fond assombri ─────────────────────────────────────────────────────
+    rrPath(ctx, cx, cy, CELL_W, CELL_H, R);
+    ctx.fillStyle = unowned ? '#2a2040' : darkenHex(color, 45);
     ctx.fill();
 
-    // ── Portrait (même formule que rankCard) ──────────────────────────────
+    // ── Dégradé radial vers les bords ────────────────────────────────────
+    if (!unowned) {
+      const gx = S(cx + CELL_W / 2);
+      const gy = S(cy + CELL_H / 2);
+      const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, S(Math.max(CELL_W, CELL_H) * 0.72));
+      grad.addColorStop(0,   'rgba(0,0,0,0)');
+      grad.addColorStop(0.6, 'rgba(0,0,0,0)');
+      grad.addColorStop(1,   'rgba(0,0,0,0.5)');
+      rrPath(ctx, cx, cy, CELL_W, CELL_H, R);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+
+    // ── Portrait clippé, décalé à gauche ─────────────────────────────────
     if (portrait) {
       ctx.save();
-      rrPath(ctx, cx, cy, CELL_W, CELL_H, 12);
+      rrPath(ctx, cx, cy, CELL_W, CELL_H, R);
       ctx.clip();
-      const sc = (CELL_H / portrait.height) * 2;
-      ctx.drawImage(portrait, S(cx), S(cy), portrait.width * sc, portrait.height * sc);
+      const iS = Math.round(CELL_H * 0.82);
+      ctx.drawImage(portrait, S(cx + 3), S(cy + (CELL_H - iS) / 2), S(iS), S(iS));
       ctx.restore();
     }
 
-    // ── Dégradé droite pour lisibilité du nombre ─────────────────────────
+    // ── Dégradé horizontal droite pour lisibilité du nombre ──────────────
     ctx.save();
-    rrPath(ctx, cx, cy, CELL_W, CELL_H, 12);
+    rrPath(ctx, cx, cy, CELL_W, CELL_H, R);
     ctx.clip();
-    const fadeGrad = ctx.createLinearGradient(S(cx + CELL_W * 0.30), 0, S(cx + CELL_W), 0);
+    const fadeGrad = ctx.createLinearGradient(S(cx + CELL_W * 0.35), 0, S(cx + CELL_W), 0);
     fadeGrad.addColorStop(0, 'rgba(0,0,0,0)');
-    fadeGrad.addColorStop(1, 'rgba(0,0,0,0.78)');
+    fadeGrad.addColorStop(1, 'rgba(0,0,0,0.75)');
     ctx.fillStyle = fadeGrad;
     ctx.fillRect(S(cx), S(cy), S(CELL_W), S(CELL_H));
     ctx.restore();
 
-    // ── Bordure couleur prestige ──────────────────────────────────────────
-    rrPath(ctx, cx, cy, CELL_W, CELL_H, 12);
-    ctx.strokeStyle = unowned ? 'rgba(100,80,160,0.4)' : `${color}ff`;
-    ctx.lineWidth   = S(unowned ? 1.5 : 3);
+    // ── Bordure visible ───────────────────────────────────────────────────
+    rrPath(ctx, cx, cy, CELL_W, CELL_H, R);
+    ctx.strokeStyle = unowned ? 'rgba(100,80,160,0.45)' : color;
+    ctx.lineWidth   = S(unowned ? 1.5 : 4);
     ctx.stroke();
 
     ctx.globalAlpha = 1.0;
 
-    // ── Nombre de trophées (droite, gros, avec icône derrière) ───────────
+    // ── Nombre de trophées (centré verticalement, décalé droite, icône derrière) ──
     if (!unowned && bTrophies > 0) {
-      const tStr   = String(bTrophies);
-      const rightX = cx + CELL_W - 8;
-      const midY   = cy + CELL_H * 0.80;
+      const tStr = String(bTrophies);
+      const midY = cy + CELL_H * 0.54;
+      const centerX = cx + CELL_W * 0.62;
 
-      // Nombre + icône trophée
-      let fs = 21;
+      // Taille de police plus généreuse
+      let fs = 26;
       ctx.font = FONT(fs);
-      while (fs > 12 && ctx.measureText(tStr).width / SCALE > CELL_W * 0.52) {
+      while (fs > 13 && ctx.measureText(tStr).width / SCALE > CELL_W * 0.52) {
         fs -= 1;
         ctx.font = FONT(fs);
       }
 
-      const iconSz  = Math.round(fs * 1.1);
-      const textW   = ctx.measureText(tStr).width / SCALE;
-      const totalW  = (trophyIcon ? iconSz + 3 : 0) + textW;
-      const startX  = rightX - totalW;
-
-      // Icône trophée
+      // Icône trophée grande, centrée derrière le texte
       if (trophyIcon) {
-        ctx.drawImage(trophyIcon, S(startX), S(midY - iconSz / 2), S(iconSz), S(iconSz));
+        const iconSz = Math.round(CELL_H * 0.80);
+        ctx.globalAlpha = 0.22;
+        ctx.drawImage(trophyIcon, S(centerX - iconSz / 2), S(cy + (CELL_H - iconSz) / 2), S(iconSz), S(iconSz));
+        ctx.globalAlpha = 1.0;
       }
 
-      // Nombre
+      // Nombre en blanc centré
       ctx.textBaseline = 'middle';
-      ctx.textAlign    = 'left';
-      ctx.strokeStyle  = 'rgba(0,0,0,0.95)';
-      ctx.lineWidth    = S(3.5);
+      ctx.textAlign    = 'center';
+      ctx.strokeStyle  = 'rgba(0,0,0,0.90)';
+      ctx.lineWidth    = S(4);
       ctx.lineJoin     = 'round';
-      const numX = startX + (trophyIcon ? iconSz + 3 : 0);
-      ctx.strokeText(tStr, S(numX), S(midY));
-      ctx.fillStyle = color;
-      ctx.fillText(tStr, S(numX), S(midY));
+      ctx.strokeText(tStr, S(centerX), S(midY));
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(tStr, S(centerX), S(midY));
     }
   }
 

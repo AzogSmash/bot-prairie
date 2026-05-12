@@ -393,7 +393,7 @@ async function generatePushStatsCard(bsPlayer, extra, { todayPoints, weekPoints,
   const ctx    = canvas.getContext("2d");
 
   // Fond
-  const bgImg = await tryLoad(path.join(BG_DIR, "rank_bg.png"));
+  const bgImg = await tryLoad(path.join(BG_DIR, "background_prestige.png"));
   if (bgImg) {
     const sc = Math.max(S(W) / bgImg.width, S(H) / bgImg.height);
     ctx.drawImage(bgImg, (S(W) - bgImg.width * sc) / 2, (S(H) - bgImg.height * sc) / 2, bgImg.width * sc, bgImg.height * sc);

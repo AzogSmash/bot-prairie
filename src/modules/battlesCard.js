@@ -6,7 +6,7 @@ const { getCachedOrFetch } = require('../services/imageCache');
 const { drawHeader } = require('./rankCard');
 
 const ASSETS        = path.resolve(__dirname, '..', 'assets');
-const BG_FILE       = path.join(ASSETS, 'backgrounds', 'rank_bg.png');
+const BG_FILE       = path.join(ASSETS, 'backgrounds', 'background_prestige.png');
 const ICONS_DIR     = path.join(ASSETS, 'icons');
 const PORTRAITS_DIR = path.join(ASSETS, 'brawlers', 'portrait');
 const RANKED_DIR    = path.join(ASSETS, 'ranked', 'tiered');

@@ -9,12 +9,15 @@ const { drawHeader, normalizeRankCardData } = require("./rankCard");
 const ASSETS        = path.resolve(__dirname, "..", "assets");
 const BG_DIR        = path.join(ASSETS, "backgrounds");
 const PORTRAITS_DIR = path.join(ASSETS, "brawlers", "portrait");
+const EMOJI_DIR     = path.join(ASSETS, "brawlers", "emoji");
 const ICONS_DIR     = path.join(ASSETS, "icons");
+const BRAWLERS_META = require("../assets/brawlers-meta.json");
 
 const SCALE  = 2;
 const W      = 1500;
-const H      = 1250;
 const MARGIN = 14;
+const COLS   = 10;
+const GAP    = 15;
 
 function S(v) { return Math.round(v * SCALE); }
 function FONT(size, weight = 700) {
@@ -46,11 +49,12 @@ function getStreakTier(streak) {
 
 function hexToRgb(hex) {
   const h = hex.replace("#", "");
-  return {
-    r: parseInt(h.slice(0, 2), 16),
-    g: parseInt(h.slice(2, 4), 16),
-    b: parseInt(h.slice(4, 6), 16),
-  };
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+
+function darkenHex(hex, amt = 50) {
+  const [r, g, b] = hexToRgb(hex);
+  return `rgb(${Math.max(0,r-amt)},${Math.max(0,g-amt)},${Math.max(0,b-amt)})`;
 }
 
 // Crée une version teintée de l'icône flamme pour chaque palier via source-atop
@@ -99,93 +103,115 @@ async function tryLoad(localPath, remote = null) {
   if (localPath && fs.existsSync(localPath)) {
     try { return await loadImage(localPath); } catch { /* skip */ }
   }
-  if (remote?.cacheKey && remote?.url) {
-    try { return await getCachedOrFetch(remote.cacheKey, remote.url); } catch { /* skip */ }
+  const remotes = Array.isArray(remote) ? remote : (remote ? [remote] : []);
+  for (const r of remotes) {
+    if (r?.cacheKey && r?.url) {
+      try { return await getCachedOrFetch(r.cacheKey, r.url); } catch { /* skip */ }
+    }
   }
   return null;
 }
 
-async function drawWinstreakGrid(ctx, brawlers, startY, mode = 'max') {
-  const streakField = mode === 'current' ? 'currentWinStreak' : 'maxWinStreak';
-  const sorted = [...brawlers]
-    .map(b => ({ ...b, streak: Number(b[streakField] ?? 0) }))
-    .sort((a, b) => b.streak - a.streak);
-
-  const COLS    = 10;
-  const GRID_W  = W - MARGIN * 2;
-  const GAP     = 15;
-  const CELL_W  = Math.floor((GRID_W - GAP * (COLS - 1)) / COLS);
-  const CELL_H  = Math.round(CELL_W * 0.62);
-  const ROWS    = Math.max(1, Math.ceil(sorted.length / COLS));
-  const GRID_H  = H - startY - MARGIN;
-  const ACTUAL_H = Math.min(CELL_H, Math.floor(GRID_H / ROWS));
+async function drawWinstreakGrid(ctx, items, startY) {
+  const CELL_W = Math.floor((W - MARGIN * 2 - GAP * (COLS - 1)) / COLS);
+  const CELL_H = Math.round(CELL_W * 0.62);
 
   const wsIcon = await tryLoad(path.join(ICONS_DIR, "borderless", "winstreak.png"))
     ?? await tryLoad(path.join(ICONS_DIR, "winstreak.png"));
 
   const tintedFlames = await buildTintedFlames(wsIcon);
 
-  const portraits = await Promise.all(sorted.map(b => {
+  const portraits = await Promise.all(items.map(b => {
+    if (b._placeholder) return null;
     const id = b.id ?? b.brawler_id;
-    return tryLoad(
-      path.join(PORTRAITS_DIR, `${id}.png`),
-      {
-        cacheKey: `brawlers/portrait/${id}.png`,
-        url: `https://raw.githubusercontent.com/Brawlify/CDN/master/brawlers/portraits/${id}.png`,
-      },
-    );
+    const localEmoji    = path.join(EMOJI_DIR,    `${id}.png`);
+    const localPortrait = path.join(PORTRAITS_DIR, `${id}.png`);
+    if (fs.existsSync(localEmoji))    return loadImage(localEmoji).catch(() => null);
+    if (fs.existsSync(localPortrait)) return loadImage(localPortrait).catch(() => null);
+    return tryLoad(null, [
+      { cacheKey: `brawlers/emoji/${id}.png`,    url: `https://cdn.brawlify.com/brawler-bs/regular/${id}.png` },
+      { cacheKey: `brawlers/portrait/${id}.png`, url: `https://raw.githubusercontent.com/Brawlify/CDN/master/brawlers/portraits/${id}.png` },
+    ]);
   }));
 
-  for (let i = 0; i < sorted.length; i++) {
-    const { streak } = sorted[i];
-    const portrait   = portraits[i];
-    const col  = i % COLS;
-    const row  = Math.floor(i / COLS);
-    const cx   = MARGIN + col * (CELL_W + GAP);
-    const cy   = startY + row * (ACTUAL_H + GAP);
+  for (let i = 0; i < items.length; i++) {
+    const b       = items[i];
+    const col     = i % COLS;
+    const row     = Math.floor(i / COLS);
+    const cx      = MARGIN + col * (CELL_W + GAP);
+    const cy      = startY + row * (CELL_H + GAP);
+    const portrait = portraits[i];
+
+    if (b._placeholder) {
+      ctx.globalAlpha = 0.30;
+      rrPath(ctx, cx, cy, CELL_W, CELL_H, 12);
+      ctx.fillStyle = "#1a1030";
+      ctx.fill();
+      rrPath(ctx, cx, cy, CELL_W, CELL_H, 12);
+      ctx.strokeStyle = "rgba(120,100,180,0.3)";
+      ctx.lineWidth   = S(1.5);
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+      continue;
+    }
+
+    const { streak } = b;
     const tier = getStreakTier(streak);
-    const { r, g, b } = hexToRgb(tier.bg);
 
     if (streak === 0) ctx.globalAlpha = 0.50;
 
-    // ── Fond coloré vif ─────────────────────────────────────────────────────
-    rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 12);
-    ctx.fillStyle = tier.bg;
+    const R = 12;
+
+    // ── Fond assombri ────────────────────────────────────────────────────────
+    rrPath(ctx, cx, cy, CELL_W, CELL_H, R);
+    ctx.fillStyle = streak === 0 ? "#2a2040" : darkenHex(tier.bg, 45);
     ctx.fill();
 
-    // ── Portrait clippé ─────────────────────────────────────────────────────
+    // ── Dégradé radial vers les bords ────────────────────────────────────────
+    if (streak > 0) {
+      const gx = S(cx + CELL_W / 2);
+      const gy = S(cy + CELL_H / 2);
+      const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, S(Math.max(CELL_W, CELL_H) * 0.72));
+      grad.addColorStop(0,   "rgba(0,0,0,0)");
+      grad.addColorStop(0.6, "rgba(0,0,0,0)");
+      grad.addColorStop(1,   "rgba(0,0,0,0.5)");
+      rrPath(ctx, cx, cy, CELL_W, CELL_H, R);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+
+    // ── Portrait clippé, décalé à gauche ────────────────────────────────────
     if (portrait) {
       ctx.save();
-      rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 8);
+      rrPath(ctx, cx, cy, CELL_W, CELL_H, R);
       ctx.clip();
-      // Zoom x2 sur le portrait pour remplir la case
-      const sc = (ACTUAL_H / portrait.height) * 2;
-      ctx.drawImage(portrait, S(cx), S(cy), portrait.width * sc, portrait.height * sc);
+      const iS = Math.round(CELL_H * 0.82);
+      ctx.drawImage(portrait, S(cx + 3), S(cy + (CELL_H - iS) / 2), S(iS), S(iS));
       ctx.restore();
     }
 
     // ── Dégradé horizontal droite pour lisibilité flamme ────────────────────
     ctx.save();
-    rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 8);
+    rrPath(ctx, cx, cy, CELL_W, CELL_H, R);
     ctx.clip();
-    const cellGrad = ctx.createLinearGradient(S(cx + CELL_W * 0.28), 0, S(cx + CELL_W), 0);
+    const cellGrad = ctx.createLinearGradient(S(cx + CELL_W * 0.35), 0, S(cx + CELL_W), 0);
     cellGrad.addColorStop(0, "rgba(0,0,0,0)");
-    cellGrad.addColorStop(1, "rgba(0,0,0,0.72)");
+    cellGrad.addColorStop(1, "rgba(0,0,0,0.75)");
     ctx.fillStyle = cellGrad;
-    ctx.fillRect(S(cx), S(cy), S(CELL_W), S(ACTUAL_H));
+    ctx.fillRect(S(cx), S(cy), S(CELL_W), S(CELL_H));
     ctx.restore();
 
     // ── Bordure vive ─────────────────────────────────────────────────────────
-    rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 8);
-    ctx.strokeStyle = tier.border;
-    ctx.lineWidth   = S(streak > 0 ? 3.5 : 2);
+    rrPath(ctx, cx, cy, CELL_W, CELL_H, R);
+    ctx.strokeStyle = streak === 0 ? "rgba(100,80,160,0.45)" : tier.border;
+    ctx.lineWidth   = S(streak > 0 ? 4 : 1.5);
     ctx.stroke();
 
     // ── Flamme au milieu-droit, nombre centré dedans ─────────────────────────
-    const flameH  = Math.round(ACTUAL_H * 0.72);
+    const flameH  = Math.round(CELL_H * 0.72);
     const flameW  = flameH;
     const flameX  = cx + CELL_W - flameW - 5;
-    const midY    = cy + ACTUAL_H * 0.62;
+    const midY    = cy + CELL_H * 0.62 - 5;
     const flameCX = flameX + flameW / 2;
 
     const flameImg = tintedFlames.get(tier.min) ?? wsIcon;
@@ -206,11 +232,38 @@ async function drawWinstreakGrid(ctx, brawlers, startY, mode = 'max') {
 }
 
 async function generateWinstreakCard(bsPlayer, extra = {}, mode = 'max') {
-  const data   = normalizeRankCardData(bsPlayer, extra);
+  const data = normalizeRankCardData(bsPlayer, extra);
+  const streakField = mode === 'current' ? 'currentWinStreak' : 'maxWinStreak';
+
+  // Construire la liste complète : possédés triés + non-possédés à 0
+  const ownedMap = new Map();
+  for (const b of (data.brawlers || [])) ownedMap.set(b.id ?? b.brawler_id, b);
+
+  const ownedSorted = [...ownedMap.values()]
+    .map(b => ({ ...b, streak: Number(b[streakField] ?? 0) }))
+    .sort((a, b) => b.streak - a.streak);
+
+  const unowned = BRAWLERS_META
+    .filter(b => !ownedMap.has(b.id))
+    .map(b => ({ id: b.id, streak: 0, _unowned: true }));
+
+  const allItems = [...ownedSorted, ...unowned];
+
+  // Compléter la dernière ligne avec des cases placeholder
+  const rem = allItems.length % COLS;
+  if (rem !== 0) for (let i = 0; i < COLS - rem; i++) allItems.push({ _placeholder: true });
+
+  // Hauteur dynamique
+  const CELL_W = Math.floor((W - MARGIN * 2 - GAP * (COLS - 1)) / COLS);
+  const CELL_H = Math.round(CELL_W * 0.62);
+  const ROWS = Math.ceil(allItems.length / COLS);
+  const GRID_TOTAL = ROWS * CELL_H + (ROWS - 1) * GAP;
+  const H = 208 + 14 + GRID_TOTAL + MARGIN + 16;
+
   const canvas = createCanvas(S(W), S(H));
   const ctx    = canvas.getContext("2d");
 
-  const bgImg = await tryLoad(path.join(BG_DIR, "rank_bg.png"));
+  const bgImg = await tryLoad(path.join(BG_DIR, "background_prestige.png"));
   if (bgImg) {
     const sc = Math.max(S(W) / bgImg.width, S(H) / bgImg.height);
     const dW = bgImg.width * sc;
@@ -232,7 +285,7 @@ async function generateWinstreakCard(bsPlayer, extra = {}, mode = 'max') {
   ctx.fillStyle = "rgba(255,255,255,0.10)";
   ctx.fillRect(S(MARGIN), S(headerEndY - 4), S(W - MARGIN * 2), S(2));
 
-  await drawWinstreakGrid(ctx, data.brawlers, headerEndY, mode);
+  await drawWinstreakGrid(ctx, allItems, headerEndY);
 
   ctx.font         = FONT(10, 700);
   ctx.textBaseline = "bottom";
