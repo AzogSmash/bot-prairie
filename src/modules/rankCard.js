@@ -10,7 +10,7 @@ const ASSETS = path.resolve(__dirname, "..", "assets");
 const BG_DIR = path.join(ASSETS, "backgrounds");
 const PROFILE_ICONS_DIR = path.join(ASSETS, "profile-icons");
 const RECORDS_DIR = path.join(ASSETS, "records");
-const PORTRAITS_DIR = path.join(ASSETS, "brawlers", "portrait");
+const PORTRAITS_DIR = path.join(ASSETS, "brawlers", "emoji");
 const PRESTIGES_DIR = path.join(ASSETS, "prestiges", "tiered");
 const RANKED_DIR = path.join(ASSETS, "ranked", "tiered");
 const ICONS_DIR = path.join(ASSETS, "icons");
@@ -30,20 +30,20 @@ const MAX_GADGETS    = BRAWLERS_META.reduce((s, b) => s + b.totalGadgets, 0);
 const MAX_SP         = BRAWLERS_META.reduce((s, b) => s + b.totalSP, 0);
 
 const PRESTIGE_THRESHOLDS = [
-  { min: 0,     level: 0,  color: "#815b40" },
-  { min: 250,   level: 1,  color: "#f5aa4d" },
-  { min: 500,   level: 2,  color: "#b3b5d5" },
-  { min: 750,   level: 3,  color: "#dec745" },
-  { min: 1000,  level: 4,  color: "#b377e4" },
-  { min: 2000,  level: 5,  color: "#ed599e" },
-  { min: 3000,  level: 6,  color: "#f3cb66" },
-  { min: 4000,  level: 7,  color: "#DAA520" },
-  { min: 5000,  level: 8,  color: "#f3cb66" },
-  { min: 6000,  level: 9,  color: "#f3cb66" },
-  { min: 7000,  level: 10, color: "#f3cb66" },
-  { min: 8000,  level: 11, color: "#f3cb66" },
-  { min: 9000,  level: 12, color: "#f3cb66" },
-  { min: 10000, level: 13, color: "#f3cb66" },
+  { min: 0,     level: 0,  color: "#a0714f" },
+  { min: 250,   level: 1,  color: "#ffb835" },
+  { min: 500,   level: 2,  color: "#c8cce8" },
+  { min: 750,   level: 3,  color: "#ffe033" },
+  { min: 1000,  level: 4,  color: "#c45aff" },
+  { min: 2000,  level: 5,  color: "#ff2d78" },
+  { min: 3000,  level: 6,  color: "#ffd700" },
+  { min: 4000,  level: 7,  color: "#ffc200" },
+  { min: 5000,  level: 8,  color: "#ffd700" },
+  { min: 6000,  level: 9,  color: "#ffd700" },
+  { min: 7000,  level: 10, color: "#ffd700" },
+  { min: 8000,  level: 11, color: "#ffd700" },
+  { min: 9000,  level: 12, color: "#ffd700" },
+  { min: 10000, level: 13, color: "#ffd700" },
 ];
 
 const RANKED_LABELS = [
@@ -538,8 +538,8 @@ async function drawBrawlerGrid(ctx, brawlers, startY) {
         path.join(PORTRAITS_DIR, `${id}.png`),
         null,
         {
-          cacheKey: `brawlers/portrait/${id}.png`,
-          url: `https://raw.githubusercontent.com/Brawlify/CDN/master/brawlers/portraits/${id}.png`,
+          cacheKey: `brawlers/emoji/${id}.png`,
+          url: `https://cdn.brawlify.com/brawler-bs/regular/${id}.png`,
         },
       ),
       // Pas de badge de prestige pour les brawlers non débloqués
@@ -559,23 +559,19 @@ async function drawBrawlerGrid(ctx, brawlers, startY) {
     if (unowned) ctx.globalAlpha = 0.50;
 
     rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 14);
-    ctx.fillStyle = unowned ? "#2a2040" : `${prestige.color}dd`;
+    ctx.fillStyle = unowned ? "#2a2040" : prestige.color;
     ctx.fill();
 
     if (portrait) {
-      ctx.save();
-      rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 8);
-      ctx.clip();
-      const sc = (ACTUAL_H / portrait.height) * 2;
-      const dW = portrait.width * sc;
-      const dH = portrait.height * sc;
-      ctx.drawImage(portrait, S(cx), S(cy), dW, dH);
-      ctx.restore();
+      const iS = Math.round(Math.min(CELL_W, ACTUAL_H) * 0.72);
+      const dx = cx + (CELL_W - iS) / 2;
+      const dy = cy + (ACTUAL_H - iS) / 2;
+      ctx.drawImage(portrait, S(dx), S(dy), S(iS), S(iS));
     }
 
     rrPath(ctx, cx, cy, CELL_W, ACTUAL_H, 8);
-    ctx.strokeStyle = unowned ? "rgba(100,80,160,0.4)" : "rgba(255,255,255,0.95)";
-    ctx.lineWidth   = S(unowned ? 2 : 4);
+    ctx.strokeStyle = unowned ? "rgba(100,80,160,0.4)" : prestige.color;
+    ctx.lineWidth   = S(unowned ? 2 : 5);
     ctx.stroke();
 
     if (badge && !unowned) {
