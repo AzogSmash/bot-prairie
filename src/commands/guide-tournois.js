@@ -19,16 +19,16 @@ module.exports = {
         {
           name: '📊 Voir le bracket',
           value: [
-            '`/tournoi-bracket`',
+            '`/tournoi-bracket` dans <#1173729682546495589>',
             'Affiche le bracket du tournoi en cours avec tous les matchs et résultats.',
-            '> L\'image du bracket est aussi mise à jour automatiquement dans le canal tournoi.',
+            '> L\'image du bracket est visible en direct dans <#1236716401050386613>.',
             '> Le bouton 🔄 te permet de rafraîchir le bracket en direct.',
           ].join('\n'),
         },
         {
           name: '🎯 Faire ses pronostics',
           value: [
-            '`/pronostic`',
+            '`/pronostic` dans <#1173729682546495589>',
             'Prédie tous les matchs du bracket avant de soumettre tes pronostics.',
             '> L\'interface se débloque **round par round** : tu prédis les QF, puis les demies, puis la finale.',
             '> Une fois soumis, tes pronostics sont **définitifs** — impossible de les modifier.',
