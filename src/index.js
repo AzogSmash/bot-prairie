@@ -257,11 +257,11 @@ client.once('clientReady', async () => {
 
   setTimeout(async () => {
     await updateClubsPanel(client);
-    setInterval(() => updateClubsPanel(client), 60 * 60 * 1000);
+    setInterval(() => updateClubsPanel(client), 30 * 60 * 1000);
   }, 3000);
   setTimeout(async () => {
     await updateSnapshots(client);
-    setInterval(() => updateSnapshots(client), 60 * 60 * 1000);
+    setInterval(() => updateSnapshots(client), 30 * 60 * 1000);
   }, 33000);
 });
 

@@ -392,9 +392,9 @@ async function updateSnapshots(client) {
   const now = getNowParis();
 
   await saveSnapshots(clubMembersCache, 'hourly');
-  if (now.hour === 0 && now.minute < 60) await saveSnapshots(clubMembersCache, 'daily');
-  if (now.weekday === 1 && now.hour === 0) await saveSnapshots(clubMembersCache, 'weekly');
-  if (now.day === 1 && now.hour === 0) await saveSnapshots(clubMembersCache, 'monthly');
+  if (now.hour === 0 && now.minute < 30) await saveSnapshots(clubMembersCache, 'daily');
+  if (now.weekday === 1 && now.hour === 0 && now.minute < 30) await saveSnapshots(clubMembersCache, 'weekly');
+  if (now.day === 1 && now.hour === 0 && now.minute < 30) await saveSnapshots(clubMembersCache, 'monthly');
 
   const progression = {};
   for (const club of PRAIRIE_CLUBS) {
