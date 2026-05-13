@@ -20,7 +20,13 @@ async function brawlFetch(path) {
           resolve(JSON.parse(data));
         } else {
           console.log(`[BS API] Error: ${data}`);
-          reject(new Error(`Erreur API (${res.statusCode})`));
+          let body = {};
+          try { body = JSON.parse(data); } catch {}
+          if (res.statusCode === 503 || body.reason === 'inMaintenance') {
+            reject(new Error("L'API Brawl Stars est actuellement en mise à jour, elle devrait revenir sous peu."));
+          } else {
+            reject(new Error(`Erreur API (${res.statusCode})`));
+          }
         }
       });
     }).on('error', reject);
