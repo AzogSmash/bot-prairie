@@ -85,8 +85,11 @@ async function getRusheurs(clubFilter, periode) {
     currentRows = currentRowsRaw;
 
     if (season?.length) {
-      const { data: firstSnaps } = await supabase
+      console.log('[Rusheurs] season_start utilisé :', season[0].started_at);
+      const { data: firstSnaps, error: rpcError } = await supabase
         .rpc('first_trophies_since', { season_start: season[0].started_at });
+      console.log('[Rusheurs] RPC rows:', firstSnaps?.length, '| error:', rpcError?.message);
+      if (firstSnaps?.length) console.log('[Rusheurs] sample[0]:', firstSnaps[0]);
       for (const snap of (firstSnaps || [])) {
         refMap[snap.bs_tag] = snap.trophies;
       }
