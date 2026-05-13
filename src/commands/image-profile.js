@@ -7,8 +7,8 @@ const { getPreferredBsTag } = require('../lib/brawlAccounts');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('image-profil')
-    .setDescription('Génère ta carte de profil visuelle Brawl Stars')
+    .setName('carte-profil')
+    .setDescription('Ta carte de profil visuelle Brawl Stars 🃏')
     .addUserOption(option =>
       option.setName('membre')
         .setDescription('Le membre (toi par défaut)')
