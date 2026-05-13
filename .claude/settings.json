@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:brawlify.com)",
+      "WebFetch(domain:api.rnt.dev)",
+      "WebSearch",
+      "WebFetch(domain:developer.brawlstars.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:brawlapi.com)",
+      "WebFetch(domain:publicapi.dev)",
+      "WebFetch(domain:liable-founding-entertain.ngrok-free.dev)",
+      "WebFetch(domain:api.brawlify.com)",
+      "WebFetch(domain:bsproxy.royaleapi.dev)",
+      "Bash(node src/dev/test-battles-card.js P80YQJRL)",
+      "Bash(node src/dev/test-trophies-card.js P80YQJRL)",
+      "Bash(node src/dev/test-ws-card.js P80YQJRL)",
+      "Bash(node -e \"require\\('./src/services/imageNav'\\); require\\('./src/commands/image-prestige'\\); require\\('./src/commands/image-trophies'\\); require\\('./src/commands/image-battles'\\); require\\('./src/commands/image-winstreak'\\); console.log\\('OK'\\)\")",
+      "Bash(git commit -m ' *)",
+      "Bash(node src/dev/test-battles-card.js)",
+      "Bash(node src/dev/test-battles-card.js 9GCGVPQY)",
+      "Bash(node src/dev/test-battles-card.js 9GCGV0PQY)",
+      "Bash(node -e ' *)",
+      "Bash(git commit -m 'fix: log erreur Supabase dans /anniversaire *)",
+      "Bash(node src/dev/test-trophies-card.js 2YUJ82QU3Q)",
+      "Bash(node src/dev/test-trophies-card.js)",
+      "Bash(git commit -m 'feat: /anniversaires public \\(visible par tous\\) *)",
+      "Bash(node src/dev/test-push-stats-card.js)",
+      "Bash(node src/dev/test-push-stats-card.js QG0J90VG)",
+      "Bash(node src/dev/test-push-stats-card.js \"#QG0J90VG\")",
+      "PowerShell(Invoke-WebRequest -Uri \"https://cdn.discordapp.com/emojis/1478963121082204221.png\" -OutFile \"c:\\\\Users\\\\ccass\\\\bot-prairie\\\\src\\\\assets\\\\icons\\\\cadenas.png\")",
+      "PowerShell(\\(Get-Item \"c:\\\\Users\\\\ccass\\\\bot-prairie\\\\src\\\\assets\\\\icons\\\\cadenas.png\"\\).Length)",
+      "PowerShell(cd \"c:\\\\Users\\\\ccass\\\\bot-prairie\"; \\(Get-FileHash \"src\\\\assets\\\\icons\\\\cadenas.png\" -Algorithm SHA256\\).Hash; git ls-files -s src/assets/icons/cadenas.png)",
+      "Bash(node src/index.js)",
+      "Bash(taskkill /F /FI \"COMMANDLINE eq node src/index.js\")",
+      "Bash(taskkill /IM node.exe /F)"
+    ]
+  }
+}

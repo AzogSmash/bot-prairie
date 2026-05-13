@@ -6,8 +6,8 @@ const { setupImageNav } = require('../services/imageNav');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('image-prestige')
-    .setDescription('Génère ta carte de prestige Brawl Stars')
+    .setName('carte')
+    .setDescription('Tes cartes visuelles Brawl Stars 🎨')
     .addUserOption(option =>
       option.setName('membre')
         .setDescription('Le membre (toi par défaut)')
@@ -48,8 +48,8 @@ module.exports = {
 
       await setupImageNav(interaction, bsTag, player, extra, 'prestige');
     } catch (err) {
-      console.error('[ImagePrestige]', err);
-      await interaction.editReply({ content: `❌ Erreur lors de la génération : ${err.message}` });
+      console.error('[Carte]', err);
+      await interaction.editReply({ content: `❌ ${err.message}` });
     }
   }
 };
