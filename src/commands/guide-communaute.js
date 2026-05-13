@@ -1,5 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
+const BOT_CHANNEL = '<#1173729682546495589>';
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('guide-communaute')
@@ -12,62 +14,60 @@ module.exports = {
       .setColor('#2ecc71')
       .setTitle('🌿 La vie de la famille Prairie')
       .setDescription(
-        'Le bot facilite la vie quotidienne de la famille Prairie : infos sur les clubs, ' +
-        'gestion des absences, anniversaires et bien plus.'
+        `Le bot facilite la vie quotidienne de la famille Prairie : infos sur les clubs, ` +
+        `gestion des absences, anniversaires et bien plus.\n\n` +
+        `📌 Toutes ces commandes sont à utiliser dans ${BOT_CHANNEL}`
       )
       .addFields(
         {
           name: '🌿 Les 7 clubs Prairie',
           value: [
             '`/clubs`',
-            'Vue en temps réel des 7 clubs de la famille : membres actuels, places disponibles, trophées minimum, records.',
-            '> Utile pour savoir quel club recrute ou vérifier les critères pour rejoindre un club supérieur.',
+            'Vue en temps réel des 7 clubs : membres, places disponibles, trophées minimum, records monde et France.',
+            '> Utile pour savoir quel club recrute ou vérifier les critères d\'un club supérieur.',
           ].join('\n'),
         },
         {
           name: '📅 Déclarer une absence',
           value: [
             '`/absence`',
-            'Préviens le staff si tu vas être absent. Un formulaire s\'ouvre pour indiquer tes dates et la raison (optionnelle).',
-            '> Déclare ton absence **avant** de partir pour éviter d\'être exclu pendant ton absence.',
+            'Un formulaire s\'ouvre pour indiquer tes dates et la raison (optionnelle).',
+            '> ⚠️ Déclare ton absence **avant** de partir pour éviter d\'être exclu pendant ton absence.',
           ].join('\n'),
         },
         {
-          name: '📋 Voir les absences',
+          name: '📋 Consulter les absences',
           value: [
             '`/absences`',
-            'Consulte les absences actives de la famille, filtrables par club et par période.',
-            '> Pratique pour les capitaines qui veulent savoir qui est présent.',
+            'Liste les absences actives, filtrables par **club** et par **période** (en cours, ce mois, mois prochain…).',
           ].join('\n'),
         },
         {
           name: '❌ Annuler une absence',
           value: [
             '`/absence-annuler`',
-            'Tu rentres plus tôt que prévu ? Annule ton absence pour que le staff soit informé.',
+            'Annule ton absence. Si tu en as plusieurs, un menu s\'affiche pour choisir laquelle annuler.',
           ].join('\n'),
         },
         {
           name: '🎂 Anniversaires',
           value: [
-            '`/anniversaire` — Enregistre ta date de naissance pour être fêté le jour J',
+            '`/anniversaire <jour> <mois>` — Enregistre ton anniversaire (l\'année est optionnelle pour afficher ton âge)',
+            '`/anniversaire` — Affiche ton anniversaire enregistré (avec un bouton pour le supprimer)',
             '`/anniversaires` — Consulte les prochains anniversaires de la famille',
-            '> Le bot envoie automatiquement un message d\'anniversaire dans le canal général.',
+            '> Le bot envoie automatiquement un message dans le canal général le jour J 🎉',
           ].join('\n'),
         },
         {
           name: '🌐 Site Prairie',
-          value: [
-            '`/site`',
-            'Lien direct vers le site officiel de la famille Prairie.',
-          ].join('\n'),
+          value: '`/site` — Lien direct vers le site officiel de la famille Prairie.',
         },
         {
           name: '💡 Bon à savoir',
           value: [
-            '• Une absence non déclarée peut entraîner une exclusion du club — pense à prévenir !',
-            '• Les panels clubs se mettent à jour automatiquement toutes les 30 min',
-            '• Pour un récap de toutes les commandes → `/help`',
+            '• Une absence non déclarée peut entraîner une exclusion — pense à prévenir !',
+            '• Les infos des clubs se mettent à jour automatiquement toutes les 30 min',
+            '• Utilise `/help` pour un récap de toutes les commandes',
           ].join('\n'),
         }
       )
