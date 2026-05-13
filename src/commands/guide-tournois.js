@@ -29,10 +29,10 @@ module.exports = {
           name: '🎯 Faire ses pronostics',
           value: [
             '`/pronostic`',
-            'Parie sur les résultats des matchs avant le début du tournoi.',
-            '> Les matchs se débloquent progressivement au fil du tournoi.',
-            '> Tu peux modifier tes pronostics tant que le tournoi n\'a pas commencé.',
-            '> Un classement des meilleurs pronostiqueurs est affiché à la fin.',
+            'Prédie tous les matchs du bracket avant de soumettre tes pronostics.',
+            '> L\'interface se débloque **round par round** : tu prédis les QF, puis les demies, puis la finale.',
+            '> Une fois soumis, tes pronostics sont **définitifs** — impossible de les modifier.',
+            '> Un classement des meilleurs pronostiqueurs est affiché à la fin 🏆',
           ].join('\n'),
         },
         {
@@ -55,10 +55,19 @@ module.exports = {
           ].join('\n'),
         },
         {
+          name: '🏅 Système de points',
+          value: [
+            '**3 points maximum** par tournoi :',
+            '> **1 pt** — tous les résultats du tableau **gauche** corrects',
+            '> **1 pt** — tous les résultats du tableau **droit** corrects',
+            '> **1 pt** — gagnant de la **grande finale** correct',
+            'Les meilleurs pronostiqueurs peuvent gagner des points Prairie et tenter de remporter un battlepass !',
+          ].join('\n'),
+        },
+        {
           name: '💡 Bon à savoir',
           value: [
-            '• Les pronostics sont verrouillés dès que le tournoi démarre',
-            '• Plus tu es précis dans tes pronostics, plus tu marques de points',
+            '• Lis `/pronostic-help` avant de te lancer pour tout comprendre',
             '• Pour un récap de toutes les commandes → `/help`',
           ].join('\n'),
         }
