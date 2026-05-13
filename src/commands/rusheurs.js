@@ -79,7 +79,7 @@ async function getRusheurs(clubFilter, periode) {
 
   if (periode === 'season') {
     const [{ data: season }, currentRowsRaw] = await Promise.all([
-      supabase.from('season_starts').select('started_at').order('started_at', { ascending: false }).limit(1),
+      supabase.from('season_starts').select('started_at').eq('type', 'classique').order('started_at', { ascending: false }).limit(1),
       getCurrentRows(),
     ]);
     currentRows = currentRowsRaw;
