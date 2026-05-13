@@ -316,22 +316,35 @@ async function checkSeasonResets(client) {
   if (!isFirstThursday && !isThirdThursday) return;
 
   const type = isFirstThursday ? 'classique' : 'classée';
+  const seasonStartedAt = nowUtc.startOf('hour').toISO();
   const todayUtc = nowUtc.startOf('day').toISO();
 
-  // Dédup — ne rien faire si déjà inséré aujourd'hui
+  // Snapshot de référence saison — toujours pris au début de saison,
+  // même si l'entrée season_starts était déjà pré-insérée
+  const { clubMembersCache } = getCache();
+  if (clubMembersCache.length) {
+    await saveSnapshots(clubMembersCache, 'season');
+  }
+
+  // Dédup — n'insère pas si une entrée existe déjà pour aujourd'hui (pré-insérée ou déjà créée)
   const { data: existing } = await supabase
     .from('season_starts')
     .select('id')
     .eq('type', type)
     .gte('started_at', todayUtc)
     .maybeSingle();
-  if (existing) return;
 
-  // Calcul du prochain numéro
+  if (existing) {
+    console.log(`[Saison] ✅ Snapshot saison pris (entrée déjà présente : ${type})`);
+    return;
+  }
+
+  // Calcul du prochain numéro (seulement si pas pré-inséré)
   const { data: last } = await supabase
     .from('season_starts')
     .select('number')
     .eq('type', type)
+    .lte('started_at', new Date().toISOString())
     .order('started_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -347,20 +360,12 @@ async function checkSeasonResets(client) {
     label  = `Saison classée mois ${number}/4`;
   }
 
-  const seasonStartedAt = nowUtc.startOf('hour').toISO();
-
   await supabase.from('season_starts').insert({
     started_at: seasonStartedAt,
     label,
     type,
     number,
   });
-
-  // Snapshot de référence saison : base pour le calcul de progression
-  const { clubMembersCache } = getCache();
-  if (clubMembersCache.length) {
-    await saveSnapshots(clubMembersCache, 'season');
-  }
 
   console.log(`[Saison] ✅ Nouveau reset automatique : ${label}`);
 
