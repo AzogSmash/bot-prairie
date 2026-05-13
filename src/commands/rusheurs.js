@@ -75,10 +75,42 @@ async function getRusheurs(clubFilter, periode) {
     return Object.values(map);
   }
 
-  const [refRows, currentRows] = await Promise.all([getRefRows(), getCurrentRows()]);
+  // Pour la saison : on récupère d'abord les joueurs actifs,
+  // puis le premier snapshot de chacun depuis le début de saison en parallèle
+  // (même approche que push-stats : requête par joueur pour éviter les limites Supabase)
+  let currentRows, refMap = {};
 
-  const refMap = {};
-  for (const r of refRows) refMap[r.bs_tag] = r.trophies;
+  if (periode === 'season') {
+    const [{ data: season }, currentRowsRaw] = await Promise.all([
+      supabase.from('season_starts').select('started_at').order('started_at', { ascending: false }).limit(1),
+      getCurrentRows(),
+    ]);
+    currentRows = currentRowsRaw;
+
+    if (season?.length) {
+      const seasonStart = season[0].started_at;
+      const firstSnaps = await Promise.all(
+        currentRows.map(r =>
+          supabase
+            .from('trophies_snapshots')
+            .select('bs_tag, trophies')
+            .eq('bs_tag', r.bs_tag)
+            .gte('snapshot_at', seasonStart)
+            .order('snapshot_at', { ascending: true })
+            .limit(1)
+            .maybeSingle()
+            .then(({ data }) => data)
+        )
+      );
+      for (const snap of firstSnaps) {
+        if (snap) refMap[snap.bs_tag] = snap.trophies;
+      }
+    }
+  } else {
+    const [refRows, currentRowsRaw] = await Promise.all([getRefRows(), getCurrentRows()]);
+    currentRows = currentRowsRaw;
+    for (const r of refRows) refMap[r.bs_tag] = r.trophies;
+  }
 
   // Calcule progression par membre
   let rusheurs = currentRows
