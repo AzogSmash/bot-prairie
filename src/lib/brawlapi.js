@@ -22,14 +22,25 @@ async function brawlFetch(path) {
           console.log(`[BS API] Error: ${data}`);
           let body = {};
           try { body = JSON.parse(data); } catch {}
+          const contact = 'Si le problème persiste, contacte <@550678866839207937> en MP.';
           if (res.statusCode === 503 || body.reason === 'inMaintenance') {
-            reject(new Error("L'API Brawl Stars est actuellement en mise à jour, elle devrait revenir sous peu."));
+            reject(new Error("🔧 L'API Brawl Stars est en cours de mise à jour, réessaie dans quelques minutes."));
+          } else if (res.statusCode === 404) {
+            reject(new Error('❓ Joueur introuvable. Vérifie que le tag est correct.'));
+          } else if (res.statusCode === 429) {
+            reject(new Error(`⏳ Trop de requêtes vers l'API Brawl Stars, réessaie dans quelques secondes. ${contact}`));
+          } else if (res.statusCode === 403) {
+            reject(new Error(`🔑 La clé API Brawl Stars est invalide ou expirée. ${contact}`));
+          } else if (res.statusCode >= 500) {
+            reject(new Error(`💥 Erreur serveur Brawl Stars (${res.statusCode}). ${contact}`));
           } else {
-            reject(new Error(`Erreur API (${res.statusCode})`));
+            reject(new Error(`❌ Erreur inattendue (${res.statusCode}). ${contact}`));
           }
         }
       });
-    }).on('error', reject);
+    }).on('error', (err) => {
+      reject(new Error(`🌐 Impossible de contacter l'API Brawl Stars. Vérifie ta connexion ou réessaie. Si le problème persiste, contacte <@550678866839207937> en MP.`));
+    });
   });
 }
 

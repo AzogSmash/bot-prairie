@@ -394,7 +394,7 @@ module.exports = {
 
     } catch (err) {
       console.error('[Profil]', err);
-      await interaction.editReply({ content: '❌ Erreur lors de la récupération du profil.' });
+      await interaction.editReply({ content: `❌ ${err.message}` });
     }
   }
 };

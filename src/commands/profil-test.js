@@ -322,8 +322,8 @@ async function buildProfileEmbed(target, client) {
     .addFields({
       name: 'Victoires',
       value: [
-        `${B1} X **${player['3vs3Victories']?.toLocaleString('fr-FR') || '?'}** victoires 3v3`,
-        `${B2} X **${player.soloVictories?.toLocaleString('fr-FR') || '?'}** solo  •  X **${player.duoVictories?.toLocaleString('fr-FR') || '?'}** duo`,
+        `${B1} X **${player['3vs3Victories']?.toLocaleString('fr-FR') || '?'}**`,
+        `${B2} X **${player.soloVictories?.toLocaleString('fr-FR') || '?'}** •  X **${player.duoVictories?.toLocaleString('fr-FR') || '?'}**`,
       ].join('\n'),
       inline: false,
     })
@@ -444,7 +444,7 @@ module.exports = {
 
     } catch (err) {
       console.error('[ProfilTest]', err);
-      await interaction.editReply({ content: '❌ Erreur lors de la récupération du profil.' });
+      await interaction.editReply({ content: `❌ ${err.message}` });
     }
   }
 };

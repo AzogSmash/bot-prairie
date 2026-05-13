@@ -91,6 +91,7 @@ async function setupImageNav(interaction, bsTag, player, extra, initialMode) {
       });
     } catch (err) {
       console.error('[ImageNav]', err);
+      await i.editReply({ content: `❌ ${err.message}`, files: [], components: [] }).catch(() => {});
     }
   });
 
