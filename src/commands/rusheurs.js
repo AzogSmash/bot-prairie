@@ -32,10 +32,10 @@ async function getRusheurs(clubFilter, periode) {
       const { data } = await supabase
         .from('trophies_snapshots')
         .select('bs_tag, trophies, club_name')
-        .eq('type', 'hourly')
+        .eq('type', 'daily')
         .gte('snapshot_at', season[0].started_at)
         .order('snapshot_at', { ascending: true })
-        .limit(1000);
+        .limit(10000);
 
       const map = {};
       for (const r of (data || [])) {
@@ -66,7 +66,7 @@ async function getRusheurs(clubFilter, periode) {
       .select('bs_tag, bs_name, trophies, club_name')
       .eq('type', 'hourly')
       .order('snapshot_at', { ascending: false })
-      .limit(1000);
+      .limit(5000);
 
     const map = {};
     for (const r of (data || [])) {
