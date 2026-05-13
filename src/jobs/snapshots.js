@@ -347,12 +347,20 @@ async function checkSeasonResets(client) {
     label  = `Saison classée mois ${number}/4`;
   }
 
+  const seasonStartedAt = nowUtc.startOf('hour').toISO();
+
   await supabase.from('season_starts').insert({
-    started_at: nowUtc.toISO(),
+    started_at: seasonStartedAt,
     label,
     type,
     number,
   });
+
+  // Snapshot de référence saison : base pour le calcul de progression
+  const { clubMembersCache } = getCache();
+  if (clubMembersCache.length) {
+    await saveSnapshots(clubMembersCache, 'season');
+  }
 
   console.log(`[Saison] ✅ Nouveau reset automatique : ${label}`);
 
