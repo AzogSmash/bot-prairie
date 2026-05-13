@@ -44,8 +44,10 @@ module.exports = {
         {
           name: '🎨 Cartes visuelles',
           value: [
-            '`/carte` ou `/carte @membre`',
-            'Génère des cartes visuelles de tes stats BS. Un menu te permet de naviguer entre **6 vues** :',
+            '`/carte` ou `/carte @membre` — s\'ouvre sur la carte Prestige',
+            '`/carte-profil` ou `/carte-profil @membre` — s\'ouvre sur la carte Profil',
+            'Les deux commandes donnent accès aux **7 vues** via le menu de navigation :',
+            '> 🃏 **Carte profil** — carte de profil visuelle complète',
             '> ⭐ **Prestige** — niveau de prestige, ranked, records',
             '> 🏆 **Trophées actuels** — tous tes brawlers et leurs trophées',
             '> 🥇 **Trophées record** — tes meilleures performances par brawler',

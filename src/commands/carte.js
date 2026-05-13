@@ -44,6 +44,10 @@ module.exports = {
         accountCreation:   stats.find(s => s.id === 27)?.value ?? null,
         maxWinStreak:      rntData.max_winstreak ?? 0,
         totalPrestige:     player.totalPrestigeLevel ?? 0,
+        _rntData:          rntData,
+        _expLevel:         player.expLevel || 1,
+        _expPoints:        player.expPoints || 0,
+        _clubName:         player.club?.name || '',
       };
 
       await setupImageNav(interaction, bsTag, player, extra, 'prestige');

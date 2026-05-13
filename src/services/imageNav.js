@@ -5,16 +5,18 @@ const { generateRankCard }     = require('../modules/rankCard');
 const { renderTrophiesCard }   = require('../modules/trophiesCard');
 const { renderBattlesCard }    = require('../modules/battlesCard');
 const { generateWinstreakCard } = require('../modules/winstreakCard');
+const { renderProfileCard }    = require('../modules/profileCardExact');
 
 const TIMEOUT_MS = 5 * 60 * 1000; // 5 min
 
 const MODES = [
+  { value: 'carte_profil',     label: 'Carte profil',      description: 'Carte de profil visuelle',         emoji: '🃏' },
   { value: 'prestige',         label: 'Prestige',          description: 'Carte prestige et statistiques',   emoji: '⭐' },
   { value: 'trophies',         label: 'Trophées actuels',  description: 'Trophées actuels par brawler',     emoji: '🏆' },
   { value: 'highest_trophies', label: 'Trophées record',   description: 'Record de trophées par brawler',   emoji: '🥇' },
   { value: 'battles',          label: 'Dernières parties', description: '25 dernières parties jouées',      emoji: '⚔️' },
   { value: 'ws_max',           label: 'WS Maximum',        description: 'Meilleure série par brawler',      emoji: '🔥' },
-  { value: 'ws_current',       label: 'WS Actuelle',       description: 'Série de victoires en cours',     emoji: '💥' },
+  { value: 'ws_current',       label: 'WS Actuelle',       description: 'Série de victoires en cours',      emoji: '💥' },
 ];
 
 function buildRow(current) {
@@ -34,6 +36,19 @@ function buildRow(current) {
 
 async function renderMode(mode, bsTag, player, extra) {
   switch (mode) {
+    case 'carte_profil': {
+      const rntData = extra._rntData;
+      if (!rntData || !rntData.stats) throw new Error('🔧 Carte profil indisponible pour le moment, réessaie dans quelques instants.');
+      return {
+        buffer: await renderProfileCard({
+          player: rntData,
+          extra: { expLevel: extra._expLevel || 1, expPoints: extra._expPoints || 0, clubName: extra._clubName || '' },
+          playerTag: bsTag,
+        }),
+        name: 'carte-profil.png',
+      };
+    }
+
     case 'prestige':
       return { buffer: await generateRankCard(player, extra), name: 'prestige.png' };
 
